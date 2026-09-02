@@ -1,0 +1,27 @@
+[tools]
+python = "3.12"
+uv = "latest"
+lefthook = "latest"
+
+[settings]
+python.uv_venv_auto = "create|source"
+
+[env]
+_.file = [".env"]
+HF_HOME = "{{config_root}}/.cache/huggingface"
+SPLAT_MODEL_CACHE_DIR = "{{env.HF_HOME}}/splat-models"
+HF_TOKEN = "{{env.HF_TOKEN | default(value='')}}"
+
+[tasks]
+lint = "uv run ruff check ."
+format = "uv run ruff format ."
+test = "uv run pytest"
+run = "uv run splat"
+
+[tasks.check]
+description = "Run lint + format check + tests (CI-equivalent, locally)"
+run = [
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+    "uv run pytest",
+]
