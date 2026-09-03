@@ -8,8 +8,10 @@ python.uv_venv_auto = "create|source"
 
 [env]
 _.file = [".env"]
-HF_HOME = "{{config_root}}/.cache/huggingface"
-SPLAT_MODEL_CACHE_DIR = "{{env.HF_HOME}}/splat-models"
+SPLAT_CACHE_ROOT = "{{env.XDG_CACHE_HOME | default(value=env.HOME ~ '/.cache')}}/splat"
+HF_HOME = "{{env.SPLAT_CACHE_ROOT}}/huggingface"
+SPLAT_MODEL_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/models"
+SPLAT_ASSET_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/assets"
 HF_TOKEN = "{{env.HF_TOKEN | default(value='')}}"
 
 [tasks]

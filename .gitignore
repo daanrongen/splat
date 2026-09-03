@@ -16,3 +16,6 @@ mise.local.toml
 
 # model weight cache (never bundled, downloaded on demand)
 .cache/
+
+# Claude Code local bookkeeping
+.claude/

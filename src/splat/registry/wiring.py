@@ -7,8 +7,11 @@ from pathlib import Path
 
 from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
+from splat.ports.depth import DepthEstimationBackend
+from splat.ports.generation import ImageGenerationBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
+from splat.ports.segmentation import SegmentationBackend
 from splat.ports.splat_io import SplatReader, SplatWriter
 from splat.registry.formats import FORMAT_READERS, FORMAT_WRITERS
 from splat.registry.models import MODEL_CATALOG
@@ -55,3 +58,52 @@ def get_reconstruction_backend(
 
 def model_license(name: str) -> ModelLicense:
     return MODEL_CATALOG[name].license
+
+
+def get_generation_backend(name: str, *, device: str = "auto") -> ImageGenerationBackend:
+    from splat.registry.generation import GENERATION_CATALOG
+
+    try:
+        descriptor = GENERATION_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(GENERATION_CATALOG))
+        raise UnsupportedFormat(
+            f"Unknown generation model {name!r}. Available: {available}"
+        ) from exc
+
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id,
+        sdxl=descriptor.sdxl,
+        license=descriptor.license,
+        device=device,
+    )
+
+
+def get_segmentation_backend(name: str, *, device: str = "auto") -> SegmentationBackend:
+    from splat.registry.segmentation import SEGMENTATION_CATALOG
+
+    try:
+        descriptor = SEGMENTATION_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(SEGMENTATION_CATALOG))
+        raise UnsupportedFormat(
+            f"Unknown segmentation model {name!r}. Available: {available}"
+        ) from exc
+
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
+    )
+
+
+def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:
+    from splat.registry.depth import DEPTH_CATALOG
+
+    try:
+        descriptor = DEPTH_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(DEPTH_CATALOG))
+        raise UnsupportedFormat(f"Unknown depth model {name!r}. Available: {available}") from exc
+
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
+    )

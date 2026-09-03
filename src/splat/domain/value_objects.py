@@ -40,6 +40,21 @@ UNCONFIRMED = ModelLicense(
     is_commercial=False,
     notes="License could not be confirmed from public sources — treat as research-only.",
 )
+OPENRAIL_M = ModelLicense(
+    spdx_id="OpenRAIL-M",
+    is_commercial=True,
+    notes="Commercial use generally permitted; carries use-based behavioral restrictions.",
+)
+SAI_NC_COMMUNITY = ModelLicense(
+    spdx_id="StabilityAI-NC-Community",
+    is_commercial=False,
+    notes="Stability AI Non-Commercial Research Community License.",
+)
+APPLE_ASCL = ModelLicense(
+    spdx_id="Apple-ASCL",
+    is_commercial=True,
+    notes="Apple Sample Code License — review specific terms before commercial redistribution.",
+)
 
 
 # --- Camera / pose ---------------------------------------------------------

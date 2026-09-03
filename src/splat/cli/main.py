@@ -1,10 +1,24 @@
+import os
+
+from splat.paths import asset_cache_dir, hf_home_dir, model_cache_dir
+
+# Must run before any transitive `huggingface_hub` import below (it reads
+# HF_HOME at import time) — guarantees the XDG-consolidated cache applies
+# even when mise's own env activation isn't in effect for this process.
+os.environ.setdefault("HF_HOME", str(hf_home_dir()))
+os.environ.setdefault("SPLAT_MODEL_CACHE_DIR", str(model_cache_dir()))
+os.environ.setdefault("SPLAT_ASSET_CACHE_DIR", str(asset_cache_dir()))
+
 import typer
 
 from splat.cli.compress import compress
 from splat.cli.convert import convert
+from splat.cli.depth import depth
+from splat.cli.generate import generate
 from splat.cli.info import info
 from splat.cli.mesh import export
 from splat.cli.models import models_app
+from splat.cli.segment import segment
 from splat.cli.train import train
 from splat.cli.validate import validate
 
@@ -19,6 +33,9 @@ app.command("validate")(validate)
 app.command("compress")(compress)
 app.command("export")(export)
 app.command("train")(train)
+app.command("generate")(generate)
+app.command("segment")(segment)
+app.command("depth")(depth)
 app.add_typer(models_app, name="models")
 
 

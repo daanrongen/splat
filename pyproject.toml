@@ -15,6 +15,11 @@ dependencies = [
     "torch>=2.5",
     "huggingface-hub>=0.27",
     "plyfile>=1.1",
+    "mlx>=0.32.2",
+    "regex>=2026.9.3",
+    "pillow>=12.3.0",
+    "transformers>=5.16.1",
+    "coremltools>=9.0",
 ]
 
 [project.scripts]
@@ -38,6 +43,7 @@ dev = [
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+extend-exclude = ["**/_vendor/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
@@ -55,6 +61,9 @@ quote-style = "double"
 minversion = "8.0"
 addopts = "-ra --cov=splat --cov-report=term-missing"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = ["*/_vendor/*"]
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]

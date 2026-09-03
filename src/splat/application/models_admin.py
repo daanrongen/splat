@@ -1,13 +1,26 @@
+from typing import Any
+
 from splat.domain.errors import UnsupportedFormat
 from splat.ports.model_source import ModelSource
-from splat.registry.models import MODEL_CATALOG, ModelDescriptor
+from splat.registry.depth import DEPTH_CATALOG
+from splat.registry.generation import GENERATION_CATALOG
+from splat.registry.models import MODEL_CATALOG
+from splat.registry.segmentation import SEGMENTATION_CATALOG
 
 
-def _lookup(name: str) -> ModelDescriptor:
+def _all_catalogs() -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    for catalog in (MODEL_CATALOG, GENERATION_CATALOG, SEGMENTATION_CATALOG, DEPTH_CATALOG):
+        merged.update(catalog)
+    return merged
+
+
+def _lookup(name: str) -> Any:
+    catalog = _all_catalogs()
     try:
-        return MODEL_CATALOG[name]
+        return catalog[name]
     except KeyError as exc:
-        available = ", ".join(sorted(MODEL_CATALOG))
+        available = ", ".join(sorted(catalog))
         raise UnsupportedFormat(f"Unknown model {name!r}. Available: {available}") from exc
 
 
@@ -15,10 +28,10 @@ class ListModelsUseCase:
     def __init__(self, model_source: ModelSource) -> None:
         self._model_source = model_source
 
-    def execute(self) -> list[tuple[ModelDescriptor, bool]]:
+    def execute(self) -> list[tuple[Any, bool]]:
         return [
             (descriptor, self._model_source.is_cached(descriptor.hf_repo_id))
-            for descriptor in MODEL_CATALOG.values()
+            for descriptor in _all_catalogs().values()
         ]
 
 
@@ -31,7 +44,7 @@ class PullModelUseCase:
 
 
 class ModelInfoUseCase:
-    def execute(self, name: str) -> ModelDescriptor:
+    def execute(self, name: str) -> Any:
         return _lookup(name)
 
 

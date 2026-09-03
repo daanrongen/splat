@@ -10,7 +10,10 @@ from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_model_source
 
-models_app = typer.Typer(help="Manage locally cached reconstruction models.", no_args_is_help=True)
+models_app = typer.Typer(
+    help="Manage locally cached models (reconstruction, generation, segmentation, depth).",
+    no_args_is_help=True,
+)
 
 
 @models_app.command("list")
@@ -19,7 +22,8 @@ def list_models() -> None:
     rows = ListModelsUseCase(get_model_source()).execute()
     for descriptor, cached in rows:
         status = "cached" if cached else "not pulled"
-        console.print(f"{descriptor.name:20} {descriptor.license!s:24} {status}")
+        runtime = getattr(descriptor, "runtime", "-")
+        console.print(f"{descriptor.name:20} {runtime:8} {descriptor.license!s:24} {status}")
 
 
 @models_app.command("pull")
@@ -42,10 +46,12 @@ def info(name: str = typer.Argument(...)) -> None:
         error(str(exc))
         raise typer.Exit(code=1) from exc
     console.print(f"name:    {descriptor.name}")
+    console.print(f"runtime: {getattr(descriptor, 'runtime', '-')}")
     console.print(f"source:  {descriptor.hf_repo_id}")
     console.print(f"license: {descriptor.license}")
-    upper = descriptor.max_images if descriptor.max_images is not None else "∞"
-    console.print(f"images:  {descriptor.min_images}..{upper}")
+    if hasattr(descriptor, "min_images"):
+        upper = descriptor.max_images if descriptor.max_images is not None else "∞"
+        console.print(f"images:  {descriptor.min_images}..{upper}")
 
 
 @models_app.command("rm")
