@@ -14,9 +14,10 @@ import typer
 from splat.cli.compress import compress
 from splat.cli.convert import convert
 from splat.cli.depth import depth
+from splat.cli.gaussian import gaussian
 from splat.cli.generate import generate
 from splat.cli.info import info
-from splat.cli.mesh import export
+from splat.cli.mesh import mesh
 from splat.cli.models import models_app
 from splat.cli.segment import segment
 from splat.cli.train import train
@@ -31,11 +32,13 @@ app.command("convert")(convert)
 app.command("info")(info)
 app.command("validate")(validate)
 app.command("compress")(compress)
-app.command("export")(export)
+app.command("mesh")(mesh)
+app.command("export", hidden=True)(mesh)  # pre-#6 alias, kept for compatibility
 app.command("train")(train)
 app.command("generate")(generate)
 app.command("segment")(segment)
 app.command("depth")(depth)
+app.command("gaussian")(gaussian)
 app.add_typer(models_app, name="models")
 
 
