@@ -39,15 +39,14 @@ def _settings() -> list[_Setting]:
         _Setting("depth", "--device", "SPLAT_DEPTH_DEVICE", "auto"),
         _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mvsplat", GAUSSIAN_CATALOG),
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
-        _Setting(
-            "mesh", "--model", "SPLAT_MESH_MODEL", "depth-heightfield", MESH_PREDICTION_CATALOG
-        ),
+        _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "triposr", MESH_PREDICTION_CATALOG),
         _Setting("mesh", "--device", "SPLAT_MESH_DEVICE", "auto"),
-        _Setting("mesh", "--to", "SPLAT_MESH_FORMAT", "glb"),
         _Setting("compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
         _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
         _Setting("train", "--iterations", "SPLAT_TRAIN_ITERATIONS", "30000"),
         _Setting("train", "--backend", "SPLAT_TRAIN_BACKEND", ""),
+        _Setting("displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO", "glb"),
+        _Setting("extract.surface", "--device", "SPLAT_EXTRACT_SURFACE_DEVICE", "auto"),
     ]
 
 

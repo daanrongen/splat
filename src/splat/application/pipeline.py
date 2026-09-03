@@ -19,9 +19,10 @@ from splat.application.depth import EstimateDepthUseCase
 from splat.application.generate import GenerateUseCase
 from splat.application.mesh import PredictMeshUseCase
 from splat.application.segment import SegmentUseCase
+from splat.application.tools import displace_height
 from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.domain.image_space import DepthMap
+from splat.domain.image_space import DepthMap, Shape3D
 from splat.ports.asset_cache import AssetCache
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.generation import ImageGenerationBackend
@@ -151,49 +152,74 @@ def run_depth(
     )
 
 
+def _shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
+    mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
+    if shape.uv is not None and shape.texture is not None:
+        mesh.visual = trimesh.visual.TextureVisuals(
+            uv=shape.uv, image=Image.fromarray(shape.texture)
+        )
+    buf = BytesIO()
+    try:
+        mesh.export(buf, file_type=export_format)
+    except Exception as exc:
+        raise SplatDomainError(f"Could not export mesh as {export_format!r}: {exc}") from exc
+    return buf.getvalue()
+
+
 def run_mesh(
     backend: MeshPredictionBackend,
     cache: AssetCache,
     *,
     model_name: str,
+    input_asset: Asset,
+    params: dict,
+) -> Asset:
+    cache_key = compute_cache_key(
+        stage="mesh", model=model_name, params=params, parent_ids=(input_asset.id,)
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    shape = PredictMeshUseCase(backend).execute(input_asset.content_path, **params)
+
+    return cache.put(
+        cache_key,
+        kind=AssetKind.SHAPE_3D,
+        content_bytes=_shape_to_mesh_bytes(shape, "glb"),
+        ext="glb",
+        metadata={**shape.metadata},
+        parent_ids=[input_asset.id],
+        created_by=f"mesh:{model_name}",
+    )
+
+
+def run_displace_height(
+    cache: AssetCache,
+    *,
     image_asset: Asset,
-    depth_asset: Asset | None,
-    depth_map: DepthMap | None,
+    depth_asset: Asset,
+    depth_map: DepthMap,
     params: dict,
     export_format: str = "glb",
 ) -> Asset:
-    parent_ids = (image_asset.id, depth_asset.id) if depth_asset is not None else (image_asset.id,)
+    parent_ids = (image_asset.id, depth_asset.id)
     cache_key = compute_cache_key(
-        stage="mesh",
-        model=model_name,
+        stage="tools",
+        model="displace.height",
         params={"format": export_format, **params},
         parent_ids=parent_ids,
     )
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
-    shape = PredictMeshUseCase(backend).execute(
-        image_asset.content_path, depth_map=depth_map, **params
-    )
-
-    mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
-    if shape.uv is not None and shape.texture is not None:
-        mesh.visual = trimesh.visual.TextureVisuals(
-            uv=shape.uv, image=Image.fromarray(shape.texture)
-        )
-
-    buf = BytesIO()
-    try:
-        mesh.export(buf, file_type=export_format)
-    except Exception as exc:
-        raise SplatDomainError(f"Could not export mesh as {export_format!r}: {exc}") from exc
+    shape = displace_height.execute(image_asset.content_path, depth_map, **params)
 
     return cache.put(
         cache_key,
         kind=AssetKind.SHAPE_3D,
-        content_bytes=buf.getvalue(),
+        content_bytes=_shape_to_mesh_bytes(shape, export_format),
         ext=export_format,
         metadata={**shape.metadata},
         parent_ids=list(parent_ids),
-        created_by=f"mesh:{model_name}",
+        created_by="tools:displace.height",
     )

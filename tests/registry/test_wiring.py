@@ -59,5 +59,5 @@ def test_get_mesh_backend_unknown_model_raises():
 
 
 def test_get_mesh_backend_wires_known_model():
-    backend = get_mesh_backend("depth-heightfield", device="cpu")
-    assert backend.name == "depth-heightfield"
+    backend = get_mesh_backend("triposr", device="cpu")
+    assert backend.name == "triposr"

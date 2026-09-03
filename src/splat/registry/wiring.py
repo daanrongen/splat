@@ -105,7 +105,9 @@ def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBacken
         available = ", ".join(sorted(MESH_PREDICTION_CATALOG))
         raise UnsupportedFormat(f"Unknown mesh model {name!r}. Available: {available}") from exc
 
-    return descriptor.backend_cls(license=descriptor.license, device=device)
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
+    )
 
 
 def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:

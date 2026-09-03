@@ -1,49 +1,40 @@
-"""Wiring seam for both mesh directions: `MESH_CATALOG` for gaussian-cloud
--> file export (still empty — see `ports/mesh.py`'s `MeshExporter` docstring
-for why), and `MESH_PREDICTION_CATALOG` for image(+depth) -> mesh
-prediction.
+"""Wiring seam for the `MeshPredictionBackend` catalog `splat mesh` selects
+from. `MeshExporter` (`splat tools extract.surface`) has no registry at
+all — same as `ports/training.py`/`ports/rasterizer.py` — since it has zero
+adapters to select between.
 """
 
 from dataclasses import dataclass
 from typing import Literal
 
 from splat.domain.value_objects import ModelLicense
-from splat.ports.mesh import MeshExporter, MeshPredictionBackend
+from splat.ports.mesh import MeshPredictionBackend
 
-Runtime = Literal["mlx", "coreml", "torch", "geometry"]
-
-
-@dataclass(frozen=True)
-class MeshModelDescriptor:
-    name: str
-    backend_cls: type[MeshExporter]
-
-
-MESH_CATALOG: dict[str, MeshModelDescriptor] = {}
+Runtime = Literal["mlx", "coreml", "torch"]
 
 
 @dataclass(frozen=True)
 class MeshPredictionModelDescriptor:
     name: str
     backend_cls: type[MeshPredictionBackend]
-    hf_repo_id: str | None
+    hf_repo_id: str
     license: ModelLicense
     runtime: Runtime
 
 
-def _build_prediction_catalog() -> dict[str, MeshPredictionModelDescriptor]:
-    from splat.adapters.mesh.depth_heightfield import DepthHeightfieldBackend
+def _build_catalog() -> dict[str, MeshPredictionModelDescriptor]:
+    from splat.adapters.mesh.triposr import TripoSRBackend
     from splat.domain.value_objects import MIT
 
     return {
-        "depth-heightfield": MeshPredictionModelDescriptor(
-            name="depth-heightfield",
-            backend_cls=DepthHeightfieldBackend,
-            hf_repo_id=None,
+        "triposr": MeshPredictionModelDescriptor(
+            name="triposr",
+            backend_cls=TripoSRBackend,
+            hf_repo_id="stabilityai/TripoSR",
             license=MIT,
-            runtime="geometry",
+            runtime="torch",
         ),
     }
 
 
-MESH_PREDICTION_CATALOG: dict[str, MeshPredictionModelDescriptor] = _build_prediction_catalog()
+MESH_PREDICTION_CATALOG: dict[str, MeshPredictionModelDescriptor] = _build_catalog()
