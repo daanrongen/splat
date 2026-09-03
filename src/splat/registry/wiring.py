@@ -14,7 +14,7 @@ from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.splat_io import SplatReader, SplatWriter
 from splat.registry.formats import FORMAT_READERS, FORMAT_WRITERS
-from splat.registry.models import MODEL_CATALOG
+from splat.registry.gaussian import GAUSSIAN_CATALOG
 
 
 def get_reader(ext: str) -> SplatReader:
@@ -45,9 +45,9 @@ def get_reconstruction_backend(
     name: str, *, model_source: ModelSource, device: str = "auto"
 ) -> ReconstructionBackend:
     try:
-        descriptor = MODEL_CATALOG[name]
+        descriptor = GAUSSIAN_CATALOG[name]
     except KeyError as exc:
-        available = ", ".join(sorted(MODEL_CATALOG))
+        available = ", ".join(sorted(GAUSSIAN_CATALOG))
         raise UnsupportedFormat(f"Unknown model {name!r}. Available: {available}") from exc
 
     weights_path: Path = model_source.pull(descriptor.hf_repo_id)
@@ -57,7 +57,7 @@ def get_reconstruction_backend(
 
 
 def model_license(name: str) -> ModelLicense:
-    return MODEL_CATALOG[name].license
+    return GAUSSIAN_CATALOG[name].license
 
 
 def get_generation_backend(name: str, *, device: str = "auto") -> ImageGenerationBackend:

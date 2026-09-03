@@ -1,4 +1,4 @@
-"""MVSplat feed-forward reconstruction adapter — see registry/models.py for
+"""MVSplat feed-forward reconstruction adapter — see registry/gaussian.py for
 the catalog entry (MIT license, `dylanebert/mvsplat` weights).
 
 Deliberately left as a stub. MVSplat itself is plain PyTorch (no custom CUDA

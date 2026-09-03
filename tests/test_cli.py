@@ -55,10 +55,33 @@ def test_compress(tmp_path: Path, synthetic_cloud) -> None:
     assert out_path.exists()
 
 
-def test_export_stub_reports_not_implemented(tmp_path: Path) -> None:
+def test_mesh_stub_reports_not_implemented(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["mesh", str(tmp_path / "a.ply"), str(tmp_path / "b.obj")])
+    assert result.exit_code == 1
+    assert "not yet implemented" in result.output
+
+
+def test_export_alias_reports_not_implemented(tmp_path: Path) -> None:
     result = runner.invoke(app, ["export", str(tmp_path / "a.ply"), str(tmp_path / "b.obj")])
     assert result.exit_code == 1
     assert "not yet implemented" in result.output
+
+
+def test_gaussian_unknown_model_errors(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "gaussian",
+            str(tmp_path / "a.png"),
+            str(tmp_path / "b.png"),
+            "-o",
+            str(tmp_path / "out.splat"),
+            "--model",
+            "not-a-real-model",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "Unknown model" in result.output
 
 
 def test_train_stub_reports_not_implemented(tmp_path: Path) -> None:

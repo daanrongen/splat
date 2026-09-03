@@ -68,11 +68,12 @@ uv sync
 | `generate PROMPT` | Text → image | `--model sdxl-turbo-mlx\|sd21-coreml`, `--negative`, `--steps`, `--seed`, `-o FILE` |
 | `segment INPUT` | Image → RGBA sticker cutouts | `--model sam-mlx\|sam2-coreml`, `--max-stickers`, `-o DIR` |
 | `depth INPUT` | Image → per-pixel metric depth | `--model depth-pro`, `-o FILE` (normalized preview PNG) |
-| `convert INPUT... [OUTPUT]` | Splat↔splat format conversion, or images → splat via `--model` | `-f/--from`, `-t/--to`, `--model mvsplat`, `-o FILE` |
+| `gaussian INPUT...` | Image(s) → Gaussian splat (feed-forward reconstruction) | `--model mvsplat`, `--device`, `-o FILE` |
+| `convert INPUT... [OUTPUT]` | Splat↔splat format conversion | `-f/--from`, `-t/--to`, `-o FILE` |
 | `info PATH` | Point count, SH degree, bounding box | |
 | `validate PATH` | Check domain invariants, exit non-zero on failure | `--strict` |
 | `compress INPUT OUTPUT` | Prune + quantize for delivery | `--profile web-delivery\|archival` |
-| `export INPUT OUTPUT` | Splat → mesh | not yet implemented, stubbed intentionally |
+| `mesh INPUT OUTPUT` | Splat → mesh | not yet implemented, stubbed intentionally; `--model`, `--device` |
 | `train DATASET_DIR` | Per-scene optimization | not yet implemented, stubbed intentionally |
 | `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
 
