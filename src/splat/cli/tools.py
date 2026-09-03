@@ -23,13 +23,16 @@ def displace_height(
         ..., help="Depth-map path, @<asset-id>, or '-' — its source image is fetched by provenance."
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Write the mesh file here."),
-    to: str = typer.Option("glb", "-t", "--to", help="Mesh export format: glb | obj | ply."),
+    to: str | None = typer.Option(
+        None, "-t", "--to", help="Mesh format: glb | obj | ply (inferred from -o by default)."
+    ),
 ) -> None:
     """Displace a depth map's per-pixel height into a triangulated, textured mesh."""
+    export_format = to or (output.suffix.lstrip(".") if output else "glb")
     cache = FilesystemAssetCache()
     try:
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.DEPTH_MAP)
-        results = [_displace_height_one(asset, cache, to) for asset in inputs]
+        results = [_displace_height_one(asset, cache, export_format) for asset in inputs]
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
