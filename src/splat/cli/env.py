@@ -1,0 +1,75 @@
+from dataclasses import dataclass
+
+import typer
+from rich.table import Table
+
+from splat.cli._console import console, error
+from splat.env import resolve_verbose
+
+
+@dataclass(frozen=True)
+class _Setting:
+    command: str
+    param: str
+    var: str
+    default: str
+    catalog: dict | None = None  # model-name catalog to validate against, if any
+
+
+def _settings() -> list[_Setting]:
+    from splat.registry.depth import DEPTH_CATALOG
+    from splat.registry.gaussian import GAUSSIAN_CATALOG
+    from splat.registry.generation import GENERATION_CATALOG
+    from splat.registry.mesh import MESH_CATALOG
+    from splat.registry.segmentation import SEGMENTATION_CATALOG
+
+    return [
+        _Setting(
+            "generate", "--model", "SPLAT_GENERATE_MODEL", "sdxl-turbo-mlx", GENERATION_CATALOG
+        ),
+        _Setting("generate", "--device", "SPLAT_GENERATE_DEVICE", "auto"),
+        _Setting("generate", "--steps", "SPLAT_GENERATE_STEPS", ""),
+        _Setting("generate", "--seed", "SPLAT_GENERATE_SEED", ""),
+        _Setting("generate", "--negative", "SPLAT_GENERATE_NEGATIVE", ""),
+        _Setting("segment", "--model", "SPLAT_SEGMENT_MODEL", "sam-mlx", SEGMENTATION_CATALOG),
+        _Setting("segment", "--device", "SPLAT_SEGMENT_DEVICE", "auto"),
+        _Setting("segment", "--max-stickers", "SPLAT_SEGMENT_MAX_STICKERS", "20"),
+        _Setting("depth", "--model", "SPLAT_DEPTH_MODEL", "depth-pro", DEPTH_CATALOG),
+        _Setting("depth", "--device", "SPLAT_DEPTH_DEVICE", "auto"),
+        _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mvsplat", GAUSSIAN_CATALOG),
+        _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
+        _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "", MESH_CATALOG),
+        _Setting("mesh", "--device", "SPLAT_MESH_DEVICE", "auto"),
+        _Setting("mesh", "--to", "SPLAT_MESH_FORMAT", ""),
+        _Setting("compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
+        _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
+        _Setting("train", "--iterations", "SPLAT_TRAIN_ITERATIONS", "30000"),
+        _Setting("train", "--backend", "SPLAT_TRAIN_BACKEND", ""),
+    ]
+
+
+def env() -> None:
+    """Print every SPLAT_* setting's resolved value and source (env|mise|default)."""
+    table = Table(title="splat environment-variable defaults")
+    table.add_column("command")
+    table.add_column("param")
+    table.add_column("env var")
+    table.add_column("value")
+    table.add_column("source")
+
+    invalid: list[_Setting] = []
+    for setting in _settings():
+        resolved = resolve_verbose(setting.var, setting.default)
+        value = resolved.value or "[dim](none)[/dim]"
+        if setting.catalog is not None and resolved.value and resolved.value not in setting.catalog:
+            value = f"[red]{resolved.value}[/red]"
+            invalid.append(setting)
+        table.add_row(setting.command, setting.param, setting.var, value, resolved.source)
+
+    console.print(table)
+
+    if invalid:
+        for setting in invalid:
+            available = ", ".join(sorted(setting.catalog))
+            error(f"{setting.var}: unknown value, available: {available}")
+        raise typer.Exit(code=1)

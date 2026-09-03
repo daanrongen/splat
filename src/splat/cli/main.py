@@ -14,6 +14,7 @@ import typer
 from splat.cli.compress import compress
 from splat.cli.convert import convert
 from splat.cli.depth import depth
+from splat.cli.env import env
 from splat.cli.gaussian import gaussian
 from splat.cli.generate import generate
 from splat.cli.info import info
@@ -39,6 +40,7 @@ app.command("generate")(generate)
 app.command("segment")(segment)
 app.command("depth")(depth)
 app.command("gaussian")(gaussian)
+app.command("env")(env)
 app.add_typer(models_app, name="models")
 
 
