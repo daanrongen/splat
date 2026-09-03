@@ -5,7 +5,7 @@ from splat.ports.reconstruction import ReconstructionBackend
 
 
 @dataclass(frozen=True)
-class ModelDescriptor:
+class GaussianModelDescriptor:
     name: str
     backend_cls: type[ReconstructionBackend]
     hf_repo_id: str
@@ -14,15 +14,15 @@ class ModelDescriptor:
     max_images: int | None
 
 
-def _build_catalog() -> dict[str, ModelDescriptor]:
+def _build_catalog() -> dict[str, GaussianModelDescriptor]:
     # Imported lazily so a missing/optional adapter dependency can't break
-    # every other command — only `splat models pull/convert --model ...`
+    # every other command — only `splat models pull/gaussian --model ...`
     # needs the reconstruction adapters to actually import cleanly.
     from splat.adapters.reconstruction.mvsplat import MVSplatBackend
     from splat.domain.value_objects import MIT
 
     return {
-        "mvsplat": ModelDescriptor(
+        "mvsplat": GaussianModelDescriptor(
             name="mvsplat",
             backend_cls=MVSplatBackend,
             hf_repo_id="dylanebert/mvsplat",
@@ -33,4 +33,4 @@ def _build_catalog() -> dict[str, ModelDescriptor]:
     }
 
 
-MODEL_CATALOG: dict[str, ModelDescriptor] = _build_catalog()
+GAUSSIAN_CATALOG: dict[str, GaussianModelDescriptor] = _build_catalog()
