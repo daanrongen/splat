@@ -13,6 +13,7 @@ dependencies = [
     "rich>=13.9",
     "numpy>=2.1",
     "torch>=2.5",
+    "torchvision>=0.20",
     "huggingface-hub>=0.27",
     "plyfile>=1.1",
     "mlx>=0.32.2",
