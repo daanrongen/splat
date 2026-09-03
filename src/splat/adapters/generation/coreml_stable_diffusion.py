@@ -81,18 +81,21 @@ class CoreMLStableDiffusionBackend:
 
         components = ["text_encoder", "unet", "vae_decoder"]
         local_dir = self._local_dir()
-        # local_dir= materializes real files (reusing already-downloaded blobs via
-        # hardlink, no re-fetch) instead of the default symlinked cache — the
-        # CoreML compiler cannot stage a symlinked weight.bin during compilation.
-        snapshot_download(
-            self._hf_repo_id,
-            local_dir=local_dir,
-            allow_patterns=[
-                f"{_TOKENIZER_SUBFOLDER}/vocab.json",
-                f"{_TOKENIZER_SUBFOLDER}/merges.txt",
-                *[f"{self._package_path(c)}/**" for c in components],
-            ],
-        )
+        have_tokenizer = (local_dir / _TOKENIZER_SUBFOLDER / "vocab.json").exists()
+        have_packages = all((local_dir / self._package_path(c)).exists() for c in components)
+        if not (have_tokenizer and have_packages):
+            # local_dir= materializes real files (reusing already-downloaded blobs via
+            # hardlink, no re-fetch) instead of the default symlinked cache — the
+            # CoreML compiler cannot stage a symlinked weight.bin during compilation.
+            snapshot_download(
+                self._hf_repo_id,
+                local_dir=local_dir,
+                allow_patterns=[
+                    f"{_TOKENIZER_SUBFOLDER}/vocab.json",
+                    f"{_TOKENIZER_SUBFOLDER}/merges.txt",
+                    *[f"{self._package_path(c)}/**" for c in components],
+                ],
+            )
 
         vocab = json.loads((local_dir / _TOKENIZER_SUBFOLDER / "vocab.json").read_text())
         merges_text = (local_dir / _TOKENIZER_SUBFOLDER / "merges.txt").read_text()
