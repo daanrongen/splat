@@ -9,6 +9,7 @@ from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.generation import ImageGenerationBackend
+from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.segmentation import SegmentationBackend
@@ -89,6 +90,20 @@ def get_segmentation_backend(name: str, *, device: str = "auto") -> Segmentation
         raise UnsupportedFormat(
             f"Unknown segmentation model {name!r}. Available: {available}"
         ) from exc
+
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
+    )
+
+
+def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBackend:
+    from splat.registry.mesh import MESH_PREDICTION_CATALOG
+
+    try:
+        descriptor = MESH_PREDICTION_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(MESH_PREDICTION_CATALOG))
+        raise UnsupportedFormat(f"Unknown mesh model {name!r}. Available: {available}") from exc
 
     return descriptor.backend_cls(
         hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device

@@ -3,6 +3,7 @@ import pytest
 from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.domain.errors import UnsupportedFormat
 from splat.registry.wiring import (
+    get_mesh_backend,
     get_reader,
     get_reconstruction_backend,
     get_writer,
@@ -50,3 +51,13 @@ def test_get_reconstruction_backend_wires_known_model(tmp_path):
     backend = get_reconstruction_backend("mvsplat", model_source=DummyModelSource(), device="cpu")
     assert backend.name == "mvsplat"
     assert backend.required_image_count() == (2, None)
+
+
+def test_get_mesh_backend_unknown_model_raises():
+    with pytest.raises(UnsupportedFormat, match="Unknown mesh model"):
+        get_mesh_backend("not-a-real-model")
+
+
+def test_get_mesh_backend_wires_known_model():
+    backend = get_mesh_backend("triposr", device="cpu")
+    assert backend.name == "triposr"

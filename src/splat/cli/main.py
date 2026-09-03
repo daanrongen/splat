@@ -21,6 +21,7 @@ from splat.cli.info import info
 from splat.cli.mesh import mesh
 from splat.cli.models import models_app
 from splat.cli.segment import segment
+from splat.cli.tools import tools_app
 from splat.cli.train import train
 from splat.cli.validate import validate
 
@@ -34,7 +35,6 @@ app.command("info")(info)
 app.command("validate")(validate)
 app.command("compress")(compress)
 app.command("mesh")(mesh)
-app.command("export", hidden=True)(mesh)  # pre-#6 alias, kept for compatibility
 app.command("train")(train)
 app.command("generate")(generate)
 app.command("segment")(segment)
@@ -42,6 +42,7 @@ app.command("depth")(depth)
 app.command("gaussian")(gaussian)
 app.command("env")(env)
 app.add_typer(models_app, name="models")
+app.add_typer(tools_app, name="tools")
 
 
 if __name__ == "__main__":

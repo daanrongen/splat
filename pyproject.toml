@@ -21,6 +21,7 @@ dependencies = [
     "pillow>=12.3.0",
     "transformers>=5.16.1",
     "coremltools>=9.0",
+    "trimesh>=4.4",
 ]
 
 [project.scripts]

@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
 import typer
+from rich.console import Console
 from rich.table import Table
 
-from splat.cli._console import console, error
+from splat.cli._console import error
 from splat.env import resolve_verbose
 
 
@@ -20,7 +21,7 @@ def _settings() -> list[_Setting]:
     from splat.registry.depth import DEPTH_CATALOG
     from splat.registry.gaussian import GAUSSIAN_CATALOG
     from splat.registry.generation import GENERATION_CATALOG
-    from splat.registry.mesh import MESH_CATALOG
+    from splat.registry.mesh import MESH_PREDICTION_CATALOG
     from splat.registry.segmentation import SEGMENTATION_CATALOG
 
     return [
@@ -38,13 +39,14 @@ def _settings() -> list[_Setting]:
         _Setting("depth", "--device", "SPLAT_DEPTH_DEVICE", "auto"),
         _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mvsplat", GAUSSIAN_CATALOG),
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
-        _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "", MESH_CATALOG),
+        _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "triposr", MESH_PREDICTION_CATALOG),
         _Setting("mesh", "--device", "SPLAT_MESH_DEVICE", "auto"),
-        _Setting("mesh", "--to", "SPLAT_MESH_FORMAT", ""),
         _Setting("compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
         _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
         _Setting("train", "--iterations", "SPLAT_TRAIN_ITERATIONS", "30000"),
         _Setting("train", "--backend", "SPLAT_TRAIN_BACKEND", ""),
+        _Setting("displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO", "glb"),
+        _Setting("extract.surface", "--device", "SPLAT_EXTRACT_SURFACE_DEVICE", "auto"),
     ]
 
 
@@ -66,7 +68,7 @@ def env() -> None:
             invalid.append(setting)
         table.add_row(setting.command, setting.param, setting.var, value, resolved.source)
 
-    console.print(table)
+    Console(width=120).print(table)
 
     if invalid:
         for setting in invalid:

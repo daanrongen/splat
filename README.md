@@ -14,17 +14,25 @@ Two halves, one architecture:
 
 - **Splat file tooling** — convert, inspect, validate, and compress
   `.ply`/`.splat` Gaussian Splat files.
-- **Generative pipeline** — `generate → segment → depth → …` turns a text
-  prompt into an image, cuts a subject out as an RGBA "sticker", and
-  estimates its depth. Each stage caches its output as an `Asset` and can
-  read the previous stage's output directly, by cache ID, or piped from
-  another `splat` command — the same "everything is one universal object"
-  idea `pandoc` uses for documents.
+- **Generative pipeline** — `generate → segment → depth → mesh → …` turns a
+  text prompt into an image, cuts a subject out as an RGBA "sticker",
+  estimates its depth, and predicts a mesh from it. Each stage caches its
+  output as an `Asset` and can read the previous stage's output directly,
+  by cache ID, or piped from another `splat` command — the same
+  "everything is one universal object" idea `pandoc` uses for documents.
 
 Both halves are ports & adapters: a command talks to a `Protocol` port, and
 a *runtime* (`mlx`, `coreml`, or `torch`) provides the adapter. The point of
 splitting runtime from port is that adapters chain — a CoreML `generate`
 can feed an MLX `segment`, or vice versa.
+
+Sitting alongside that pipeline is **`splat tools`** — deterministic,
+non-ML operators that compose between the stochastic ML stages via the
+same `Asset`/cache/pipe contract, but carry none of the swappable-backend
+machinery (no `Protocol` port, no model catalog, no license) since there's
+nothing to pick between. `generate`/`segment`/`depth`/`mesh` all imply
+"pick a backend, get non-deterministic output"; a `tools` command is
+always the same pure function.
 
 ## Quick tour
 
@@ -39,9 +47,14 @@ splat validate scene.ply --strict
 splat generate "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
 splat segment robot.png --model sam-mlx -o stickers/ --max-stickers 5
 splat depth stickers/sticker_000.png --model depth-pro -o depth.png
+splat mesh stickers/sticker_000.png -o sticker.glb   # not yet implemented, see below
+
+# a deterministic `tools` operator spliced into the same pipeline
+splat depth stickers/sticker_000.png | splat tools displace.height - -o sticker.glb
 
 # chained via Unix pipes — same pipeline, one line
-splat generate "a small red toy robot" | splat segment - | splat depth -
+splat generate "a small red toy robot" | splat segment - | splat depth - \
+  | splat tools displace.height - -o robot.glb
 ```
 
 ## Installation
@@ -68,19 +81,25 @@ uv sync
 | `generate PROMPT` | Text → image | `--model sdxl-turbo-mlx\|sd21-coreml`, `--negative`, `--steps`, `--seed`, `-o FILE` |
 | `segment INPUT` | Image → RGBA sticker cutouts | `--model sam-mlx\|sam2-coreml`, `--max-stickers`, `-o DIR` |
 | `depth INPUT` | Image → per-pixel metric depth | `--model depth-pro`, `-o FILE` (normalized preview PNG) |
+| `mesh INPUT` | Image → mesh, via a learned model | not yet implemented, stubbed intentionally; `--model triposr`, `--device`, `-o FILE` |
 | `gaussian INPUT...` | Image(s) → Gaussian splat (feed-forward reconstruction) | `--model mvsplat`, `--device`, `-o FILE` |
 | `convert INPUT... [OUTPUT]` | Splat↔splat format conversion | `-f/--from`, `-t/--to`, `-o FILE` |
 | `info PATH` | Point count, SH degree, bounding box | |
 | `validate PATH` | Check domain invariants, exit non-zero on failure | `--strict` |
 | `compress INPUT OUTPUT` | Prune + quantize for delivery | `--profile web-delivery\|archival` |
-| `mesh INPUT OUTPUT` | Splat → mesh | not yet implemented, stubbed intentionally; `--model`, `--device` |
 | `train DATASET_DIR` | Per-scene optimization | not yet implemented, stubbed intentionally |
+| `tools displace.height INPUT` | Depth map → triangulated, textured mesh | `-t/--to glb\|obj\|ply`, `-o FILE` |
+| `tools extract.surface INPUT OUTPUT` | Gaussian splat → mesh export (SuGaR-style) | not yet implemented, stubbed intentionally; `-t/--to`, `--device` |
 | `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
 | `env` | Show every `SPLAT_*` default and where it resolved from | |
 
-`INPUT` on `segment`/`depth` accepts a file path, `@<asset-id>` to address
-a cached asset directly, or `-` to read piped NDJSON asset records from an
-earlier `splat` command.
+`INPUT` on `segment`/`depth`/`mesh`/`tools displace.height` accepts a file
+path, `@<asset-id>` to address a cached asset directly, or `-` to read
+piped NDJSON asset records from an earlier `splat` command.
+`displace.height` specifically requires that asset to be a `depth_map` —
+pipe it through `splat depth` first; it fetches the source image for
+texturing via the depth asset's own provenance (`parent_ids`), it never
+invokes `depth` itself.
 
 ### Piping contract
 
@@ -99,6 +118,7 @@ a plain file alongside the cache entry; it never replaces caching.
 | `sam-mlx` | segment | MLX | Apache-2.0 |
 | `sam2-coreml` | segment | CoreML | Apache-2.0 |
 | `depth-pro` | depth | PyTorch/MPS | Apple-ASCL |
+| `triposr` | mesh | PyTorch/MPS | MIT (stub — see below) |
 | `mvsplat` | image → splat | PyTorch/MPS | MIT (stub — see below) |
 
 `splat models info <name>` prints a model's exact source repo and license.
@@ -112,6 +132,13 @@ license, or a pre-alpha rasterizer). See the docstring in
 `src/splat/adapters/reconstruction/mvsplat.py` for the full survey. Per-scene
 optimization training (`splat train`) is stubbed for the same reason: the
 reference 3DGS rasterizer is CUDA-only with no settled MPS equivalent yet.
+
+`triposr` (single-image → mesh) is stubbed the same way: no Apple-native or
+depth-conditioned image-to-mesh model exists anywhere surveyed, and
+TripoSR's own `tsr` package isn't vendored yet. See the docstring in
+`src/splat/adapters/mesh/triposr.py` for the full survey. Depth-map → mesh
+via pure geometry (no model, no license, no download) is available today
+as `splat tools displace.height` instead.
 
 ## Caching
 
@@ -146,16 +173,20 @@ of one converter per format/model pair:
   format reader/writer and reconstruction backend reads or writes this.
 - `Asset` (`domain/asset.py`) — the generative pipeline side. A typed,
   content-addressed envelope (`kind`, `content_path`, `parent_ids`,
-  `metadata`) that every `generate`/`segment`/`depth` command reads and
-  writes, cached by `FilesystemAssetCache`.
+  `metadata`) that every `generate`/`segment`/`depth`/`mesh`/`tools`
+  command reads and writes, cached by `FilesystemAssetCache`.
 
 `ports/` defines the `Protocol` interfaces (`SplatReader`/`SplatWriter`,
 `ReconstructionBackend`, `ImageGenerationBackend`, `SegmentationBackend`,
-`DepthEstimationBackend`, `ModelSource`, `Compressor`); `adapters/`
-implements them per runtime; `registry/` is the entire dependency-wiring
+`DepthEstimationBackend`, `MeshPredictionBackend`, `MeshExporter`,
+`ModelSource`, `Compressor`); `adapters/` implements them per runtime;
+`registry/` is the entire dependency-wiring
 layer — plain dict catalogs, no framework. `cli/` is a thin Typer
 presentation layer that resolves adapters through `registry/wiring.py` and
-never imports a concrete adapter directly.
+never imports a concrete adapter directly. `splat tools` operators skip
+this entirely — no port, no registry, no `--model` — since a deterministic
+function has nothing to swap; `application/tools/` holds the plain
+functions directly.
 
 ## Development
 
