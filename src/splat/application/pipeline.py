@@ -1,5 +1,5 @@
 """Cache-aware orchestration for the generative pipeline stages
-(generate/segment/depth/...). Each `run_*` function computes a deterministic
+(diffuse/segment/depth/...). Each `run_*` function computes a deterministic
 cache key from its inputs, short-circuits on a cache hit, and otherwise runs
 the plain use case and stores the result — this is what makes
 `stage -> stage -> stage` chains memoize instead of recomputing on rerun.
@@ -16,7 +16,7 @@ import trimesh
 from PIL import Image
 
 from splat.application.depth import EstimateDepthUseCase
-from splat.application.generate import GenerateUseCase
+from splat.application.diffuse import DiffuseUseCase
 from splat.application.mesh import PredictMeshUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
@@ -25,7 +25,7 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Shape3D
 from splat.ports.asset_cache import AssetCache
 from splat.ports.depth import DepthEstimationBackend
-from splat.ports.generation import ImageGenerationBackend
+from splat.ports.diffusion import DiffusionBackend
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.segmentation import SegmentationBackend
 
@@ -41,8 +41,8 @@ def compute_cache_key(
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
-def run_generate(
-    backend: ImageGenerationBackend,
+def run_diffuse(
+    backend: DiffusionBackend,
     cache: AssetCache,
     *,
     model_name: str,
@@ -50,14 +50,14 @@ def run_generate(
     params: dict,
 ) -> Asset:
     cache_key = compute_cache_key(
-        stage="generate", model=model_name, params={"prompt": prompt, **params}
+        stage="diffuse", model=model_name, params={"prompt": prompt, **params}
     )
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir) / "generated.png"
-        GenerateUseCase(backend).execute(prompt, output_path=tmp_path, **params)
+        tmp_path = Path(tmp_dir) / "diffused.png"
+        DiffuseUseCase(backend).execute(prompt, output_path=tmp_path, **params)
         content_bytes = tmp_path.read_bytes()
 
     return cache.put(
@@ -67,7 +67,7 @@ def run_generate(
         ext="png",
         metadata={"prompt": prompt, **params},
         parent_ids=[],
-        created_by=f"generate:{model_name}",
+        created_by=f"diffuse:{model_name}",
     )
 
 

@@ -14,7 +14,7 @@ Two halves, one architecture:
 
 - **Splat file tooling** — convert, inspect, validate, and compress
   `.ply`/`.splat` Gaussian Splat files.
-- **Generative pipeline** — `generate → segment → depth → mesh → …` turns a
+- **Generative pipeline** — `diffuse → segment → depth → mesh → …` turns a
   text prompt into an image, cuts a subject out as an RGBA "sticker",
   estimates its depth, and predicts a mesh from it. Each stage caches its
   output as an `Asset` and can read the previous stage's output directly,
@@ -23,14 +23,14 @@ Two halves, one architecture:
 
 Both halves are ports & adapters: a command talks to a `Protocol` port, and
 a *runtime* (`mlx`, `coreml`, or `torch`) provides the adapter. The point of
-splitting runtime from port is that adapters chain — a CoreML `generate`
+splitting runtime from port is that adapters chain — a CoreML `diffuse`
 can feed an MLX `segment`, or vice versa.
 
 Sitting alongside that pipeline is **`splat tools`** — deterministic,
 non-ML operators that compose between the stochastic ML stages via the
 same `Asset`/cache/pipe contract, but carry none of the swappable-backend
 machinery (no `Protocol` port, no model catalog, no license) since there's
-nothing to pick between. `generate`/`segment`/`depth`/`mesh` all imply
+nothing to pick between. `diffuse`/`segment`/`depth`/`mesh` all imply
 "pick a backend, get non-deterministic output"; a `tools` command is
 always the same pure function.
 
@@ -44,7 +44,7 @@ splat info scene.ply
 splat validate scene.ply --strict
 
 # generative pipeline
-splat generate "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
+splat diffuse "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
 splat segment robot.png --model sam-mlx -o stickers/ --max-stickers 5
 splat depth stickers/sticker_000.png --model depth-pro -o depth.png
 splat mesh stickers/sticker_000.png -o sticker.glb   # not yet implemented, see below
@@ -53,7 +53,7 @@ splat mesh stickers/sticker_000.png -o sticker.glb   # not yet implemented, see 
 splat depth stickers/sticker_000.png | splat tools displace.height - -o sticker.glb
 
 # chained via Unix pipes — same pipeline, one line
-splat generate "a small red toy robot" | splat segment - | splat depth - \
+splat diffuse "a small red toy robot" | splat segment - | splat depth - \
   | splat tools displace.height - -o robot.glb
 ```
 
@@ -78,7 +78,7 @@ uv sync
 
 | Command | Does | Key options |
 |---|---|---|
-| `generate PROMPT` | Text → image | `--model sdxl-turbo-mlx\|sd21-coreml`, `--negative`, `--steps`, `--seed`, `-o FILE` |
+| `diffuse PROMPT` | Text → image | `--model sdxl-turbo-mlx\|sd21-coreml`, `--negative`, `--steps`, `--seed`, `-o FILE` |
 | `segment INPUT` | Image → RGBA sticker cutouts | `--model sam-mlx\|sam2-coreml`, `--max-stickers`, `-o DIR` |
 | `depth INPUT` | Image → per-pixel metric depth | `--model depth-pro`, `-o FILE` (normalized preview PNG) |
 | `mesh INPUT` | Image → mesh, via a learned model | not yet implemented, stubbed intentionally; `--model triposr`, `--device`, `-o FILE` |
@@ -113,8 +113,8 @@ a plain file alongside the cache entry; it never replaces caching.
 
 | Model | Task | Runtime | License |
 |---|---|---|---|
-| `sdxl-turbo-mlx` | generate | MLX | StabilityAI-NC-Community (non-commercial) |
-| `sd21-coreml` | generate | CoreML | OpenRAIL-M |
+| `sdxl-turbo-mlx` | diffuse | MLX | StabilityAI-NC-Community (non-commercial) |
+| `sd21-coreml` | diffuse | CoreML | OpenRAIL-M |
 | `sam-mlx` | segment | MLX | Apache-2.0 |
 | `sam2-coreml` | segment | CoreML | Apache-2.0 |
 | `depth-pro` | depth | PyTorch/MPS | Apple-ASCL |
@@ -157,7 +157,7 @@ as they run. Override any of the three via the matching env var (set in
 `mise.toml`'s `[env]`, or a gitignored `mise.local.toml` for `HF_TOKEN`).
 
 Every command's `--model`/`--device`/parameter flags also fall back to a
-`SPLAT_<COMMAND>_<PARAM>` env var (e.g. `SPLAT_GENERATE_MODEL`,
+`SPLAT_<COMMAND>_<PARAM>` env var (e.g. `SPLAT_DIFFUSE_MODEL`,
 `SPLAT_SEGMENT_DEVICE`) before their built-in default — set globally via
 shell `export`, or per-project via `mise.toml`'s `[env]`. Precedence:
 CLI flag > `os.environ` > `mise env --json` (queried lazily when the var
@@ -173,11 +173,11 @@ of one converter per format/model pair:
   format reader/writer and reconstruction backend reads or writes this.
 - `Asset` (`domain/asset.py`) — the generative pipeline side. A typed,
   content-addressed envelope (`kind`, `content_path`, `parent_ids`,
-  `metadata`) that every `generate`/`segment`/`depth`/`mesh`/`tools`
+  `metadata`) that every `diffuse`/`segment`/`depth`/`mesh`/`tools`
   command reads and writes, cached by `FilesystemAssetCache`.
 
 `ports/` defines the `Protocol` interfaces (`SplatReader`/`SplatWriter`,
-`ReconstructionBackend`, `ImageGenerationBackend`, `SegmentationBackend`,
+`ReconstructionBackend`, `DiffusionBackend`, `SegmentationBackend`,
 `DepthEstimationBackend`, `MeshPredictionBackend`, `MeshExporter`,
 `ModelSource`, `Compressor`); `adapters/` implements them per runtime;
 `registry/` is the entire dependency-wiring

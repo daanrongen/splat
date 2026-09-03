@@ -8,7 +8,7 @@ from pathlib import Path
 from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
 from splat.ports.depth import DepthEstimationBackend
-from splat.ports.generation import ImageGenerationBackend
+from splat.ports.diffusion import DiffusionBackend
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
@@ -61,15 +61,15 @@ def model_license(name: str) -> ModelLicense:
     return GAUSSIAN_CATALOG[name].license
 
 
-def get_generation_backend(name: str, *, device: str = "auto") -> ImageGenerationBackend:
-    from splat.registry.generation import GENERATION_CATALOG
+def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBackend:
+    from splat.registry.diffusion import DIFFUSION_CATALOG
 
     try:
-        descriptor = GENERATION_CATALOG[name]
+        descriptor = DIFFUSION_CATALOG[name]
     except KeyError as exc:
-        available = ", ".join(sorted(GENERATION_CATALOG))
+        available = ", ".join(sorted(DIFFUSION_CATALOG))
         raise UnsupportedFormat(
-            f"Unknown generation model {name!r}. Available: {available}"
+            f"Unknown diffusion model {name!r}. Available: {available}"
         ) from exc
 
     return descriptor.backend_cls(

@@ -9,7 +9,7 @@ import mlx.core as mx
 import numpy as np
 from PIL import Image
 
-from splat.adapters.generation._vendor.mlx_stable_diffusion import (
+from splat.adapters.diffusion._vendor.mlx_stable_diffusion import (
     StableDiffusion,
     StableDiffusionXL,
 )
@@ -38,7 +38,7 @@ class MLXStableDiffusionBackend:
             self._model = cls(self._hf_repo_id, float16=True)
         return self._model
 
-    def generate(
+    def diffuse(
         self,
         prompt: str,
         *,

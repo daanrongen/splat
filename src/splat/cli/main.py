@@ -14,9 +14,9 @@ import typer
 from splat.cli.compress import compress
 from splat.cli.convert import convert
 from splat.cli.depth import depth
+from splat.cli.diffuse import diffuse
 from splat.cli.env import env
 from splat.cli.gaussian import gaussian
-from splat.cli.generate import generate
 from splat.cli.info import info
 from splat.cli.mesh import mesh
 from splat.cli.models import models_app
@@ -36,7 +36,7 @@ app.command("validate")(validate)
 app.command("compress")(compress)
 app.command("mesh")(mesh)
 app.command("train")(train)
-app.command("generate")(generate)
+app.command("diffuse")(diffuse)
 app.command("segment")(segment)
 app.command("depth")(depth)
 app.command("gaussian")(gaussian)

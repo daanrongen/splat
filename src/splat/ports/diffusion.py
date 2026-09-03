@@ -4,11 +4,11 @@ from typing import Protocol
 from splat.domain.value_objects import ModelLicense
 
 
-class ImageGenerationBackend(Protocol):
+class DiffusionBackend(Protocol):
     name: str
     license: ModelLicense
 
-    def generate(
+    def diffuse(
         self,
         prompt: str,
         *,

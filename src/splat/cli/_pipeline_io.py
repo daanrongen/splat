@@ -1,5 +1,5 @@
 """The universal input/output contract shared by every generative-pipeline
-command (generate/segment/depth/...): resolve INPUT from a file path,
+command (diffuse/segment/depth/...): resolve INPUT from a file path,
 `@<asset-id>`, or piped NDJSON asset records; report OUTPUT as NDJSON when
 piped, or a human summary in an interactive terminal.
 """
