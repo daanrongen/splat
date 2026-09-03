@@ -27,3 +27,16 @@ class DepthMap:
     focal_length_px: float | None = None
     field_of_view_deg: float | None = None
     metadata: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
+class Shape3D:
+    """A predicted 3D mesh: vertex positions and triangle indices, plus an
+    optional per-vertex UV + source texture for the surface it was lifted
+    from. Not yet a GaussianCloud — see `AssetKind.SHAPE_3D`."""
+
+    vertices: np.ndarray  # (V, 3) float32, meters
+    faces: np.ndarray  # (F, 3) int64, indices into vertices
+    uv: np.ndarray | None = None  # (V, 2) float32, [0, 1]
+    texture: np.ndarray | None = None  # (H, W, 3) uint8 RGB
+    metadata: dict[str, object] = field(default_factory=dict)

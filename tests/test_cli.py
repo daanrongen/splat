@@ -56,13 +56,13 @@ def test_compress(tmp_path: Path, synthetic_cloud) -> None:
 
 
 def test_mesh_stub_reports_not_implemented(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["mesh", str(tmp_path / "a.ply"), str(tmp_path / "b.obj")])
+    result = runner.invoke(app, ["mesh", str(tmp_path / "a.ply"), "-o", str(tmp_path / "b.obj")])
     assert result.exit_code == 1
     assert "not yet implemented" in result.output
 
 
 def test_export_alias_reports_not_implemented(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["export", str(tmp_path / "a.ply"), str(tmp_path / "b.obj")])
+    result = runner.invoke(app, ["export", str(tmp_path / "a.ply"), "-o", str(tmp_path / "b.obj")])
     assert result.exit_code == 1
     assert "not yet implemented" in result.output
 

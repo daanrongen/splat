@@ -5,12 +5,20 @@ from splat.ports.model_source import ModelSource
 from splat.registry.depth import DEPTH_CATALOG
 from splat.registry.gaussian import GAUSSIAN_CATALOG
 from splat.registry.generation import GENERATION_CATALOG
+from splat.registry.mesh import MESH_CATALOG, MESH_PREDICTION_CATALOG
 from splat.registry.segmentation import SEGMENTATION_CATALOG
 
 
 def _all_catalogs() -> dict[str, Any]:
     merged: dict[str, Any] = {}
-    for catalog in (GAUSSIAN_CATALOG, GENERATION_CATALOG, SEGMENTATION_CATALOG, DEPTH_CATALOG):
+    for catalog in (
+        GAUSSIAN_CATALOG,
+        GENERATION_CATALOG,
+        SEGMENTATION_CATALOG,
+        DEPTH_CATALOG,
+        MESH_CATALOG,
+        MESH_PREDICTION_CATALOG,
+    ):
         merged.update(catalog)
     return merged
 

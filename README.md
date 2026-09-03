@@ -14,12 +14,12 @@ Two halves, one architecture:
 
 - **Splat file tooling** — convert, inspect, validate, and compress
   `.ply`/`.splat` Gaussian Splat files.
-- **Generative pipeline** — `generate → segment → depth → …` turns a text
-  prompt into an image, cuts a subject out as an RGBA "sticker", and
-  estimates its depth. Each stage caches its output as an `Asset` and can
-  read the previous stage's output directly, by cache ID, or piped from
-  another `splat` command — the same "everything is one universal object"
-  idea `pandoc` uses for documents.
+- **Generative pipeline** — `generate → segment → depth → mesh → …` turns a
+  text prompt into an image, cuts a subject out as an RGBA "sticker",
+  estimates its depth, and lifts it into a textured mesh. Each stage caches
+  its output as an `Asset` and can read the previous stage's output
+  directly, by cache ID, or piped from another `splat` command — the same
+  "everything is one universal object" idea `pandoc` uses for documents.
 
 Both halves are ports & adapters: a command talks to a `Protocol` port, and
 a *runtime* (`mlx`, `coreml`, or `torch`) provides the adapter. The point of
@@ -39,9 +39,10 @@ splat validate scene.ply --strict
 splat generate "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
 splat segment robot.png --model sam-mlx -o stickers/ --max-stickers 5
 splat depth stickers/sticker_000.png --model depth-pro -o depth.png
+splat mesh stickers/sticker_000.png -o sticker.glb   # runs depth-pro internally if needed
 
 # chained via Unix pipes — same pipeline, one line
-splat generate "a small red toy robot" | splat segment - | splat depth -
+splat generate "a small red toy robot" | splat segment - | splat depth - | splat mesh - -o robot.glb
 ```
 
 ## Installation
@@ -68,19 +69,21 @@ uv sync
 | `generate PROMPT` | Text → image | `--model sdxl-turbo-mlx\|sd21-coreml`, `--negative`, `--steps`, `--seed`, `-o FILE` |
 | `segment INPUT` | Image → RGBA sticker cutouts | `--model sam-mlx\|sam2-coreml`, `--max-stickers`, `-o DIR` |
 | `depth INPUT` | Image → per-pixel metric depth | `--model depth-pro`, `-o FILE` (normalized preview PNG) |
+| `mesh INPUT` | Image(+depth) → textured mesh; or splat → mesh export (not yet implemented) | `--model depth-heightfield`, `--depth-model`, `-t/--to glb\|obj\|ply`, `-o FILE` |
 | `gaussian INPUT...` | Image(s) → Gaussian splat (feed-forward reconstruction) | `--model mvsplat`, `--device`, `-o FILE` |
 | `convert INPUT... [OUTPUT]` | Splat↔splat format conversion | `-f/--from`, `-t/--to`, `-o FILE` |
 | `info PATH` | Point count, SH degree, bounding box | |
 | `validate PATH` | Check domain invariants, exit non-zero on failure | `--strict` |
 | `compress INPUT OUTPUT` | Prune + quantize for delivery | `--profile web-delivery\|archival` |
-| `mesh INPUT OUTPUT` | Splat → mesh | not yet implemented, stubbed intentionally; `--model`, `--device` |
 | `train DATASET_DIR` | Per-scene optimization | not yet implemented, stubbed intentionally |
 | `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
 | `env` | Show every `SPLAT_*` default and where it resolved from | |
 
-`INPUT` on `segment`/`depth` accepts a file path, `@<asset-id>` to address
-a cached asset directly, or `-` to read piped NDJSON asset records from an
-earlier `splat` command.
+`INPUT` on `segment`/`depth`/`mesh` accepts a file path, `@<asset-id>` to
+address a cached asset directly, or `-` to read piped NDJSON asset records
+from an earlier `splat` command — except a path with a recognized splat
+extension (`.ply`/`.splat`), which routes `mesh` to the (not yet
+implemented) gaussian → mesh export instead.
 
 ### Piping contract
 
@@ -99,6 +102,7 @@ a plain file alongside the cache entry; it never replaces caching.
 | `sam-mlx` | segment | MLX | Apache-2.0 |
 | `sam2-coreml` | segment | CoreML | Apache-2.0 |
 | `depth-pro` | depth | PyTorch/MPS | Apple-ASCL |
+| `depth-heightfield` | mesh | geometry (no model weights) | MIT |
 | `mvsplat` | image → splat | PyTorch/MPS | MIT (stub — see below) |
 
 `splat models info <name>` prints a model's exact source repo and license.
@@ -151,8 +155,9 @@ of one converter per format/model pair:
 
 `ports/` defines the `Protocol` interfaces (`SplatReader`/`SplatWriter`,
 `ReconstructionBackend`, `ImageGenerationBackend`, `SegmentationBackend`,
-`DepthEstimationBackend`, `ModelSource`, `Compressor`); `adapters/`
-implements them per runtime; `registry/` is the entire dependency-wiring
+`DepthEstimationBackend`, `MeshPredictionBackend`, `MeshExporter`,
+`ModelSource`, `Compressor`); `adapters/` implements them per runtime;
+`registry/` is the entire dependency-wiring
 layer — plain dict catalogs, no framework. `cli/` is a thin Typer
 presentation layer that resolves adapters through `registry/wiring.py` and
 never imports a concrete adapter directly.
