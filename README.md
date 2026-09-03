@@ -76,6 +76,7 @@ uv sync
 | `mesh INPUT OUTPUT` | Splat → mesh | not yet implemented, stubbed intentionally; `--model`, `--device` |
 | `train DATASET_DIR` | Per-scene optimization | not yet implemented, stubbed intentionally |
 | `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
+| `env` | Show every `SPLAT_*` default and where it resolved from | |
 
 `INPUT` on `segment`/`depth` accepts a file path, `@<asset-id>` to address
 a cached asset directly, or `-` to read piped NDJSON asset records from an
@@ -127,6 +128,14 @@ $XDG_CACHE_HOME/splat/        (defaults to ~/.cache/splat)
 cache explicitly; pipeline commands populate the asset cache automatically
 as they run. Override any of the three via the matching env var (set in
 `mise.toml`'s `[env]`, or a gitignored `mise.local.toml` for `HF_TOKEN`).
+
+Every command's `--model`/`--device`/parameter flags also fall back to a
+`SPLAT_<COMMAND>_<PARAM>` env var (e.g. `SPLAT_GENERATE_MODEL`,
+`SPLAT_SEGMENT_DEVICE`) before their built-in default — set globally via
+shell `export`, or per-project via `mise.toml`'s `[env]`. Precedence:
+CLI flag > `os.environ` > `mise env --json` (queried lazily when the var
+isn't in `os.environ` and `mise` is on `PATH`) > built-in default. Run
+`splat env` to see every setting's resolved value and source.
 
 ## Architecture
 
