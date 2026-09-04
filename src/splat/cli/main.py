@@ -11,6 +11,7 @@ os.environ.setdefault("SPLAT_ASSET_CACHE_DIR", str(asset_cache_dir()))
 
 import typer
 
+from splat.cli.caption import caption
 from splat.cli.depth import depth
 from splat.cli.diffuse import diffuse
 from splat.cli.env import env
@@ -35,6 +36,7 @@ app = typer.Typer(
 )
 
 app.command("diffuse")(diffuse)
+app.command("caption")(caption)
 app.command("segment")(segment)
 app.command("depth")(depth)
 app.command("upscale")(upscale)

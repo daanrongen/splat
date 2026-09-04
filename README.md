@@ -1,10 +1,10 @@
 # splat
 
-`splat` is a local 3D image-space toolkit for generating, segmenting, upscaling, estimating depth, predicting meshes, reconstructing Gaussian splats, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, PyTorch/MPS, and OpenCV-backed image I/O, and it downloads model weights on demand instead of shipping them in the package.
+`splat` is a local 3D image-space toolkit for generating, captioning, segmenting, upscaling, estimating depth, predicting meshes, reconstructing Gaussian splats, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, PyTorch/MPS, and OpenCV-backed image I/O, and it downloads model weights on demand instead of shipping them in the package.
 
 The CLI is split by behavior:
 
-- **Model-backed stages** live at the top level: `diffuse`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
+- **Model-backed stages** live at the top level: `diffuse`, `caption`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
 - **Deterministic tools** live under `splat tools`: `convert`, `compress`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
 - **Inspection, services, and administration** stay separate: `info`, `validate`, `models`, `http`, `mcp`, and `env`.
 
@@ -54,6 +54,16 @@ splat segment robot.png --model sam-mlx --max-stickers 5 -o stickers/
 ```
 
 Key options: `--model sam-mlx|sam2-coreml`, `--max-stickers`, `--device`, `-o/--output`.
+
+### caption
+
+`splat caption` turns an image or sticker into a UTF-8 text caption asset.
+
+```sh
+splat diffuse "dog" | splat caption - --model fastvlm-0.5b -o dog.txt
+```
+
+Key options: `--model fastvlm-0.5b`, `--prompt`, `--max-tokens`, `--temperature`, `--device`, `-o/--output`. FastVLM weights are cataloged as research/non-commercial.
 
 ### depth
 
@@ -165,6 +175,7 @@ splat validate scene.ply --strict
 Pipeline commands accept a file path, `@<asset-id>`, or `-` for NDJSON records from stdin when the command works with assets. Every asset-producing stage writes to the content-addressed cache and prints NDJSON when stdout is piped.
 
 ```sh
+splat diffuse "dog" | splat caption - -o dog.txt
 splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth - | splat tools displace.height - -o test.obj
 ```
 
@@ -182,6 +193,7 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | Route | CLI surface | Response |
 |---|---|---|
 | `POST /diffuse` | `splat diffuse` | image bytes |
+| `POST /caption` | `splat caption` | text bytes |
 | `POST /segment` | `splat segment` | sticker asset manifest |
 | `POST /depth` | `splat depth` | depth `.npy` bytes |
 | `POST /upscale` | `splat upscale` | image bytes |
@@ -212,7 +224,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`.
 
 ```sh
 splat mcp

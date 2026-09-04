@@ -10,6 +10,7 @@ from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
 from splat.env import resolve as resolve_env
 from splat.ports.asset_cache import AssetCache
+from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 
 if TYPE_CHECKING:
@@ -145,6 +146,20 @@ def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBack
     except KeyError as exc:
         available = ", ".join(sorted(DEPTH_CATALOG))
         raise UnsupportedFormat(f"Unknown depth model {name!r}. Available: {available}") from exc
+
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
+    )
+
+
+def get_caption_backend(name: str, *, device: str = "auto") -> CaptioningBackend:
+    from splat.registry.caption import CAPTION_CATALOG
+
+    try:
+        descriptor = CAPTION_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(CAPTION_CATALOG))
+        raise UnsupportedFormat(f"Unknown caption model {name!r}. Available: {available}") from exc
 
     return descriptor.backend_cls(
         hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device

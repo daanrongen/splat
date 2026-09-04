@@ -8,6 +8,7 @@ from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Sticker
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
+from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.gaussian import GaussianRequest
@@ -37,6 +38,14 @@ class FakeDepthBackend:
 
     def estimate(self, image_path, **params) -> DepthMap:
         return DepthMap(depth=np.ones((2, 2), dtype=np.float32), focal_length_px=10.0, metadata={})
+
+
+class FakeCaptionBackend:
+    name = "fake-captioner"
+    license = MIT
+
+    def caption(self, image_path: Path, *, prompt: str, max_tokens: int, temperature: float):
+        return f"{prompt}: small scene"
 
 
 class FakeSegmentationBackend:
@@ -117,6 +126,22 @@ def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote
     assert len(results) == 1
     assert results[0].kind == AssetKind.DEPTH_MAP
     assert results[0].parent_ids == [asset.id]
+
+
+def test_caption_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
+    cache = get_asset_cache()
+    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+
+    results = remote_client.caption(
+        CaptionRequest(inputs=[asset], model="fake-captioner", prompt="Look")
+    )
+
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.CAPTION
+    assert results[0].parent_ids == [asset.id]
+    assert results[0].content_path.read_text(encoding="utf-8") == "Look: small scene"
 
 
 def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):

@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 import trimesh
 
+from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
 from splat.application.mesh import PredictMeshUseCase
@@ -25,6 +26,7 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Shape3D
 from splat.image_io import encode_png
 from splat.ports.asset_cache import AssetCache
+from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.mesh import MeshPredictionBackend
@@ -149,6 +151,34 @@ def run_depth(
         },
         parent_ids=[input_asset.id],
         created_by=f"depth:{model_name}",
+    )
+
+
+def run_caption(
+    backend: CaptioningBackend,
+    cache: AssetCache,
+    *,
+    model_name: str,
+    input_asset: Asset,
+    params: dict,
+) -> Asset:
+    cache_key = compute_cache_key(
+        stage="caption", model=model_name, params=params, parent_ids=(input_asset.id,)
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    text = CaptionUseCase(backend).execute(input_asset.content_path, **params).strip()
+    content_bytes = text.encode("utf-8")
+
+    return cache.put(
+        cache_key,
+        kind=AssetKind.CAPTION,
+        content_bytes=content_bytes,
+        ext="txt",
+        metadata={**params, "text_length": len(text)},
+        parent_ids=[input_asset.id],
+        created_by=f"caption:{model_name}",
     )
 
 

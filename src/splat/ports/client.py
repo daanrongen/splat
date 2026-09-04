@@ -23,6 +23,7 @@ from typing import Protocol
 from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset
 from splat.domain.gaussians import GaussianCloud
+from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.gaussian import GaussianRequest, GaussianResult
@@ -71,6 +72,8 @@ class SplatClient(Protocol):
     def diffuse(self, request: DiffuseRequest) -> DiffuseResult: ...
 
     def segment(self, request: SegmentRequest) -> list[Asset]: ...
+
+    def caption(self, request: CaptionRequest) -> list[Asset]: ...
 
     def depth(self, request: DepthRequest) -> list[Asset]: ...
 

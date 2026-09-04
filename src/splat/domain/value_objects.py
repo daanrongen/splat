@@ -56,6 +56,11 @@ APPLE_ASCL = ModelLicense(
     is_commercial=True,
     notes="Apple Sample Code License — review specific terms before commercial redistribution.",
 )
+APPLE_AMLR = ModelLicense(
+    spdx_id="Apple-ML-Research",
+    is_commercial=False,
+    notes="Apple Machine Learning Research Model License — research use only.",
+)
 
 
 # --- Camera / pose ---------------------------------------------------------

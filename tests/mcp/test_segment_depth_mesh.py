@@ -27,6 +27,14 @@ class FakeDepthBackend:
         )
 
 
+class FakeCaptionBackend:
+    name = "fake-captioner"
+    license = MIT
+
+    def caption(self, image_path, *, prompt: str, max_tokens: int, temperature: float):
+        return f"{prompt}: small scene"
+
+
 class FakeMeshBackend:
     name = "triposr"
     license = MIT
@@ -71,6 +79,21 @@ def test_depth_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool
     result = call_tool("depth", image=_sample_image(tmp_path))
 
     assert result.is_error is False
+    assert any(block.type == "resource" for block in result.content)
+
+
+def test_caption_returns_text_and_resource_content(mocker, tmp_path, monkeypatch, call_tool):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
+
+    result = call_tool(
+        "caption", image=_sample_image(tmp_path), model="fake-captioner", prompt="Look"
+    )
+
+    assert result.is_error is False
+    assert any(
+        block.type == "text" and block.text == "Look: small scene" for block in result.content
+    )
     assert any(block.type == "resource" for block in result.content)
 
 
