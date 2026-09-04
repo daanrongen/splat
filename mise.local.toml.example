@@ -1,5 +1,2 @@
 # Copy to mise.local.toml (gitignored) and fill in real values.
 # mise auto-merges this over mise.toml — do not commit the real file.
-
-[env]
-HF_TOKEN = "hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
