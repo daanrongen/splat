@@ -182,8 +182,21 @@ command (`diffuse`, `segment`, `depth`, `mesh`, `gaussian`, `convert`,
 Image/asset arguments accept a local file path or `@<asset-id>`, same as
 the CLI's own addressing — chain tool calls the way you'd pipe CLI
 commands (call `depth`, then feed its returned asset id into
-`tools_displace_height`). Like `splat http`, this always executes locally
-and never consults `SPLAT_URL`.
+`tools_displace_height`).
+
+`splat mcp` is always a local stdio process — that's how Claude Desktop/
+Claude Code spawn it — but every tool except `tools_displace_height`
+(outside `SplatClient`'s contract, same exception as the CLI) honors
+`SPLAT_URL` exactly like the CLI does, so its tool calls can run on a
+remote `splat http` server:
+
+```
+# on macbook (has the models):
+SPLAT_HOST=0.0.0.0:8000 splat http
+
+# wherever Claude Code runs:
+claude mcp add splat -e SPLAT_URL=http://macbook:8000 -- splat mcp
+```
 
 ## Model catalog
 

@@ -2,8 +2,9 @@ from pathlib import Path
 
 import mcp.types as types
 
-from splat.handlers.convert import ConvertRequest, handle
+from splat.handlers.convert import ConvertRequest
 from splat.mcp._content import text_content
+from splat.registry.wiring import get_client
 
 
 def convert(
@@ -13,7 +14,7 @@ def convert(
     to_format: str | None = None,
 ) -> list[types.ContentBlock]:
     """Convert between splat file formats."""
-    result = handle(
+    result = get_client().convert(
         ConvertRequest(
             input_path=Path(input_path),
             output_path=Path(output_path),

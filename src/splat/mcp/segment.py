@@ -1,10 +1,10 @@
 import mcp.types as types
 
 from splat.domain.asset import AssetKind
-from splat.handlers.segment import SegmentRequest, handle
+from splat.handlers.segment import SegmentRequest
 from splat.mcp._content import image_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_asset_cache, get_client
 
 
 def segment(
@@ -16,7 +16,7 @@ def segment(
     """Segment an image (path or @<asset-id>) into RGBA sticker cutouts."""
     cache = get_asset_cache()
     asset = resolve_input_asset(image, cache, default_kind=AssetKind.IMAGE)
-    stickers = handle(
+    stickers = get_client().segment(
         SegmentRequest(inputs=[asset], model=model, max_stickers=max_stickers, device=device)
     )
     content: list[types.ContentBlock] = [
