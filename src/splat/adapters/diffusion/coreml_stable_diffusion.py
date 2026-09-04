@@ -19,7 +19,7 @@ import numpy as np
 from huggingface_hub import snapshot_download
 from PIL import Image
 
-from splat.adapters.generation._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
+from splat.adapters.diffusion._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
 from splat.domain.value_objects import ModelLicense
 from splat.paths import model_cache_dir
 
@@ -122,7 +122,7 @@ class CoreMLStableDiffusionBackend:
         hidden = out["last_hidden_state"]  # (1, 77, 1024)
         return hidden.transpose(0, 2, 1)[:, :, None, :]  # (1, 1024, 1, 77) — unet's expected layout
 
-    def generate(
+    def diffuse(
         self,
         prompt: str,
         *,

@@ -1,5 +1,5 @@
 """The universal envelope that flows through the generative pipeline
-(generate -> segment -> depth -> mesh -> gaussian), the same role
+(diffuse -> segment -> depth -> mesh -> gaussian), the same role
 GaussianCloud plays for format conversion: one canonical shape every stage
 consumes and produces, so stages chain without knowing about each other.
 """

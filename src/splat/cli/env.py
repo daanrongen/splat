@@ -19,19 +19,17 @@ class _Setting:
 
 def _settings() -> list[_Setting]:
     from splat.registry.depth import DEPTH_CATALOG
+    from splat.registry.diffusion import DIFFUSION_CATALOG
     from splat.registry.gaussian import GAUSSIAN_CATALOG
-    from splat.registry.generation import GENERATION_CATALOG
     from splat.registry.mesh import MESH_PREDICTION_CATALOG
     from splat.registry.segmentation import SEGMENTATION_CATALOG
 
     return [
-        _Setting(
-            "generate", "--model", "SPLAT_GENERATE_MODEL", "sdxl-turbo-mlx", GENERATION_CATALOG
-        ),
-        _Setting("generate", "--device", "SPLAT_GENERATE_DEVICE", "auto"),
-        _Setting("generate", "--steps", "SPLAT_GENERATE_STEPS", ""),
-        _Setting("generate", "--seed", "SPLAT_GENERATE_SEED", ""),
-        _Setting("generate", "--negative", "SPLAT_GENERATE_NEGATIVE", ""),
+        _Setting("diffuse", "--model", "SPLAT_DIFFUSE_MODEL", "sdxl-turbo-mlx", DIFFUSION_CATALOG),
+        _Setting("diffuse", "--device", "SPLAT_DIFFUSE_DEVICE", "auto"),
+        _Setting("diffuse", "--steps", "SPLAT_DIFFUSE_STEPS", ""),
+        _Setting("diffuse", "--seed", "SPLAT_DIFFUSE_SEED", ""),
+        _Setting("diffuse", "--negative", "SPLAT_DIFFUSE_NEGATIVE", ""),
         _Setting("segment", "--model", "SPLAT_SEGMENT_MODEL", "sam-mlx", SEGMENTATION_CATALOG),
         _Setting("segment", "--device", "SPLAT_SEGMENT_DEVICE", "auto"),
         _Setting("segment", "--max-stickers", "SPLAT_SEGMENT_MAX_STICKERS", "20"),

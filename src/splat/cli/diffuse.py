@@ -3,14 +3,14 @@ from pathlib import Path
 import typer
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.application.pipeline import run_generate
+from splat.application.pipeline import run_diffuse
 from splat.cli._console import console, error, warn
 from splat.cli._pipeline_io import report
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_generation_backend
+from splat.registry.wiring import get_diffusion_backend
 
 
-def generate(
+def diffuse(
     prompt: str = typer.Argument(..., help="Text prompt to generate an image from."),
     output: Path | None = typer.Option(None, "-o", "--output", help="Also export to this path."),
     model: str = typer.Option("sdxl-turbo-mlx", "--model"),
@@ -21,13 +21,13 @@ def generate(
     seed: int | None = typer.Option(None, "--seed"),
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
-    """Generate an image from a text prompt (cached; the pipeline's origin stage)."""
+    """Diffuse an image from a text prompt (cached; the pipeline's origin stage)."""
     cache = FilesystemAssetCache()
     try:
-        backend = get_generation_backend(model, device=device)
+        backend = get_diffusion_backend(model, device=device)
         if not backend.license.is_commercial:
             warn(f"{model} license: {backend.license}")
-        asset = run_generate(
+        asset = run_diffuse(
             backend,
             cache,
             model_name=model,
@@ -44,6 +44,6 @@ def generate(
     report(
         [asset],
         lambda assets: console.print(
-            f"[green]generated[/green] {assets[0].id} ({assets[0].content_path})"
+            f"[green]diffused[/green] {assets[0].id} ({assets[0].content_path})"
         ),
     )

@@ -2,28 +2,28 @@ from dataclasses import dataclass
 from typing import Literal
 
 from splat.domain.value_objects import ModelLicense
-from splat.ports.generation import ImageGenerationBackend
+from splat.ports.diffusion import DiffusionBackend
 
 Runtime = Literal["mlx", "coreml", "torch"]
 
 
 @dataclass(frozen=True)
-class GenerationModelDescriptor:
+class DiffusionModelDescriptor:
     name: str
-    backend_cls: type[ImageGenerationBackend]
+    backend_cls: type[DiffusionBackend]
     hf_repo_id: str
     sdxl: bool
     license: ModelLicense
     runtime: Runtime
 
 
-def _build_catalog() -> dict[str, GenerationModelDescriptor]:
-    from splat.adapters.generation.coreml_stable_diffusion import CoreMLStableDiffusionBackend
-    from splat.adapters.generation.mlx_stable_diffusion import MLXStableDiffusionBackend
+def _build_catalog() -> dict[str, DiffusionModelDescriptor]:
+    from splat.adapters.diffusion.coreml_stable_diffusion import CoreMLStableDiffusionBackend
+    from splat.adapters.diffusion.mlx_stable_diffusion import MLXStableDiffusionBackend
     from splat.domain.value_objects import OPENRAIL_M, SAI_NC_COMMUNITY
 
     return {
-        "sdxl-turbo-mlx": GenerationModelDescriptor(
+        "sdxl-turbo-mlx": DiffusionModelDescriptor(
             name="sdxl-turbo-mlx",
             backend_cls=MLXStableDiffusionBackend,
             hf_repo_id="stabilityai/sdxl-turbo",
@@ -31,7 +31,7 @@ def _build_catalog() -> dict[str, GenerationModelDescriptor]:
             license=SAI_NC_COMMUNITY,
             runtime="mlx",
         ),
-        "sd21-coreml": GenerationModelDescriptor(
+        "sd21-coreml": DiffusionModelDescriptor(
             name="sd21-coreml",
             backend_cls=CoreMLStableDiffusionBackend,
             hf_repo_id="apple/coreml-stable-diffusion-2-1-base",
@@ -42,4 +42,4 @@ def _build_catalog() -> dict[str, GenerationModelDescriptor]:
     }
 
 
-GENERATION_CATALOG: dict[str, GenerationModelDescriptor] = _build_catalog()
+DIFFUSION_CATALOG: dict[str, DiffusionModelDescriptor] = _build_catalog()

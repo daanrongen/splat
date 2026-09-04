@@ -3,27 +3,27 @@ from splat.env import resolve, resolve_verbose
 
 
 def test_resolve_prefers_os_environ(monkeypatch):
-    monkeypatch.setenv("SPLAT_GENERATE_MODEL", "from-env")
-    assert resolve("SPLAT_GENERATE_MODEL", "default-value") == "from-env"
+    monkeypatch.setenv("SPLAT_DIFFUSE_MODEL", "from-env")
+    assert resolve("SPLAT_DIFFUSE_MODEL", "default-value") == "from-env"
 
 
 def test_resolve_verbose_reports_env_source(monkeypatch):
-    monkeypatch.setenv("SPLAT_GENERATE_MODEL", "from-env")
-    resolved = resolve_verbose("SPLAT_GENERATE_MODEL", "default-value")
+    monkeypatch.setenv("SPLAT_DIFFUSE_MODEL", "from-env")
+    resolved = resolve_verbose("SPLAT_DIFFUSE_MODEL", "default-value")
     assert resolved == env_module.Resolved("from-env", "env")
 
 
 def test_resolve_falls_back_to_mise(monkeypatch):
-    monkeypatch.delenv("SPLAT_GENERATE_MODEL", raising=False)
-    monkeypatch.setattr(env_module, "_mise_env_cache", {"SPLAT_GENERATE_MODEL": "from-mise"})
-    resolved = resolve_verbose("SPLAT_GENERATE_MODEL", "default-value")
+    monkeypatch.delenv("SPLAT_DIFFUSE_MODEL", raising=False)
+    monkeypatch.setattr(env_module, "_mise_env_cache", {"SPLAT_DIFFUSE_MODEL": "from-mise"})
+    resolved = resolve_verbose("SPLAT_DIFFUSE_MODEL", "default-value")
     assert resolved == env_module.Resolved("from-mise", "mise")
 
 
 def test_resolve_falls_back_to_default(monkeypatch):
-    monkeypatch.delenv("SPLAT_GENERATE_MODEL", raising=False)
+    monkeypatch.delenv("SPLAT_DIFFUSE_MODEL", raising=False)
     monkeypatch.setattr(env_module, "_mise_env_cache", {})
-    resolved = resolve_verbose("SPLAT_GENERATE_MODEL", "default-value")
+    resolved = resolve_verbose("SPLAT_DIFFUSE_MODEL", "default-value")
     assert resolved == env_module.Resolved("default-value", "default")
 
 
