@@ -1,19 +1,14 @@
-"""The seam between a command and "where the work actually runs":
-LocalSplatClient (adapters/client/local.py) calls handlers/*.py in-process;
-RemoteSplatClient (adapters/client/http.py) calls a remote `splat http`
-server instead. Every CLI command goes through registry.wiring.get_client()
-rather than importing handlers/*.py directly, so SPLAT_URL transparently
-redirects execution without any command needing to know which client it got.
+"""The seam between a command and where the work actually runs.
+
+LocalSplatClient calls handlers in-process. RemoteSplatClient calls a remote
+`splat http` server. CLI commands use registry.wiring.get_client(), so
+SPLAT_URL redirects remote-capable execution without changing command code.
 
 Asset-producing methods return real domain objects (Asset, GaussianCloud)
-because their payload — file bytes — is fully transmitted and either
-lands in the local asset cache (asset-producing) or gets written to a
-caller-supplied local path and re-read (gaussian/tools convert/tools compress).
-info/validate/models_* return plain summaries instead of full domain
-objects, because http/'s wire schema for those is intentionally a summary,
-not a full GaussianCloud/catalog-descriptor — this is the "presentation of
-a read" boundary, not something a remote round-trip can reconstruct in
-full, so both clients report through the same reduced shape.
+because their file bytes are transmitted and either land in the local asset
+cache or get written to a caller-supplied local path and re-read. Read-only
+methods return summaries because the HTTP wire schema intentionally exposes
+presentation data, not every internal domain detail.
 
 `splat tools displace.height` isn't part of this contract: `splat http`
 doesn't expose a route for it (out of #13's scope), so it stays wired
@@ -82,9 +77,9 @@ class SplatClient(Protocol):
 
     def gaussian(self, request: GaussianRequest) -> GaussianResult: ...
 
-    def convert(self, request: ConvertRequest) -> ConvertResult: ...
+    def tools_convert(self, request: ConvertRequest) -> ConvertResult: ...
 
-    def compress(self, request: CompressRequest) -> GaussianCloud: ...
+    def tools_compress(self, request: CompressRequest) -> GaussianCloud: ...
 
     def info(self, path: Path) -> InfoSummary: ...
 

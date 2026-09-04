@@ -16,7 +16,7 @@ def compress(
 ) -> None:
     """Prune outliers/low-opacity points and quantize for delivery."""
     try:
-        cloud = get_client().compress(
+        cloud = get_client().tools_compress(
             CompressRequest(input_path=input, output_path=output, profile=profile)
         )
     except (SplatDomainError, ValueError) as exc:

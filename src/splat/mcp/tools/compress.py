@@ -10,7 +10,7 @@ from splat.registry.wiring import get_client
 def compress(
     input_path: str, output_path: str, profile: str = "web-delivery"
 ) -> list[types.ContentBlock]:
-    cloud = get_client().compress(
+    cloud = get_client().tools_compress(
         CompressRequest(input_path=Path(input_path), output_path=Path(output_path), profile=profile)
     )
     return [text_content(f"wrote {output_path} ({cloud.point_count} points)")]
