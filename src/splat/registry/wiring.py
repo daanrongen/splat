@@ -4,11 +4,18 @@ extending it means adding one dict entry and one adapter file.
 """
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
+from splat.env import resolve as resolve_env
 from splat.ports.asset_cache import AssetCache
 from splat.ports.depth import DepthEstimationBackend
+
+if TYPE_CHECKING:
+    # Deferred: splat.ports.client imports handlers/*.py, which imports this
+    # module — a real cycle if resolved at import time rather than lazily.
+    from splat.ports.client import SplatClient
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
@@ -47,6 +54,18 @@ def get_asset_cache() -> AssetCache:
     from splat.adapters.cache.filesystem import FilesystemAssetCache
 
     return FilesystemAssetCache()
+
+
+def get_client() -> "SplatClient":
+    host = resolve_env("SPLAT_HOST", "")
+    if host:
+        from splat.adapters.client.http import RemoteSplatClient
+
+        return RemoteSplatClient(host)
+
+    from splat.adapters.client.local import LocalSplatClient
+
+    return LocalSplatClient()
 
 
 def get_reconstruction_backend(

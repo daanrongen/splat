@@ -6,8 +6,8 @@ from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.handlers.segment import SegmentRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.handlers.segment import SegmentRequest
+from splat.registry.wiring import get_asset_cache, get_client
 
 
 def segment(
@@ -25,7 +25,7 @@ def segment(
     cache = get_asset_cache()
     try:
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
-        all_stickers = handle(
+        all_stickers = get_client().segment(
             SegmentRequest(inputs=inputs, model=model, max_stickers=max_stickers, device=device)
         )
     except SplatDomainError as exc:

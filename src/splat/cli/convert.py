@@ -4,7 +4,8 @@ import typer
 
 from splat.cli._console import console, error, warn
 from splat.domain.errors import SplatDomainError
-from splat.handlers.convert import ConvertRequest, handle
+from splat.handlers.convert import ConvertRequest
+from splat.registry.wiring import get_client
 
 
 def convert(
@@ -36,7 +37,7 @@ def convert(
                 raise SplatDomainError("Provide INPUT and OUTPUT paths, or use -o/--output.")
             input_path, output_path = inputs
 
-        result = handle(
+        result = get_client().convert(
             ConvertRequest(
                 input_path=input_path,
                 output_path=output_path,

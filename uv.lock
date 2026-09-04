@@ -1810,6 +1810,7 @@ source = { editable = "." }
 dependencies = [
     { name = "coremltools" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "mcp" },
     { name = "mlx" },
@@ -1829,7 +1830,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "hypothesis" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1842,6 +1842,7 @@ dev = [
 requires-dist = [
     { name = "coremltools", specifier = ">=9.0" },
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=2.1.1" },
     { name = "mlx", specifier = ">=0.32.2" },
@@ -1861,7 +1862,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "hypothesis", specifier = ">=6.115" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=6.0" },

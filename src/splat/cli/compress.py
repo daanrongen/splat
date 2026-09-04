@@ -5,7 +5,8 @@ import typer
 from splat.adapters.compression.prune_quantize import PROFILES
 from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
-from splat.handlers.compress import CompressRequest, handle
+from splat.handlers.compress import CompressRequest
+from splat.registry.wiring import get_client
 
 
 def compress(
@@ -15,7 +16,9 @@ def compress(
 ) -> None:
     """Prune outliers/low-opacity points and quantize for delivery."""
     try:
-        cloud = handle(CompressRequest(input_path=input, output_path=output, profile=profile))
+        cloud = get_client().compress(
+            CompressRequest(input_path=input, output_path=output, profile=profile)
+        )
     except (SplatDomainError, ValueError) as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

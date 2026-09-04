@@ -45,7 +45,18 @@ def _settings() -> list[_Setting]:
         _Setting("train", "--backend", "SPLAT_TRAIN_BACKEND", ""),
         _Setting("displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO", "glb"),
         _Setting("extract.surface", "--device", "SPLAT_EXTRACT_SURFACE_DEVICE", "auto"),
+        _Setting("*", "(client)", "SPLAT_HOST", ""),
     ]
+
+
+def _reachable(host: str) -> bool:
+    import httpx
+
+    try:
+        httpx.get(f"{host.rstrip('/')}/openapi.json", timeout=2.0)
+        return True
+    except httpx.HTTPError:
+        return False
 
 
 def env() -> None:
@@ -67,6 +78,10 @@ def env() -> None:
         table.add_row(setting.command, setting.param, setting.var, value, resolved.source)
 
     Console(width=120).print(table)
+
+    host = resolve_verbose("SPLAT_HOST", "").value
+    if host:
+        Console(width=120).print(f"SPLAT_HOST reachable: {'yes' if _reachable(host) else 'no'}")
 
     if invalid:
         for setting in invalid:

@@ -136,6 +136,34 @@ network (e.g. running it on one machine and driving it from another on the
 same LAN); don't expose it beyond that without adding your own auth layer
 in front of it. It always executes locally and never proxies elsewhere.
 
+## Distributed execution (`SPLAT_HOST`)
+
+Run `splat http` on one machine (e.g. a Mac with more GPU/Neural Engine
+headroom) and point the CLI at it from another host on the same network:
+
+```
+# on macbook:
+splat http --host 0.0.0.0 --port 8000
+
+# on macmini:
+export SPLAT_HOST=http://macbook.local:8000
+splat diffuse "a fox in a garden" -o test.png
+```
+
+`splat diffuse` runs on `macbook`; `test.png` is written locally on
+`macmini`, exactly as if it had run there. Every CLI command that has an
+HTTP route (everything except `splat tools displace.height`, not yet
+exposed over HTTP) transparently redirects the same way — asset-producing
+commands (`diffuse`/`segment`/`depth`/`mesh`) mirror the resulting asset
+into your local cache under the same id the server computed, so `-o` and
+NDJSON piping work unchanged; `gaussian`/`convert`/`compress` write their
+output to the local path you gave, same as running locally.
+
+`splat mcp` and `splat http` itself never consult `SPLAT_HOST` — only the
+CLI does, since it's the only one of the three that ever needs to decide
+between "run this here" and "run this over there." `splat env` reports
+`SPLAT_HOST`'s resolved value and whether it's currently reachable.
+
 ## MCP server
 
 `splat mcp` exposes the same pipeline as MCP tools over stdio — the way
@@ -206,6 +234,11 @@ CLI flag > `os.environ` > `mise env --json` (queried lazily when the var
 isn't in `os.environ` and `mise` is on `PATH`) > built-in default. Run
 `splat env` to see every setting's resolved value and source.
 
+`SPLAT_HOST` (see [Distributed execution](#distributed-execution-splat_host)
+above) follows the same `os.environ` > `mise env --json` > default (empty,
+meaning local) precedence, and is the one setting `splat env` also checks
+for live reachability.
+
 ## Architecture
 
 Domain-driven design, ports & adapters, two aggregates at the hub instead
@@ -238,6 +271,17 @@ request to the same request type and renders the result as an HTTP
 response; `mcp/` maps an MCP tool call to the same request type and
 renders the result as MCP content blocks. None of the three imports a
 concrete adapter directly.
+
+`cli/` is the one driving adapter that can execute somewhere other than
+in-process: instead of calling `handlers/*.py` directly, it calls
+`registry.wiring.get_client()`, which returns a `SplatClient`
+(`ports/client.py`) — `LocalSplatClient` (`adapters/client/local.py`, a
+pass-through to `handlers/*.py`) when `SPLAT_HOST` is unset, or
+`RemoteSplatClient` (`adapters/client/http.py`, HTTP calls to a remote
+`splat http` server, reusing `http/_schemas.py`'s wire models) when it's
+set. `http/` and `mcp/` always call `handlers/*.py` directly — they're
+never on the "remote" end of a `SplatClient`, only ever the thing a remote
+CLI talks to.
 
 ## Development
 

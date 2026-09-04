@@ -43,8 +43,17 @@ class ModelSummary(BaseModel):
     cached: bool | None = None
 
 
+class ModelInfoResponse(BaseModel):
+    name: str
+    runtime: str
+    source: str
+    license: str
+    min_images: int | None = None
+    max_images: int | None = None
+
+
 class InfoResponse(BaseModel):
-    format: str
+    format: str | None
     points: int
     sh_degree: int
     bbox_min: list[float]

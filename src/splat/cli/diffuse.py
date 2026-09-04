@@ -5,7 +5,8 @@ import typer
 from splat.cli._console import console, error, warn
 from splat.cli._pipeline_io import report
 from splat.domain.errors import SplatDomainError
-from splat.handlers.diffuse import DiffuseRequest, handle
+from splat.handlers.diffuse import DiffuseRequest
+from splat.registry.wiring import get_client
 
 
 def diffuse(
@@ -21,7 +22,7 @@ def diffuse(
 ) -> None:
     """Diffuse an image from a text prompt (cached; the pipeline's origin stage)."""
     try:
-        result = handle(
+        result = get_client().diffuse(
             DiffuseRequest(
                 prompt=prompt,
                 model=model,

@@ -6,8 +6,8 @@ from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.handlers.mesh import MeshRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.handlers.mesh import MeshRequest
+from splat.registry.wiring import get_asset_cache, get_client
 
 
 def mesh(
@@ -22,7 +22,7 @@ def mesh(
     cache = get_asset_cache()
     try:
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
-        results = handle(MeshRequest(inputs=inputs, model=model, device=device))
+        results = get_client().mesh(MeshRequest(inputs=inputs, model=model, device=device))
     except (SplatDomainError, NotImplementedError) as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
