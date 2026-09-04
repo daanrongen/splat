@@ -3,9 +3,11 @@
 # untouched copy changes nothing. mise auto-merges this over mise.toml.
 
 [env]
-# splat http
-SPLAT_HTTP_HOST = "127.0.0.1"
-SPLAT_HTTP_PORT = "8000"
+# splat http — bind address for a server run ON THIS MACHINE (`splat http`).
+# Not the same as SPLAT_HOST below, which points this machine's CLI at a
+# server running elsewhere.
+SPLAT_HTTP_BIND_HOST = "127.0.0.1"
+SPLAT_HTTP_BIND_PORT = "8000"
 
 # cache locations
 SPLAT_CACHE_ROOT = "{{env.XDG_CACHE_HOME | default(value=env.HOME ~ '/.cache')}}/splat"
@@ -47,5 +49,6 @@ SPLAT_EXTRACT_SURFACE_DEVICE = "auto"
 SPLAT_TRAIN_ITERATIONS = "30000"
 SPLAT_TRAIN_BACKEND = ""
 
-# distributed CLI — point at another host's `splat http` server
+# distributed CLI — set to a REMOTE splat http server's URL (e.g.
+# "http://macbook:8000") to run every command there instead of locally.
 SPLAT_HOST = ""
