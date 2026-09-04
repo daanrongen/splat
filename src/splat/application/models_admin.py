@@ -2,6 +2,7 @@ from typing import Any
 
 from splat.domain.errors import UnsupportedFormat
 from splat.ports.model_source import ModelSource
+from splat.registry.caption import CAPTION_CATALOG
 from splat.registry.depth import DEPTH_CATALOG
 from splat.registry.diffusion import DIFFUSION_CATALOG
 from splat.registry.gaussian import GAUSSIAN_CATALOG
@@ -14,6 +15,7 @@ def _all_catalogs() -> dict[str, Any]:
     merged: dict[str, Any] = {}
     for catalog in (
         GAUSSIAN_CATALOG,
+        CAPTION_CATALOG,
         DIFFUSION_CATALOG,
         SEGMENTATION_CATALOG,
         DEPTH_CATALOG,

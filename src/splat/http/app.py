@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from splat.domain.errors import SplatDomainError
 from splat.http import (
     assets,
+    caption,
     depth,
     diffuse,
     gaussian,
@@ -24,6 +25,7 @@ from splat.http.tools import compress, convert
 
 _ROUTERS = (
     diffuse,
+    caption,
     segment,
     depth,
     upscale,

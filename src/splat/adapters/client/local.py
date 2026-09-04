@@ -5,6 +5,8 @@ from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset
 from splat.domain.gaussians import GaussianCloud
 from splat.handlers import models as models_handler
+from splat.handlers.caption import CaptionRequest
+from splat.handlers.caption import handle as handle_caption
 from splat.handlers.depth import DepthRequest
 from splat.handlers.depth import handle as handle_depth
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
@@ -35,6 +37,9 @@ class LocalSplatClient:
 
     def segment(self, request: SegmentRequest) -> list[Asset]:
         return handle_segment(request)
+
+    def caption(self, request: CaptionRequest) -> list[Asset]:
+        return handle_caption(request)
 
     def depth(self, request: DepthRequest) -> list[Asset]:
         return handle_depth(request)

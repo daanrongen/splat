@@ -12,6 +12,7 @@ from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
+from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.gaussian import GaussianRequest, GaussianResult
@@ -133,6 +134,40 @@ class RemoteSplatClient:
         response = self._client.get(f"/assets/{asset_id}")
         _raise_for_domain_error(response)
         return response.content
+
+    def caption(self, request: CaptionRequest) -> list[Asset]:
+        results = []
+        for input_asset in request.inputs:
+            files = {
+                "image": (input_asset.content_path.name, input_asset.content_path.read_bytes())
+            }
+            form = {
+                "model": request.model,
+                "prompt": request.prompt,
+                "max_tokens": request.max_tokens,
+                "temperature": request.temperature,
+                "device": request.device,
+            }
+            response = self._client.post("/caption", files=files, data=form)
+            _raise_for_domain_error(response)
+            text = response.content.decode("utf-8")
+            results.append(
+                self._store_asset(
+                    response.headers["X-Splat-Asset-Id"],
+                    kind=AssetKind.CAPTION,
+                    content=response.content,
+                    ext="txt",
+                    metadata={
+                        "prompt": request.prompt,
+                        "max_tokens": request.max_tokens,
+                        "temperature": request.temperature,
+                        "text_length": len(text),
+                    },
+                    parent_ids=[input_asset.id],
+                    created_by=f"caption:{request.model}",
+                )
+            )
+        return results
 
     def depth(self, request: DepthRequest) -> list[Asset]:
         results = []

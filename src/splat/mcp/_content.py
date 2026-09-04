@@ -12,6 +12,7 @@ _EXT_MIME = {
     "png": "image/png",
     "npy": "application/octet-stream",
     "glb": "model/gltf-binary",
+    "txt": "text/plain",
     "ply": "application/octet-stream",
     "splat": "application/octet-stream",
     "obj": "text/plain",

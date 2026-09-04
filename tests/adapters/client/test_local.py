@@ -4,6 +4,7 @@ from splat.adapters.client.local import LocalSplatClient
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.asset import AssetKind
 from splat.domain.value_objects import MIT
+from splat.handlers.caption import CaptionRequest
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
@@ -20,6 +21,14 @@ class FakeDiffusionBackend:
         return output_path
 
 
+class FakeCaptionBackend:
+    name = "fake-captioner"
+    license = MIT
+
+    def caption(self, image_path: Path, *, prompt: str, max_tokens: int, temperature: float):
+        return f"{prompt}: small scene"
+
+
 def test_diffuse_delegates_to_handler(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
@@ -31,6 +40,22 @@ def test_diffuse_delegates_to_handler(mocker, tmp_path, monkeypatch):
 
     assert result.asset.content_path.read_bytes() == b"fake-png-bytes"
     assert result.license_warning is None
+
+
+def test_caption_delegates_to_handler(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
+    from splat.registry.wiring import get_asset_cache
+
+    asset = get_asset_cache().put_external(
+        write_sample_png(tmp_path / "image.png", (2, 2)), kind=AssetKind.IMAGE
+    )
+    client = LocalSplatClient()
+
+    results = client.caption(CaptionRequest(inputs=[asset], model="fake-captioner", prompt="Look"))
+
+    assert len(results) == 1
+    assert results[0].content_path.read_text(encoding="utf-8") == "Look: small scene"
 
 
 def test_info_returns_summary(tmp_path, synthetic_cloud):

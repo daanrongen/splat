@@ -12,6 +12,7 @@ from pathlib import Path
 class AssetKind(StrEnum):
     IMAGE = "image"  # generic RGB raster
     STICKER = "sticker"  # RGBA cutout + mask metadata — "is-a" image
+    CAPTION = "caption"  # UTF-8 image-to-text output (.txt)
     DEPTH_MAP = "depth_map"  # per-pixel metric depth, cached losslessly (.npy)
     SHAPE_3D = "shape_3d"  # mesh or point cloud, not yet Gaussians (future)
     GAUSSIAN_CLOUD = "gaussian_cloud"  # future: wraps domain.gaussians.GaussianCloud

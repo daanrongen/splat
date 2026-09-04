@@ -12,6 +12,7 @@ def test_help() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "tools" in result.output
+    assert "caption" in result.output
     assert "upscale" in result.output
 
 
