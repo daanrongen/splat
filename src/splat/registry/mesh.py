@@ -1,8 +1,4 @@
-"""Wiring seam for the `MeshPredictionBackend` catalog `splat mesh` selects
-from. `MeshExporter` (`splat tools extract.surface`) has no registry at
-all — same as `ports/training.py`/`ports/rasterizer.py` — since it has zero
-adapters to select between.
-"""
+"""Model catalog for `splat mesh` image-to-mesh prediction backends."""
 
 from dataclasses import dataclass
 from typing import Literal

@@ -97,6 +97,13 @@ def test_train_stub_reports_not_implemented(tmp_path: Path) -> None:
     assert "not yet implemented" in result.output
 
 
+def test_train_help_has_no_backend_options() -> None:
+    result = runner.invoke(app, ["train", "--help"])
+    assert result.exit_code == 0
+    assert "--backend" not in result.output
+    assert "--iterations" not in result.output
+
+
 def test_models_info() -> None:
     result = runner.invoke(app, ["models", "info", "mvsplat"])
     assert result.exit_code == 0, result.output
