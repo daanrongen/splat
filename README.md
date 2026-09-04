@@ -138,15 +138,15 @@ in front of it. It always executes locally and never proxies elsewhere.
 
 ## Distributed execution (`SPLAT_URL`)
 
-Run `splat http` on one machine (e.g. a Mac with more GPU/Neural Engine
+Run `splat http` on one machine (e.g. one with more GPU/Neural Engine
 headroom) and point the CLI at it from another host on the same network:
 
 ```
-# on macbook:
+# on the machine with the models:
 SPLAT_HOST=0.0.0.0:8000 splat http
 
-# on macmini:
-export SPLAT_URL=http://macbook:8000
+# on the machine you're working from:
+export SPLAT_URL=http://gpu-host:8000
 splat diffuse "a fox in a garden" -o test.png
 ```
 
@@ -156,19 +156,19 @@ itself, to pick its own bind address; `SPLAT_URL` is only ever read by
 every other command, to decide whether to run here or redirect to a
 remote server. No process ever needs both at once.
 
-`splat diffuse` runs on `macbook`; `test.png` is written locally on
-`macmini`, exactly as if it had run there. Every CLI command that has an
-HTTP route (everything except `splat tools displace.height`, not yet
-exposed over HTTP) transparently redirects the same way — asset-producing
-commands (`diffuse`/`segment`/`depth`/`mesh`) mirror the resulting asset
-into your local cache under the same id the server computed, so `-o` and
-NDJSON piping work unchanged; `gaussian`/`convert`/`compress` write their
-output to the local path you gave, same as running locally.
+`splat diffuse` runs on the remote host; `test.png` is written locally,
+exactly as if it had run there. Every CLI command that has an HTTP route
+(everything except `splat tools displace.height`, not yet exposed over
+HTTP) transparently redirects the same way — asset-producing commands
+(`diffuse`/`segment`/`depth`/`mesh`) mirror the resulting asset into your
+local cache under the same id the server computed, so `-o` and NDJSON
+piping work unchanged; `gaussian`/`convert`/`compress` write their output
+to the local path you gave, same as running locally.
 
-`splat mcp` and `splat http` itself never consult `SPLAT_URL` — only the
-CLI does, since it's the only one of the three that ever needs to decide
-between "run this here" and "run this over there." `splat env` reports
-`SPLAT_URL`'s resolved value and whether it's currently reachable.
+`splat http` itself never consults `SPLAT_URL` — only the CLI (and, as of
+below, `splat mcp`'s tools) ever needs to decide between "run this here"
+and "run this over there." `splat env` reports `SPLAT_URL`'s resolved
+value and whether it's currently reachable.
 
 ## MCP server
 
@@ -191,11 +191,11 @@ Claude Code spawn it — but every tool except `tools_displace_height`
 remote `splat http` server:
 
 ```
-# on macbook (has the models):
+# on the machine with the models:
 SPLAT_HOST=0.0.0.0:8000 splat http
 
 # wherever Claude Code runs:
-claude mcp add splat -e SPLAT_URL=http://macbook:8000 -- splat mcp
+claude mcp add splat -e SPLAT_URL=http://gpu-host:8000 -- splat mcp
 ```
 
 ## Model catalog
