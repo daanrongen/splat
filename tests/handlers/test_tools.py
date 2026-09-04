@@ -2,18 +2,17 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.handlers.tools.displace_height import DisplaceHeightRequest, handle
+from tests.image_helpers import write_sample_png
 
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (4, 4)).save(path)
-    return path
+    return write_sample_png(path, (4, 4))
 
 
 def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):

@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from splat.application.models_admin import model_source_label
 from splat.handlers import models as models_handler
 from splat.http._schemas import ModelInfoResponse, ModelSummary
 
@@ -32,7 +33,7 @@ def info(name: str) -> ModelInfoResponse:
     return ModelInfoResponse(
         name=descriptor.name,
         runtime=getattr(descriptor, "runtime", "-"),
-        source=descriptor.hf_repo_id,
+        source=model_source_label(descriptor),
         license=str(descriptor.license),
         min_images=getattr(descriptor, "min_images", None),
         max_images=getattr(descriptor, "max_images", None),

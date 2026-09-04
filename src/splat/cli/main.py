@@ -23,6 +23,7 @@ from splat.cli.models import models_app
 from splat.cli.segment import segment
 from splat.cli.tools import tools_app
 from splat.cli.train import train
+from splat.cli.upscale import upscale
 from splat.cli.validate import validate
 
 app = typer.Typer(
@@ -36,6 +37,7 @@ app = typer.Typer(
 app.command("diffuse")(diffuse)
 app.command("segment")(segment)
 app.command("depth")(depth)
+app.command("upscale")(upscale)
 app.command("gaussian")(gaussian)
 app.command("mesh")(mesh)
 app.command("train")(train)

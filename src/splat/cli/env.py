@@ -23,6 +23,7 @@ def _settings() -> list[_Setting]:
     from splat.registry.gaussian import GAUSSIAN_CATALOG
     from splat.registry.mesh import MESH_PREDICTION_CATALOG
     from splat.registry.segmentation import SEGMENTATION_CATALOG
+    from splat.registry.upscale import UPSCALE_CATALOG
 
     return [
         _Setting("diffuse", "--model", "SPLAT_DIFFUSE_MODEL", "sdxl-turbo-mlx", DIFFUSION_CATALOG),
@@ -35,6 +36,9 @@ def _settings() -> list[_Setting]:
         _Setting("segment", "--max-stickers", "SPLAT_SEGMENT_MAX_STICKERS", "20"),
         _Setting("depth", "--model", "SPLAT_DEPTH_MODEL", "depth-pro", DEPTH_CATALOG),
         _Setting("depth", "--device", "SPLAT_DEPTH_DEVICE", "auto"),
+        _Setting("upscale", "--model", "SPLAT_UPSCALE_MODEL", "realesrgan-mlx", UPSCALE_CATALOG),
+        _Setting("upscale", "--factor", "SPLAT_UPSCALE_FACTOR", "4"),
+        _Setting("upscale", "--tile", "SPLAT_UPSCALE_TILE", "0"),
         _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mvsplat", GAUSSIAN_CATALOG),
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
         _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "triposr", MESH_PREDICTION_CATALOG),

@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-from PIL import Image
 
 from splat.adapters.depth.depth_pro import DepthProBackend, _resolve_device
 from splat.domain.value_objects import APPLE_ASCL
+from tests.image_helpers import write_sample_png
 
 
 class FakeBatchFeature(dict):
@@ -90,7 +90,7 @@ def test_load_only_downloads_weights_once(mocker, tmp_path):
     processor_ctor, model_ctor = _patch_from_pretrained(mocker, processor, model)
 
     image_path = tmp_path / "scene.png"
-    Image.new("RGB", (10, 8)).save(image_path)
+    write_sample_png(image_path, (10, 8))
 
     backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
     backend.estimate(image_path)
@@ -111,7 +111,7 @@ def test_estimate_returns_populated_depth_map(mocker, tmp_path):
     _patch_from_pretrained(mocker, processor, model)
 
     image_path = tmp_path / "scene.png"
-    Image.new("RGB", (10, 8)).save(image_path)
+    write_sample_png(image_path, (10, 8))
 
     backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
     result = backend.estimate(image_path)
@@ -132,7 +132,7 @@ def test_estimate_handles_missing_focal_length_and_fov(mocker, tmp_path):
     _patch_from_pretrained(mocker, processor, model)
 
     image_path = tmp_path / "scene.png"
-    Image.new("RGB", (10, 8)).save(image_path)
+    write_sample_png(image_path, (10, 8))
 
     backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
     result = backend.estimate(image_path)

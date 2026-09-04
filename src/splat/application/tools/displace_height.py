@@ -11,10 +11,10 @@ operator rather than a port-backed `splat mesh` adapter.
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Shape3D
+from splat.image_io import read_rgb, resize
 
 
 def execute(image_path: Path, depth_map: DepthMap, *, max_depth_jump: float = 0.05) -> Shape3D:
@@ -23,7 +23,7 @@ def execute(image_path: Path, depth_map: DepthMap, *, max_depth_jump: float = 0.
 
     depth = depth_map.depth
     h, w = depth.shape
-    image = np.array(Image.open(image_path).convert("RGB").resize((w, h)))
+    image = resize(read_rgb(image_path), (w, h))
 
     # Approximate the principal point as the image center — DepthMap
     # doesn't carry cx/cy, only focal length and field of view.

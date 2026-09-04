@@ -16,10 +16,10 @@ from pathlib import Path
 import coremltools as ct
 import numpy as np
 from huggingface_hub import snapshot_download
-from PIL import Image
 
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
+from splat.image_io import read_rgb, resize
 from splat.paths import model_cache_dir
 
 _INPUT_SIZE = (1024, 1024)  # (W, H), fixed by Apple's conversion
@@ -123,9 +123,9 @@ class CoreMLSam2Backend:
     ) -> list[Sticker]:
         self._load()
 
-        original = Image.open(image_path).convert("RGB")
-        original_size = original.size  # (W, H)
-        resized = original.resize(_INPUT_SIZE, Image.Resampling.LANCZOS)
+        original = read_rgb(image_path)
+        original_size = (original.shape[1], original.shape[0])
+        resized = resize(original, _INPUT_SIZE)
 
         embeddings = self._image_encoder.predict({"image": resized})
 
@@ -158,10 +158,9 @@ class CoreMLSam2Backend:
                 continue
 
             low_res = decoder_out["low_res_masks"][0, best_idx]
-            mask_img = Image.fromarray(low_res.astype(np.float32), mode="F").resize(
-                original_size, Image.Resampling.BILINEAR
+            binary_mask = (
+                resize(low_res.astype(np.float32), original_size, interpolation="linear") > 0
             )
-            binary_mask = np.array(mask_img) > 0
             bbox = _mask_to_bbox(binary_mask)
             if bbox is None:
                 continue
@@ -179,14 +178,13 @@ class CoreMLSam2Backend:
         if max_stickers is not None:
             keep = keep[:max_stickers]
 
-        image_array = np.array(original)
         stickers = []
         for i in keep:
             mask = masks[i]
             x0, y0, x1, y1 = (int(v) for v in boxes[i])
             w, h = x1 - x0, y1 - y0
             rgba = np.zeros((h, w, 4), dtype=np.uint8)
-            rgba[:, :, :3] = image_array[y0:y1, x0:x1]
+            rgba[:, :, :3] = original[y0:y1, x0:x1]
             rgba[:, :, 3] = (mask[y0:y1, x0:x1] * 255).astype(np.uint8)
             stickers.append(
                 Sticker(

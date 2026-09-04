@@ -14,6 +14,8 @@ from typer.testing import CliRunner
 from splat.cli.main import app
 from splat.domain.value_objects import MIT
 from splat.http.app import app as http_app
+from splat.image_io import read_rgb_or_rgba
+from tests.image_helpers import write_sample_png
 
 runner = CliRunner()
 
@@ -25,6 +27,17 @@ class FakeDiffusionBackend:
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
         output_path.write_bytes(b"fake-png-bytes")
         return output_path
+
+
+class FakeUpscaleBackend:
+    name = "fake-upscaler"
+    license = MIT
+    supported_factors = (2, 4)
+
+    def upscale(self, image, *, factor: int, tile: int = 0, **params):
+        import numpy as np
+
+        return np.repeat(np.repeat(image, factor, axis=0), factor, axis=1)
 
 
 def _free_port() -> int:
@@ -68,3 +81,30 @@ def test_splat_url_redirects_diffuse_to_remote_server(
 
     assert result.exit_code == 0, result.output
     assert out_path.read_bytes() == b"fake-png-bytes"
+
+
+def test_splat_url_redirects_upscale_to_remote_server(
+    mocker, tmp_path, monkeypatch, live_server_url
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
+    input_path = write_sample_png(tmp_path / "input.png", (3, 2))
+    out_path = tmp_path / "upscaled.png"
+
+    result = runner.invoke(
+        app,
+        [
+            "upscale",
+            str(input_path),
+            "--model",
+            "fake-upscaler",
+            "--factor",
+            "2",
+            "-o",
+            str(out_path),
+        ],
+        env={"SPLAT_URL": live_server_url},
+    )
+
+    assert result.exit_code == 0, result.output
+    assert read_rgb_or_rgba(out_path).shape == (4, 6, 3)

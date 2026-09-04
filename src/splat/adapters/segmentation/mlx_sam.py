@@ -14,11 +14,11 @@ from pathlib import Path
 import mlx.core as mx
 import numpy as np
 from huggingface_hub import snapshot_download
-from PIL import Image
 
 from splat.adapters.segmentation._vendor.mlx_sam import SamAutomaticMaskGenerator, sam
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
+from splat.image_io import read_rgb
 from splat.paths import model_cache_dir
 
 _TRANSPOSE_TO_NHWC = {
@@ -81,7 +81,7 @@ class MLXSamBackend:
         model = self._load()
         generator = SamAutomaticMaskGenerator(model, **params)
 
-        image = np.array(Image.open(image_path).convert("RGB"))
+        image = read_rgb(image_path)
         masks = generator.generate(image)
         masks.sort(key=lambda m: m["area"], reverse=True)
         if max_stickers is not None:

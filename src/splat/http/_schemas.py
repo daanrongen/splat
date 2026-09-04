@@ -18,6 +18,12 @@ class DiffuseBody(BaseModel):
     device: str = "auto"
 
 
+class UpscaleBody(BaseModel):
+    model: str = "realesrgan-mlx"
+    factor: int = 4
+    tile: int = 0
+
+
 class AssetSummary(BaseModel):
     id: str
     kind: str

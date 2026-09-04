@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
@@ -11,6 +10,8 @@ from splat.cli.main import app
 from splat.domain.asset import AssetKind
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import APPLE_ASCL
+from splat.image_io import read_rgb
+from tests.image_helpers import write_sample_png
 
 runner = CliRunner()
 
@@ -31,8 +32,7 @@ class FakeDepthBackend:
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (3, 2)).save(path)
-    return path
+    return write_sample_png(path, (3, 2))
 
 
 def test_depth_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
@@ -73,7 +73,7 @@ def test_depth_output_flag_writes_normalized_png(mocker, tmp_path, monkeypatch):
 
     assert result.exit_code == 0, result.output
     assert out_path.exists()
-    saved = np.array(Image.open(out_path))
+    saved = read_rgb(out_path)
     assert saved.min() == 0
     assert saved.max() == 255
 

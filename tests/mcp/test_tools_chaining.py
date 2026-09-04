@@ -4,10 +4,10 @@ Unix-pipe chaining.
 """
 
 import numpy as np
-from PIL import Image
 
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import APPLE_ASCL
+from tests.image_helpers import write_sample_png
 
 
 class FakeDepthBackend:
@@ -23,7 +23,7 @@ def test_depth_asset_id_chains_into_displace_height(mocker, tmp_path, monkeypatc
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     image_path = tmp_path / "scene.png"
-    Image.new("RGB", (4, 4)).save(image_path)
+    write_sample_png(image_path, (4, 4))
 
     depth_result = call_tool("depth", image=str(image_path))
     depth_asset_id = next(
@@ -43,7 +43,7 @@ def test_segment_accepts_at_id_reference(mocker, tmp_path, monkeypatch, call_too
 
     cache = get_asset_cache()
     image_path = tmp_path / "scene.png"
-    Image.new("RGB", (2, 2)).save(image_path)
+    write_sample_png(image_path, (2, 2))
     asset = cache.put_external(image_path, kind=AssetKind.IMAGE)
 
     class FakeSegmentationBackend:

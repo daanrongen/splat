@@ -7,6 +7,7 @@ from splat.registry.diffusion import DIFFUSION_CATALOG
 from splat.registry.gaussian import GAUSSIAN_CATALOG
 from splat.registry.mesh import MESH_PREDICTION_CATALOG
 from splat.registry.segmentation import SEGMENTATION_CATALOG
+from splat.registry.upscale import UPSCALE_CATALOG
 
 
 def _all_catalogs() -> dict[str, Any]:
@@ -17,9 +18,21 @@ def _all_catalogs() -> dict[str, Any]:
         SEGMENTATION_CATALOG,
         DEPTH_CATALOG,
         MESH_PREDICTION_CATALOG,
+        UPSCALE_CATALOG,
     ):
         merged.update(catalog)
     return merged
+
+
+def model_sources(descriptor: Any) -> list[str]:
+    repo_ids = getattr(descriptor, "hf_repo_ids", None)
+    if isinstance(repo_ids, dict):
+        return [repo_ids[key] for key in sorted(repo_ids)]
+    return [descriptor.hf_repo_id]
+
+
+def model_source_label(descriptor: Any) -> str:
+    return ", ".join(model_sources(descriptor))
 
 
 def _lookup(name: str) -> Any:
@@ -37,7 +50,10 @@ class ListModelsUseCase:
 
     def execute(self) -> list[tuple[Any, bool]]:
         return [
-            (descriptor, self._model_source.is_cached(descriptor.hf_repo_id))
+            (
+                descriptor,
+                all(self._model_source.is_cached(source) for source in model_sources(descriptor)),
+            )
             for descriptor in _all_catalogs().values()
         ]
 
@@ -47,7 +63,8 @@ class PullModelUseCase:
         self._model_source = model_source
 
     def execute(self, name: str) -> None:
-        self._model_source.pull(_lookup(name).hf_repo_id)
+        for source in model_sources(_lookup(name)):
+            self._model_source.pull(source)
 
 
 class ModelInfoUseCase:
@@ -60,4 +77,5 @@ class RemoveModelUseCase:
         self._model_source = model_source
 
     def execute(self, name: str) -> None:
-        self._model_source.remove(_lookup(name).hf_repo_id)
+        for source in model_sources(_lookup(name)):
+            self._model_source.remove(source)

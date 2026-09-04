@@ -1,13 +1,13 @@
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from splat.domain.asset import AssetKind
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import APPLE_ASCL
 from splat.handlers.depth import DepthRequest, handle
 from splat.registry.wiring import get_asset_cache
+from tests.image_helpers import write_sample_png
 
 
 class FakeDepthBackend:
@@ -25,8 +25,7 @@ class FakeDepthBackend:
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (3, 2)).save(path)
-    return path
+    return write_sample_png(path, (3, 2))
 
 
 def test_handle_estimates_depth_for_each_input(mocker, tmp_path, monkeypatch):

@@ -1,8 +1,8 @@
 import numpy as np
-from PIL import Image
 
 from splat.domain.image_space import DepthMap, Shape3D, Sticker
 from splat.domain.value_objects import APPLE_ASCL, MIT
+from tests.image_helpers import write_sample_png
 
 
 class FakeSegmentationBackend:
@@ -37,10 +37,18 @@ class FakeMeshBackend:
         return Shape3D(vertices=vertices, faces=faces, metadata={"face_count": 2})
 
 
+class FakeUpscaleBackend:
+    name = "fake-upscaler"
+    license = MIT
+    supported_factors = (2, 4)
+
+    def upscale(self, image, *, factor: int, tile: int = 0, **params):
+        return np.repeat(np.repeat(image, factor, axis=0), factor, axis=1)
+
+
 def _sample_image(tmp_path) -> str:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (3, 2)).save(path)
-    return str(path)
+    return str(write_sample_png(path, (3, 2)))
 
 
 def test_segment_returns_one_image_per_sticker(mocker, tmp_path, monkeypatch, call_tool):
@@ -61,6 +69,16 @@ def test_depth_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
 
     result = call_tool("depth", image=_sample_image(tmp_path))
+
+    assert result.is_error is False
+    assert any(block.type == "resource" for block in result.content)
+
+
+def test_upscale_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
+
+    result = call_tool("upscale", image=_sample_image(tmp_path), model="fake-upscaler", factor=2)
 
     assert result.is_error is False
     assert any(block.type == "resource" for block in result.content)

@@ -2,13 +2,13 @@ from pathlib import Path
 
 import numpy as np
 import typer
-from PIL import Image
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.handlers.depth import DepthRequest
+from splat.image_io import write_png
 from splat.registry.wiring import get_asset_cache, get_client
 
 
@@ -35,7 +35,7 @@ def depth(
         depth_array = np.load(results[0].content_path)
         span = max(float(depth_array.max() - depth_array.min()), 1e-6)
         normalized = (depth_array - depth_array.min()) / span
-        Image.fromarray((normalized * 255).astype(np.uint8)).save(output)
+        write_png(output, (normalized * 255).astype(np.uint8))
 
     def _human(assets: list) -> None:
         for asset in assets:

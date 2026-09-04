@@ -2,10 +2,13 @@ from pathlib import Path
 
 from splat.adapters.client.local import LocalSplatClient
 from splat.adapters.formats.ply import PlyWriter
+from splat.domain.asset import AssetKind
 from splat.domain.value_objects import MIT
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.upscale import UpscaleRequest
+from tests.image_helpers import write_sample_png
 
 
 class FakeDiffusionBackend:
@@ -76,6 +79,33 @@ def test_tools_compress_delegates_to_handler(tmp_path, synthetic_cloud):
 
     assert out_path.exists()
     assert cloud.point_count <= synthetic_cloud.point_count
+
+
+def test_upscale_delegates_to_handler(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+
+    class FakeUpscaleBackend:
+        name = "fake-upscaler"
+        license = MIT
+        supported_factors = (2, 4)
+
+        def upscale(self, image, *, factor: int, tile: int = 0, **params):
+            import numpy as np
+
+            return np.repeat(np.repeat(image, factor, axis=0), factor, axis=1)
+
+    mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
+    from splat.registry.wiring import get_asset_cache
+
+    asset = get_asset_cache().put_external(
+        write_sample_png(tmp_path / "image.png", (2, 2)), kind=AssetKind.IMAGE
+    )
+    client = LocalSplatClient()
+
+    results = client.upscale(UpscaleRequest(inputs=[asset], model="fake-upscaler", factor=2))
+
+    assert len(results) == 1
+    assert results[0].created_by == "upscale:fake-upscaler"
 
 
 def test_models_list_returns_summaries():

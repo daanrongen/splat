@@ -1,12 +1,10 @@
-import io
-
 import numpy as np
 from fastapi.testclient import TestClient
-from PIL import Image
 
 from splat.domain.image_space import DepthMap, Shape3D
 from splat.domain.value_objects import APPLE_ASCL, MIT
 from splat.http.app import app
+from tests.image_helpers import sample_png_bytes
 
 client = TestClient(app)
 
@@ -35,9 +33,7 @@ class FakeMeshBackend:
 
 
 def _sample_png_bytes() -> bytes:
-    buf = io.BytesIO()
-    Image.new("RGB", (3, 2)).save(buf, format="PNG")
-    return buf.getvalue()
+    return sample_png_bytes((3, 2))
 
 
 def test_depth_returns_npy_bytes(mocker, tmp_path, monkeypatch):
