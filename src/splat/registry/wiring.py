@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     # module — a real cycle if resolved at import time rather than lazily.
     from splat.ports.client import SplatClient
 from splat.ports.diffusion import DiffusionBackend
+from splat.ports.embedding import EmbeddingBackend
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
@@ -160,6 +161,22 @@ def get_caption_backend(name: str, *, device: str = "auto") -> CaptioningBackend
     except KeyError as exc:
         available = ", ".join(sorted(CAPTION_CATALOG))
         raise UnsupportedFormat(f"Unknown caption model {name!r}. Available: {available}") from exc
+
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
+    )
+
+
+def get_embedding_backend(name: str, *, device: str = "auto") -> EmbeddingBackend:
+    from splat.registry.embedding import EMBEDDING_CATALOG
+
+    try:
+        descriptor = EMBEDDING_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(EMBEDDING_CATALOG))
+        raise UnsupportedFormat(
+            f"Unknown embedding model {name!r}. Available: {available}"
+        ) from exc
 
     return descriptor.backend_cls(
         hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device

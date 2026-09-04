@@ -35,6 +35,17 @@ class FakeCaptionBackend:
         return f"{prompt}: small scene"
 
 
+class FakeEmbeddingBackend:
+    name = "fake-embedder"
+    license = MIT
+
+    def embed_image(self, image_path, **params) -> np.ndarray:
+        return np.array([1.0, 0.0], dtype=np.float32)
+
+    def embed_text(self, text: str, **params) -> np.ndarray:
+        return np.array([0.0, 1.0], dtype=np.float32)
+
+
 class FakeMeshBackend:
     name = "triposr"
     license = MIT
@@ -94,6 +105,17 @@ def test_caption_returns_text_and_resource_content(mocker, tmp_path, monkeypatch
     assert any(
         block.type == "text" and block.text == "Look: small scene" for block in result.content
     )
+    assert any(block.type == "resource" for block in result.content)
+
+
+def test_embed_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
+
+    result = call_tool("embed", text="red chair", model="fake-embedder")
+
+    assert result.is_error is False
+    assert any(block.type == "text" and "text 2d float32" in block.text for block in result.content)
     assert any(block.type == "resource" for block in result.content)
 
 

@@ -18,6 +18,7 @@ from splat.domain.errors import SplatDomainError
 from splat.mcp import caption as caption_tool
 from splat.mcp import depth as depth_tool
 from splat.mcp import diffuse, gaussian
+from splat.mcp import embed as embed_tool
 from splat.mcp import inspect as inspect_tool
 from splat.mcp import mesh as mesh_tool
 from splat.mcp import models as models_tool
@@ -46,6 +47,7 @@ def _as_tool_error(fn: Callable[..., Any]) -> Callable[..., Any]:
 
 server.add_tool(_as_tool_error(diffuse.diffuse), name="diffuse")
 server.add_tool(_as_tool_error(caption_tool.caption), name="caption")
+server.add_tool(_as_tool_error(embed_tool.embed), name="embed")
 server.add_tool(_as_tool_error(segment_tool.segment), name="segment")
 server.add_tool(_as_tool_error(depth_tool.depth), name="depth")
 server.add_tool(_as_tool_error(upscale_tool.upscale), name="upscale")

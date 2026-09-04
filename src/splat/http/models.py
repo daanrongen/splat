@@ -37,6 +37,9 @@ def info(name: str) -> ModelInfoResponse:
         license=str(descriptor.license),
         min_images=getattr(descriptor, "min_images", None),
         max_images=getattr(descriptor, "max_images", None),
+        dimension=getattr(descriptor, "dimension", None),
+        normalized=getattr(descriptor, "normalized", None),
+        notes=getattr(descriptor, "notes", ""),
     )
 
 

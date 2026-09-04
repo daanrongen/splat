@@ -14,6 +14,7 @@ import typer
 from splat.cli.caption import caption
 from splat.cli.depth import depth
 from splat.cli.diffuse import diffuse
+from splat.cli.embed import embed
 from splat.cli.env import env
 from splat.cli.gaussian import gaussian
 from splat.cli.http import http
@@ -37,6 +38,7 @@ app = typer.Typer(
 
 app.command("diffuse")(diffuse)
 app.command("caption")(caption)
+app.command("embed")(embed)
 app.command("segment")(segment)
 app.command("depth")(depth)
 app.command("upscale")(upscale)

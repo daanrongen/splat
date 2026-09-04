@@ -1,9 +1,14 @@
+from io import StringIO
 from pathlib import Path
 
 from typer.testing import CliRunner
 
+from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.adapters.formats.ply import PlyWriter
+from splat.cli._pipeline_io import resolve_inputs
 from splat.cli.main import app
+from splat.domain.asset import AssetKind
+from tests.image_helpers import write_sample_png
 
 runner = CliRunner()
 
@@ -14,6 +19,20 @@ def test_help() -> None:
     assert "tools" in result.output
     assert "caption" in result.output
     assert "upscale" in result.output
+
+
+def test_piped_asset_resolution_ignores_non_json_chatter(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    cache = FilesystemAssetCache(tmp_path / "cache")
+    asset = cache.put_external(
+        write_sample_png(tmp_path / "scene.png", (2, 2)), kind=AssetKind.IMAGE
+    )
+    monkeypatch.setattr(
+        "sys.stdin",
+        StringIO(f'Torch warning emitted by imported dependency\n{{"id": "{asset.id}"}}\n'),
+    )
+
+    assert resolve_inputs("-", cache) == [asset]
 
 
 def test_convert_and_compress_are_not_top_level_commands() -> None:

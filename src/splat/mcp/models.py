@@ -23,6 +23,9 @@ def info(name: str) -> dict:
         "runtime": summary.runtime,
         "source": summary.source,
         "license": summary.license,
+        "dimension": summary.dimension,
+        "normalized": summary.normalized,
+        "notes": summary.notes,
     }
 
 

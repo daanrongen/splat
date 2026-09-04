@@ -11,6 +11,7 @@ from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest
+from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
@@ -46,6 +47,17 @@ class FakeCaptionBackend:
 
     def caption(self, image_path: Path, *, prompt: str, max_tokens: int, temperature: float):
         return f"{prompt}: small scene"
+
+
+class FakeEmbeddingBackend:
+    name = "fake-embedder"
+    license = MIT
+
+    def embed_image(self, image_path: Path, **params) -> np.ndarray:
+        return np.array([1.0, 0.0], dtype=np.float32)
+
+    def embed_text(self, text: str, **params) -> np.ndarray:
+        return np.array([0.0, 1.0], dtype=np.float32)
 
 
 class FakeSegmentationBackend:
@@ -142,6 +154,32 @@ def test_caption_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remo
     assert results[0].kind == AssetKind.CAPTION
     assert results[0].parent_ids == [asset.id]
     assert results[0].content_path.read_text(encoding="utf-8") == "Look: small scene"
+
+
+def test_embed_stores_text_asset(mocker, tmp_path, monkeypatch, remote_client):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
+
+    results = remote_client.embed(EmbedRequest(text="red chair", model="fake-embedder"))
+
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.EMBEDDING
+    assert results[0].metadata["input_type"] == "text"
+    assert results[0].metadata["dimension"] == 2
+    assert results[0].metadata["text_length"] == len("red chair")
+
+
+def test_embed_stores_image_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
+    cache = get_asset_cache()
+    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+
+    results = remote_client.embed(EmbedRequest(inputs=[asset], model="fake-embedder"))
+
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.EMBEDDING
+    assert results[0].parent_ids == [asset.id]
 
 
 def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
