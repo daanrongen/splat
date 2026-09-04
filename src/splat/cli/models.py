@@ -42,6 +42,12 @@ def info(name: str = typer.Argument(...)) -> None:
     if info.min_images is not None:
         upper = info.max_images if info.max_images is not None else "∞"
         console.print(f"images:  {info.min_images}..{upper}")
+    if info.dimension is not None:
+        console.print(f"dim:     {info.dimension}")
+    if info.normalized is not None:
+        console.print(f"norm:    {info.normalized}")
+    if info.notes:
+        console.print(f"notes:   {info.notes}")
 
 
 @models_app.command("rm")

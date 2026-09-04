@@ -1,0 +1,50 @@
+from pathlib import Path
+
+import typer
+
+from splat.cli._console import console, error
+from splat.cli._pipeline_io import report, resolve_inputs
+from splat.domain.asset import AssetKind
+from splat.domain.errors import SplatDomainError
+from splat.handlers.embed import EmbedRequest
+from splat.registry.wiring import get_asset_cache, get_client
+
+
+def embed(
+    input: str | None = typer.Argument(
+        None, help="Image path, @<asset-id>, or '-' to read piped asset records."
+    ),
+    text: str | None = typer.Option(
+        None, "--text", help="Embed a text query instead of image input."
+    ),
+    output: Path | None = typer.Option(None, "-o", "--output", help="Also export .npy here."),
+    model: str = typer.Option("mobileclip2-s0", "--model"),
+    device: str = typer.Option("auto", "--device", help="'auto', 'mps', or 'cpu'."),
+) -> None:
+    """Embed image or text inputs as normalized vector assets."""
+    cache = get_asset_cache()
+    try:
+        if text is not None:
+            if input is not None:
+                raise SplatDomainError("Use either image input or --text, not both.")
+            results = get_client().embed(EmbedRequest(text=text, model=model, device=device))
+        else:
+            inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+            results = get_client().embed(EmbedRequest(inputs=inputs, model=model, device=device))
+    except SplatDomainError as exc:
+        error(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    if output is not None and results:
+        output.write_bytes(results[0].content_path.read_bytes())
+
+    def _human(assets: list) -> None:
+        for asset in assets:
+            console.print(
+                f"[green]embedded[/green] {asset.id}  "
+                f"{asset.metadata.get('input_type')} "
+                f"{asset.metadata.get('dimension')}d "
+                f"{asset.metadata.get('dtype')}"
+            )
+
+    report(results, _human)

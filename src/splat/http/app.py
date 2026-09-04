@@ -13,6 +13,7 @@ from splat.http import (
     caption,
     depth,
     diffuse,
+    embed,
     gaussian,
     info,
     mesh,
@@ -26,6 +27,7 @@ from splat.http.tools import compress, convert
 _ROUTERS = (
     diffuse,
     caption,
+    embed,
     segment,
     depth,
     upscale,

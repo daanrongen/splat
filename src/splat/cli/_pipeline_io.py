@@ -32,6 +32,8 @@ def resolve_inputs(
             line = line.strip()
             if not line:
                 continue
+            if not line.startswith("{"):
+                continue
             record = json.loads(line)
             assets.append(cache.get(record["id"]))
         if not assets:

@@ -6,6 +6,7 @@ from splat.domain.asset import AssetKind
 from splat.domain.value_objects import MIT
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.diffuse import DiffuseRequest
+from splat.handlers.embed import EmbedRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.upscale import UpscaleRequest
@@ -27,6 +28,21 @@ class FakeCaptionBackend:
 
     def caption(self, image_path: Path, *, prompt: str, max_tokens: int, temperature: float):
         return f"{prompt}: small scene"
+
+
+class FakeEmbeddingBackend:
+    name = "fake-embedder"
+    license = MIT
+
+    def embed_image(self, image_path: Path, **params):
+        import numpy as np
+
+        return np.array([1.0, 0.0], dtype=np.float32)
+
+    def embed_text(self, text: str, **params):
+        import numpy as np
+
+        return np.array([0.0, 1.0], dtype=np.float32)
 
 
 def test_diffuse_delegates_to_handler(mocker, tmp_path, monkeypatch):
@@ -56,6 +72,17 @@ def test_caption_delegates_to_handler(mocker, tmp_path, monkeypatch):
 
     assert len(results) == 1
     assert results[0].content_path.read_text(encoding="utf-8") == "Look: small scene"
+
+
+def test_embed_delegates_to_handler(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
+    client = LocalSplatClient()
+
+    results = client.embed(EmbedRequest(text="red chair", model="fake-embedder"))
+
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.EMBEDDING
 
 
 def test_info_returns_summary(tmp_path, synthetic_cloud):

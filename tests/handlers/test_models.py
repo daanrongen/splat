@@ -81,3 +81,12 @@ def test_info_reports_upscale_model_sources():
 
     assert descriptor.name == "realesrgan-mlx"
     assert "mlx-community/Real-ESRGAN-x4plus" in descriptor.hf_repo_id
+
+
+def test_info_reports_embedding_model_descriptor():
+    descriptor = models_handler.info("mobileclip2-s0")
+
+    assert descriptor.name == "mobileclip2-s0"
+    assert descriptor.hf_repo_id == "timm/MobileCLIP2-S0-OpenCLIP"
+    assert descriptor.dimension == 512
+    assert descriptor.normalized is True

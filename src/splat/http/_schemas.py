@@ -24,6 +24,12 @@ class UpscaleBody(BaseModel):
     tile: int = 0
 
 
+class EmbedBody(BaseModel):
+    text: str | None = None
+    model: str = "mobileclip2-s0"
+    device: str = "auto"
+
+
 class AssetSummary(BaseModel):
     id: str
     kind: str
@@ -56,6 +62,9 @@ class ModelInfoResponse(BaseModel):
     license: str
     min_images: int | None = None
     max_images: int | None = None
+    dimension: int | None = None
+    normalized: bool | None = None
+    notes: str = ""
 
 
 class InfoResponse(BaseModel):

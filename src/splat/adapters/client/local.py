@@ -11,6 +11,8 @@ from splat.handlers.depth import DepthRequest
 from splat.handlers.depth import handle as handle_depth
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.diffuse import handle as handle_diffuse
+from splat.handlers.embed import EmbedRequest
+from splat.handlers.embed import handle as handle_embed
 from splat.handlers.gaussian import GaussianRequest, GaussianResult
 from splat.handlers.gaussian import handle as handle_gaussian
 from splat.handlers.inspect import info as handle_info
@@ -46,6 +48,9 @@ class LocalSplatClient:
 
     def upscale(self, request: UpscaleRequest) -> list[Asset]:
         return handle_upscale(request)
+
+    def embed(self, request: EmbedRequest) -> list[Asset]:
+        return handle_embed(request)
 
     def mesh(self, request: MeshRequest) -> list[Asset]:
         return handle_mesh(request)
@@ -98,6 +103,9 @@ class LocalSplatClient:
             license=str(descriptor.license),
             min_images=getattr(descriptor, "min_images", None),
             max_images=getattr(descriptor, "max_images", None),
+            dimension=getattr(descriptor, "dimension", None),
+            normalized=getattr(descriptor, "normalized", None),
+            notes=getattr(descriptor, "notes", ""),
         )
 
     def models_rm(self, name: str) -> None:

@@ -4,9 +4,12 @@ contract, so there is exactly one definition of each request/response
 shape, shared with the server that produces/consumes it.
 """
 
+import hashlib
+from io import BytesIO
 from pathlib import Path
 
 import httpx
+import numpy as np
 
 from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset, AssetKind
@@ -15,6 +18,7 @@ from splat.domain.gaussians import GaussianCloud
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
+from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest, GaussianResult
 from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
@@ -24,6 +28,7 @@ from splat.handlers.upscale import UpscaleRequest
 from splat.http._schemas import (
     AssetSummary,
     DiffuseBody,
+    EmbedBody,
     InfoResponse,
     ModelInfoResponse,
     UpscaleBody,
@@ -223,6 +228,67 @@ class RemoteSplatClient:
             )
         return results
 
+    def embed(self, request: EmbedRequest) -> list[Asset]:
+        results = []
+        if request.text is not None:
+            body = EmbedBody(text=request.text, model=request.model, device=request.device)
+            response = self._client.post("/embed", data=body.model_dump(exclude_none=True))
+            _raise_for_domain_error(response)
+            vector = np.load(BytesIO(response.content))
+            results.append(
+                self._store_asset(
+                    response.headers["X-Splat-Asset-Id"],
+                    kind=AssetKind.EMBEDDING,
+                    content=response.content,
+                    ext="npy",
+                    metadata={
+                        "input_type": "text",
+                        "device": request.device,
+                        "text_sha256": hashlib.sha256(request.text.encode("utf-8")).hexdigest(),
+                        "text_length": len(request.text),
+                        "dtype": str(vector.dtype),
+                        "shape": list(vector.shape),
+                        "dimension": int(vector.shape[0]),
+                        "normalized": True,
+                        "model": request.model,
+                    },
+                    parent_ids=[],
+                    created_by=f"embed:{request.model}",
+                )
+            )
+            return results
+
+        for input_asset in request.inputs or []:
+            files = {
+                "image": (input_asset.content_path.name, input_asset.content_path.read_bytes())
+            }
+            body = EmbedBody(model=request.model, device=request.device)
+            response = self._client.post(
+                "/embed", files=files, data=body.model_dump(exclude_none=True)
+            )
+            _raise_for_domain_error(response)
+            vector = np.load(BytesIO(response.content))
+            results.append(
+                self._store_asset(
+                    response.headers["X-Splat-Asset-Id"],
+                    kind=AssetKind.EMBEDDING,
+                    content=response.content,
+                    ext="npy",
+                    metadata={
+                        "input_type": "image",
+                        "device": request.device,
+                        "dtype": str(vector.dtype),
+                        "shape": list(vector.shape),
+                        "dimension": int(vector.shape[0]),
+                        "normalized": True,
+                        "model": request.model,
+                    },
+                    parent_ids=[input_asset.id],
+                    created_by=f"embed:{request.model}",
+                )
+            )
+        return results
+
     def mesh(self, request: MeshRequest) -> list[Asset]:
         results = []
         for input_asset in request.inputs:
@@ -323,6 +389,9 @@ class RemoteSplatClient:
             license=data.license,
             min_images=data.min_images,
             max_images=data.max_images,
+            dimension=data.dimension,
+            normalized=data.normalized,
+            notes=data.notes,
         )
 
     def models_rm(self, name: str) -> None:

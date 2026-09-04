@@ -17,6 +17,7 @@ import trimesh
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
+from splat.application.embed import EmbedUseCase
 from splat.application.mesh import PredictMeshUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
@@ -29,6 +30,7 @@ from splat.ports.asset_cache import AssetCache
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
+from splat.ports.embedding import EmbeddingBackend
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.upscaling import UpscalingBackend
@@ -179,6 +181,110 @@ def run_caption(
         metadata={**params, "text_length": len(text)},
         parent_ids=[input_asset.id],
         created_by=f"caption:{model_name}",
+    )
+
+
+def _embedding_metadata(
+    embedding: np.ndarray,
+    *,
+    input_type: str,
+    model_name: str,
+    params: dict,
+    extra: dict,
+) -> dict:
+    return {
+        **params,
+        **extra,
+        "input_type": input_type,
+        "dtype": str(embedding.dtype),
+        "shape": list(embedding.shape),
+        "dimension": int(embedding.shape[0]),
+        "normalized": True,
+        "model": model_name,
+    }
+
+
+def _embedding_bytes(embedding: np.ndarray) -> bytes:
+    buf = BytesIO()
+    np.save(buf, embedding.astype(np.float32, copy=False))
+    return buf.getvalue()
+
+
+def run_embed_image(
+    backend: EmbeddingBackend,
+    cache: AssetCache,
+    *,
+    model_name: str,
+    input_asset: Asset,
+    params: dict,
+) -> Asset:
+    cache_key = compute_cache_key(
+        stage="embed",
+        model=model_name,
+        params={"input_type": "image", **params},
+        parent_ids=(input_asset.id,),
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    embedding = EmbedUseCase(backend).image(input_asset.content_path, **params)
+
+    return cache.put(
+        cache_key,
+        kind=AssetKind.EMBEDDING,
+        content_bytes=_embedding_bytes(embedding),
+        ext="npy",
+        metadata=_embedding_metadata(
+            embedding,
+            input_type="image",
+            model_name=model_name,
+            params=params,
+            extra={},
+        ),
+        parent_ids=[input_asset.id],
+        created_by=f"embed:{model_name}",
+    )
+
+
+def run_embed_text(
+    backend: EmbeddingBackend,
+    cache: AssetCache,
+    *,
+    model_name: str,
+    text: str,
+    params: dict,
+    input_asset: Asset | None = None,
+) -> Asset:
+    text_sha256 = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    parent_ids = (input_asset.id,) if input_asset is not None else ()
+    key_params = {"input_type": "text", **params}
+    if input_asset is None:
+        key_params["text_sha256"] = text_sha256
+    cache_key = compute_cache_key(
+        stage="embed",
+        model=model_name,
+        params=key_params,
+        parent_ids=parent_ids,
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    embedding = EmbedUseCase(backend).text(text, **params)
+
+    return cache.put(
+        cache_key,
+        kind=AssetKind.EMBEDDING,
+        content_bytes=_embedding_bytes(embedding),
+        ext="npy",
+        metadata=_embedding_metadata(
+            embedding,
+            input_type="text",
+            model_name=model_name,
+            params=params,
+            extra={"text_sha256": text_sha256, "text_length": len(text)},
+        ),
+        parent_ids=list(parent_ids),
+        created_by=f"embed:{model_name}",
     )
 
 

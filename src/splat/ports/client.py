@@ -26,6 +26,7 @@ from splat.domain.gaussians import GaussianCloud
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
+from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest, GaussianResult
 from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
@@ -66,6 +67,9 @@ class ModelInfo:
     license: str
     min_images: int | None = None
     max_images: int | None = None
+    dimension: int | None = None
+    normalized: bool | None = None
+    notes: str = ""
 
 
 class SplatClient(Protocol):
@@ -78,6 +82,8 @@ class SplatClient(Protocol):
     def depth(self, request: DepthRequest) -> list[Asset]: ...
 
     def upscale(self, request: UpscaleRequest) -> list[Asset]: ...
+
+    def embed(self, request: EmbedRequest) -> list[Asset]: ...
 
     def mesh(self, request: MeshRequest) -> list[Asset]: ...
 
