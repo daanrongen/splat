@@ -92,6 +92,7 @@ uv sync
 | `tools extract.surface INPUT OUTPUT` | Gaussian splat → mesh export (SuGaR-style) | not yet implemented, stubbed intentionally; `-t/--to`, `--device` |
 | `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
 | `http` | Start splat's HTTP server | `--host`, `--port` (default `8000`) |
+| `mcp` | Start splat's MCP server (stdio) | |
 | `env` | Show every `SPLAT_*` default and where it resolved from | |
 
 `INPUT` on `segment`/`depth`/`mesh`/`tools displace.height` accepts a file
@@ -134,6 +135,21 @@ returns the asset bytes directly):
 network (e.g. running it on one machine and driving it from another on the
 same LAN); don't expose it beyond that without adding your own auth layer
 in front of it. It always executes locally and never proxies elsewhere.
+
+## MCP server
+
+`splat mcp` exposes the same pipeline as MCP tools over stdio — the way
+Claude Desktop/Claude Code spawn local MCP servers. One tool per CLI
+command (`diffuse`, `segment`, `depth`, `mesh`, `gaussian`, `convert`,
+`compress`, `info`, `validate`, `models_list`/`pull`/`info`/`rm`,
+`tools_displace_height`), all built on the same `handlers/` layer as
+`splat http` — no logic duplicated between the two servers.
+
+Image/asset arguments accept a local file path or `@<asset-id>`, same as
+the CLI's own addressing — chain tool calls the way you'd pipe CLI
+commands (call `depth`, then feed its returned asset id into
+`tools_displace_height`). Like `splat http`, this always executes locally
+and never consults `SPLAT_HOST`.
 
 ## Model catalog
 
@@ -215,10 +231,12 @@ functions directly.
 `handlers/` sits one level above `application/`: one module per capability,
 each resolving a backend/cache from `registry/wiring.py` and invoking the
 matching use case — the one place that logic lives, so it isn't duplicated
-per driving adapter. `cli/` and `http/` are both thin driving adapters on
-top of `handlers/`: `cli/` maps argv to a request and renders the result as
-console output or a written file; `http/` maps a REST request to the same
-request type and renders the result as an HTTP response. Neither imports a
+per driving adapter. `cli/`, `http/`, and `mcp/` are all thin driving
+adapters on top of `handlers/`: `cli/` maps argv to a request and renders
+the result as console output or a written file; `http/` maps a REST
+request to the same request type and renders the result as an HTTP
+response; `mcp/` maps an MCP tool call to the same request type and
+renders the result as MCP content blocks. None of the three imports a
 concrete adapter directly.
 
 ## Development

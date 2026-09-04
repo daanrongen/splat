@@ -19,6 +19,7 @@ from splat.cli.env import env
 from splat.cli.gaussian import gaussian
 from splat.cli.http import http
 from splat.cli.info import info
+from splat.cli.mcp import mcp
 from splat.cli.mesh import mesh
 from splat.cli.models import models_app
 from splat.cli.segment import segment
@@ -42,6 +43,7 @@ app.command("segment")(segment)
 app.command("depth")(depth)
 app.command("gaussian")(gaussian)
 app.command("http")(http)
+app.command("mcp")(mcp)
 app.command("env")(env)
 app.add_typer(models_app, name="models")
 app.add_typer(tools_app, name="tools")
