@@ -42,10 +42,10 @@ class LocalSplatClient:
     def gaussian(self, request: GaussianRequest) -> GaussianResult:
         return handle_gaussian(request)
 
-    def convert(self, request: ConvertRequest) -> ConvertResult:
+    def tools_convert(self, request: ConvertRequest) -> ConvertResult:
         return handle_convert(request)
 
-    def compress(self, request: CompressRequest) -> GaussianCloud:
+    def tools_compress(self, request: CompressRequest) -> GaussianCloud:
         return handle_compress(request)
 
     def info(self, path: Path) -> InfoSummary:

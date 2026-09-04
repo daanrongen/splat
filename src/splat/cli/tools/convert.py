@@ -37,7 +37,7 @@ def convert(
                 raise SplatDomainError("Provide INPUT and OUTPUT paths, or use -o/--output.")
             input_path, output_path = inputs
 
-        result = get_client().convert(
+        result = get_client().tools_convert(
             ConvertRequest(
                 input_path=input_path,
                 output_path=output_path,

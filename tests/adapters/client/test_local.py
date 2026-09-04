@@ -4,6 +4,8 @@ from splat.adapters.client.local import LocalSplatClient
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.value_objects import MIT
 from splat.handlers.diffuse import DiffuseRequest
+from splat.handlers.tools.compress import CompressRequest
+from splat.handlers.tools.convert import ConvertRequest
 
 
 class FakeDiffusionBackend:
@@ -48,6 +50,32 @@ def test_validate_returns_summary(tmp_path, synthetic_cloud):
 
     assert summary.points == synthetic_cloud.point_count
     assert isinstance(summary.issues, list)
+
+
+def test_tools_convert_delegates_to_handler(tmp_path, synthetic_cloud):
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+    splat_path = tmp_path / "out.splat"
+    client = LocalSplatClient()
+
+    result = client.tools_convert(ConvertRequest(input_path=ply_path, output_path=splat_path))
+
+    assert splat_path.exists()
+    assert result.cloud.point_count == synthetic_cloud.point_count
+
+
+def test_tools_compress_delegates_to_handler(tmp_path, synthetic_cloud):
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+    out_path = tmp_path / "out.ply"
+    client = LocalSplatClient()
+
+    cloud = client.tools_compress(
+        CompressRequest(input_path=ply_path, output_path=out_path, profile="archival")
+    )
+
+    assert out_path.exists()
+    assert cloud.point_count <= synthetic_cloud.point_count
 
 
 def test_models_list_returns_summaries():

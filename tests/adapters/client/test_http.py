@@ -143,23 +143,25 @@ def test_gaussian_writes_local_output(mocker, tmp_path, synthetic_cloud, remote_
     assert result.cloud.point_count == synthetic_cloud.point_count
 
 
-def test_convert_writes_local_output(tmp_path, synthetic_cloud, remote_client):
+def test_tools_convert_writes_local_output(tmp_path, synthetic_cloud, remote_client):
     ply_path = tmp_path / "in.ply"
     PlyWriter().write(synthetic_cloud, ply_path)
     splat_path = tmp_path / "out.splat"
 
-    result = remote_client.convert(ConvertRequest(input_path=ply_path, output_path=splat_path))
+    result = remote_client.tools_convert(
+        ConvertRequest(input_path=ply_path, output_path=splat_path)
+    )
 
     assert splat_path.exists()
     assert result.cloud.point_count == synthetic_cloud.point_count
 
 
-def test_compress_writes_local_output(tmp_path, synthetic_cloud, remote_client):
+def test_tools_compress_writes_local_output(tmp_path, synthetic_cloud, remote_client):
     ply_path = tmp_path / "in.ply"
     PlyWriter().write(synthetic_cloud, ply_path)
     out_path = tmp_path / "out.ply"
 
-    cloud = remote_client.compress(CompressRequest(input_path=ply_path, output_path=out_path))
+    cloud = remote_client.tools_compress(CompressRequest(input_path=ply_path, output_path=out_path))
 
     assert out_path.exists()
     assert cloud.point_count <= synthetic_cloud.point_count

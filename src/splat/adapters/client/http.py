@@ -189,7 +189,7 @@ class RemoteSplatClient:
         warnings = response.headers.get("X-Splat-Warnings", "")
         return GaussianResult(cloud=cloud, warnings=warnings.split("; ") if warnings else [])
 
-    def convert(self, request: ConvertRequest) -> ConvertResult:
+    def tools_convert(self, request: ConvertRequest) -> ConvertResult:
         files = {"input": (request.input_path.name, request.input_path.read_bytes())}
         form = {"to": request.output_path.suffix.lstrip(".")}
         if request.from_format:
@@ -201,7 +201,7 @@ class RemoteSplatClient:
         warnings = response.headers.get("X-Splat-Warnings", "")
         return ConvertResult(cloud=cloud, warnings=warnings.split("; ") if warnings else [])
 
-    def compress(self, request: CompressRequest) -> GaussianCloud:
+    def tools_compress(self, request: CompressRequest) -> GaussianCloud:
         files = {"input": (request.input_path.name, request.input_path.read_bytes())}
         form = {"profile": request.profile, "to": request.output_path.suffix.lstrip(".")}
         response = self._client.post("/compress", files=files, data=form)

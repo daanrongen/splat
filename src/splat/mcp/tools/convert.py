@@ -13,7 +13,7 @@ def convert(
     from_format: str | None = None,
     to_format: str | None = None,
 ) -> list[types.ContentBlock]:
-    result = get_client().convert(
+    result = get_client().tools_convert(
         ConvertRequest(
             input_path=Path(input_path),
             output_path=Path(output_path),
