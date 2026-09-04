@@ -12,6 +12,7 @@ def test_help() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "tools" in result.output
+    assert "upscale" in result.output
 
 
 def test_convert_and_compress_are_not_top_level_commands() -> None:

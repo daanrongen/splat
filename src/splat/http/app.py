@@ -17,6 +17,7 @@ from splat.http import (
     mesh,
     models,
     segment,
+    upscale,
     validate,
 )
 from splat.http.tools import compress, convert
@@ -25,6 +26,7 @@ _ROUTERS = (
     diffuse,
     segment,
     depth,
+    upscale,
     mesh,
     gaussian,
     convert,

@@ -1,13 +1,13 @@
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from splat.domain.asset import AssetKind
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import MIT
 from splat.handlers.segment import SegmentRequest, handle
 from splat.registry.wiring import get_asset_cache
+from tests.image_helpers import write_sample_png
 
 
 class FakeSegmentationBackend:
@@ -21,8 +21,7 @@ class FakeSegmentationBackend:
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (2, 2)).save(path)
-    return path
+    return write_sample_png(path, (2, 2))
 
 
 def test_handle_fans_out_stickers(mocker, tmp_path, monkeypatch):

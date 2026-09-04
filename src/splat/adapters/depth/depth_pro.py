@@ -10,11 +10,11 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
 from transformers import DepthProForDepthEstimation, DepthProImageProcessor
 
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import ModelLicense
+from splat.image_io import read_rgb
 
 
 def _resolve_device(device: str) -> str:
@@ -45,14 +45,14 @@ class DepthProBackend:
 
     def estimate(self, image_path: Path, **params) -> DepthMap:
         self._load()
-        image = Image.open(image_path).convert("RGB")
+        image = read_rgb(image_path)
 
         inputs = self._processor(images=image, return_tensors="pt").to(self._device)
         with torch.no_grad():
             outputs = self._model(**inputs)
 
         post_processed = self._processor.post_process_depth_estimation(
-            outputs, target_sizes=[(image.height, image.width)]
+            outputs, target_sizes=[(image.shape[0], image.shape[1])]
         )[0]
 
         depth = post_processed["predicted_depth"].to("cpu").numpy().astype(np.float32)

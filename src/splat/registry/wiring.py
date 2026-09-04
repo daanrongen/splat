@@ -22,6 +22,7 @@ from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.splat_io import SplatReader, SplatWriter
+from splat.ports.upscaling import UpscalingBackend
 from splat.registry.formats import FORMAT_READERS, FORMAT_WRITERS
 from splat.registry.gaussian import GAUSSIAN_CATALOG
 
@@ -148,3 +149,15 @@ def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBack
     return descriptor.backend_cls(
         hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
     )
+
+
+def get_upscale_backend(name: str) -> UpscalingBackend:
+    from splat.registry.upscale import UPSCALE_CATALOG
+
+    try:
+        descriptor = UPSCALE_CATALOG[name]
+    except KeyError as exc:
+        available = ", ".join(sorted(UPSCALE_CATALOG))
+        raise UnsupportedFormat(f"Unknown upscale model {name!r}. Available: {available}") from exc
+
+    return descriptor.backend_cls(license=descriptor.license)

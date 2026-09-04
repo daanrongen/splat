@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from splat.application.models_admin import model_source_label
 from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset
 from splat.domain.gaussians import GaussianCloud
@@ -20,6 +21,8 @@ from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.compress import handle as handle_compress
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.tools.convert import handle as handle_convert
+from splat.handlers.upscale import UpscaleRequest
+from splat.handlers.upscale import handle as handle_upscale
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 
 
@@ -35,6 +38,9 @@ class LocalSplatClient:
 
     def depth(self, request: DepthRequest) -> list[Asset]:
         return handle_depth(request)
+
+    def upscale(self, request: UpscaleRequest) -> list[Asset]:
+        return handle_upscale(request)
 
     def mesh(self, request: MeshRequest) -> list[Asset]:
         return handle_mesh(request)
@@ -83,7 +89,7 @@ class LocalSplatClient:
         return ModelInfo(
             name=descriptor.name,
             runtime=getattr(descriptor, "runtime", "-"),
-            source=descriptor.hf_repo_id,
+            source=model_source_label(descriptor),
             license=str(descriptor.license),
             min_images=getattr(descriptor, "min_images", None),
             max_images=getattr(descriptor, "max_images", None),

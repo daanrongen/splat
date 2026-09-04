@@ -7,13 +7,13 @@ from pathlib import Path
 
 import mlx.core as mx
 import numpy as np
-from PIL import Image
 
 from splat.adapters.diffusion._vendor.mlx_stable_diffusion import (
     StableDiffusion,
     StableDiffusionXL,
 )
 from splat.domain.value_objects import ModelLicense
+from splat.image_io import write_png
 
 # The vendored loader only recognizes repo ids it has an explicit path-map
 # entry for (see _vendor/mlx_stable_diffusion/model_io.py's `_MODELS`) —
@@ -69,5 +69,5 @@ class MLXStableDiffusionBackend:
         mx.eval(decoded)
 
         image_array = np.array((mx.clip(decoded[0], 0, 1) * 255).astype(mx.uint8))
-        Image.fromarray(image_array).save(output_path)
+        write_png(output_path, image_array)
         return output_path

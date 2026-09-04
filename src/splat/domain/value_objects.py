@@ -29,6 +29,7 @@ class ModelLicense:
 
 
 MIT = ModelLicense(spdx_id="MIT", is_commercial=True)
+BSD_3_CLAUSE = ModelLicense(spdx_id="BSD-3-Clause", is_commercial=True)
 APACHE_2_0 = ModelLicense(spdx_id="Apache-2.0", is_commercial=True)
 CC_BY_NC_SA_4_0 = ModelLicense(
     spdx_id="CC-BY-NC-SA-4.0",

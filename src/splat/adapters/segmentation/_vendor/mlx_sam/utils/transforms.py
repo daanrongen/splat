@@ -1,6 +1,7 @@
 import mlx.core as mx
 import numpy as np
-from PIL import Image
+
+from splat.image_io import resize
 
 
 class ResizeLongestSide:
@@ -18,9 +19,7 @@ class ResizeLongestSide:
         Expects a numpy array with shape HxWxC in uint8 format.
         """
         target_size = self.get_preprocess_shape(image.shape[0], image.shape[1], self.target_length)
-        return np.array(
-            Image.fromarray(image).resize(target_size[::-1], resample=Image.Resampling.BILINEAR)
-        )
+        return resize(image, target_size[::-1], interpolation="linear")
 
     def apply_coords(self, coords: mx.array, original_size: tuple[int, ...]) -> mx.array:
         """

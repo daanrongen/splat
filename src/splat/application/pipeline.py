@@ -13,21 +13,23 @@ from pathlib import Path
 
 import numpy as np
 import trimesh
-from PIL import Image
 
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
 from splat.application.mesh import PredictMeshUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
+from splat.application.upscale import UpscaleUseCase
 from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Shape3D
+from splat.image_io import encode_png
 from splat.ports.asset_cache import AssetCache
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.segmentation import SegmentationBackend
+from splat.ports.upscaling import UpscalingBackend
 
 
 def compute_cache_key(
@@ -90,14 +92,12 @@ def run_segment(
 
     children: list[Asset] = []
     for i, sticker in enumerate(stickers):
-        buf = BytesIO()
-        Image.fromarray(sticker.rgba, mode="RGBA").save(buf, format="PNG")
         child_id = f"{cache_key}-{i:03d}"
         children.append(
             cache.put(
                 child_id,
                 kind=AssetKind.STICKER,
-                content_bytes=buf.getvalue(),
+                content_bytes=encode_png(sticker.rgba),
                 ext="png",
                 metadata={"bbox": sticker.bbox, "score": sticker.score, "area": sticker.area},
                 parent_ids=[input_asset.id],
@@ -152,12 +152,49 @@ def run_depth(
     )
 
 
+def run_upscale(
+    backend: UpscalingBackend,
+    cache: AssetCache,
+    *,
+    model_name: str,
+    input_asset: Asset,
+    params: dict,
+) -> Asset:
+    cache_key = compute_cache_key(
+        stage="upscale", model=model_name, params=params, parent_ids=(input_asset.id,)
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    result = UpscaleUseCase(backend).execute(input_asset.content_path, **params)
+    variant = None
+    if hasattr(backend, "variant_for_factor"):
+        variant = backend.variant_for_factor(params["factor"])
+
+    return cache.put(
+        cache_key,
+        kind=AssetKind.IMAGE,
+        content_bytes=encode_png(result.image),
+        ext="png",
+        metadata={
+            "model": model_name,
+            "variant": variant,
+            "factor": params["factor"],
+            "tile": params.get("tile", 0),
+            "source_width": result.source_width,
+            "source_height": result.source_height,
+            "output_width": result.output_width,
+            "output_height": result.output_height,
+        },
+        parent_ids=[input_asset.id],
+        created_by=f"upscale:{model_name}",
+    )
+
+
 def _shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
     if shape.uv is not None and shape.texture is not None:
-        mesh.visual = trimesh.visual.TextureVisuals(
-            uv=shape.uv, image=Image.fromarray(shape.texture)
-        )
+        mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=shape.texture)
     buf = BytesIO()
     try:
         mesh.export(buf, file_type=export_format)

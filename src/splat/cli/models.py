@@ -4,10 +4,7 @@ from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_client
 
-models_app = typer.Typer(
-    help="Manage locally cached models (reconstruction, generation, segmentation, depth).",
-    no_args_is_help=True,
-)
+models_app = typer.Typer(help="Manage locally cached model weights.", no_args_is_help=True)
 
 
 @models_app.command("list")

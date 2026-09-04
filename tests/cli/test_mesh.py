@@ -2,12 +2,12 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 from typer.testing import CliRunner
 
 from splat.cli.main import app
 from splat.domain.image_space import Shape3D
 from splat.domain.value_objects import MIT
+from tests.image_helpers import write_sample_png
 
 runner = CliRunner()
 
@@ -24,8 +24,7 @@ class FakeMeshBackend:
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (4, 4)).save(path)
-    return path
+    return write_sample_png(path, (4, 4))
 
 
 def test_mesh_predicts_with_wired_backend(mocker, tmp_path, monkeypatch):

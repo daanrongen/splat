@@ -1,10 +1,8 @@
-import io
-
 from fastapi.testclient import TestClient
-from PIL import Image
 
 from splat.adapters.formats.ply import PlyWriter
 from splat.http.app import app
+from tests.image_helpers import sample_png_bytes
 
 client = TestClient(app)
 
@@ -23,9 +21,7 @@ class FakeReconstructionBackend:
 
 
 def _sample_png_bytes() -> bytes:
-    buf = io.BytesIO()
-    Image.new("RGB", (2, 2)).save(buf, format="PNG")
-    return buf.getvalue()
+    return sample_png_bytes((2, 2))
 
 
 def test_gaussian_returns_output_bytes(mocker, synthetic_cloud):

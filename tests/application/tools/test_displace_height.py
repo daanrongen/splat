@@ -2,17 +2,16 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from splat.application.tools import displace_height
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap
+from tests.image_helpers import write_sample_png
 
 
 def _sample_image(tmp_path: Path, size=(4, 4)) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", size).save(path)
-    return path
+    return write_sample_png(path, size)
 
 
 def test_execute_requires_focal_length(tmp_path):

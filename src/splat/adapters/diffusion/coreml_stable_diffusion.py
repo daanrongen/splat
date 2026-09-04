@@ -17,10 +17,10 @@ from pathlib import Path
 import coremltools as ct
 import numpy as np
 from huggingface_hub import snapshot_download
-from PIL import Image
 
 from splat.adapters.diffusion._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
 from splat.domain.value_objects import ModelLicense
+from splat.image_io import write_png
 from splat.paths import model_cache_dir
 
 _PACKAGE_PREFIX = "Stable_Diffusion_version_stabilityai_stable-diffusion-2-1-base"
@@ -173,5 +173,5 @@ class CoreMLStableDiffusionBackend:
         image = self._vae_decoder.predict({"z": z})["image"]  # (1, 3, 512, 512), roughly [-1, 1]
 
         image = np.clip(image[0].transpose(1, 2, 0) / 2 + 0.5, 0, 1)
-        Image.fromarray((image * 255).astype(np.uint8)).save(output_path)
+        write_png(output_path, (image * 255).astype(np.uint8))
         return output_path

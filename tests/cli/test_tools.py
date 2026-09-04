@@ -2,20 +2,19 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.cli.main import app
 from splat.domain.asset import AssetKind
+from tests.image_helpers import write_sample_png
 
 runner = CliRunner()
 
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (4, 4)).save(path)
-    return path
+    return write_sample_png(path, (4, 4))
 
 
 def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):

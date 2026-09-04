@@ -1,10 +1,10 @@
 # splat
 
-`splat` is a local 3D image-space toolkit for generating, segmenting, estimating depth, predicting meshes, reconstructing Gaussian splats, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, and PyTorch/MPS backends, and it downloads model weights on demand instead of shipping them in the package.
+`splat` is a local 3D image-space toolkit for generating, segmenting, upscaling, estimating depth, predicting meshes, reconstructing Gaussian splats, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, PyTorch/MPS, and OpenCV-backed image I/O, and it downloads model weights on demand instead of shipping them in the package.
 
 The CLI is split by behavior:
 
-- **Model-backed stages** live at the top level: `diffuse`, `segment`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
+- **Model-backed stages** live at the top level: `diffuse`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
 - **Deterministic tools** live under `splat tools`: `convert`, `compress`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
 - **Inspection, services, and administration** stay separate: `info`, `validate`, `models`, `http`, `mcp`, and `env`.
 
@@ -64,6 +64,16 @@ splat depth stickers/sticker_000.png --model depth-pro -o depth.png
 ```
 
 Key options: `--model depth-pro`, `--device`, `-o/--output`.
+
+### upscale
+
+`splat upscale` turns an image or sticker asset into a higher-resolution image asset with a super-resolution backend.
+
+```sh
+splat diffuse "dog" | splat upscale - --factor 4 -o dog-4x.png
+```
+
+Key options: `--model realesrgan-mlx`, `--factor 2|4`, `--tile`, `-o/--output`.
 
 ### gaussian
 
@@ -155,7 +165,7 @@ splat validate scene.ply --strict
 Pipeline commands accept a file path, `@<asset-id>`, or `-` for NDJSON records from stdin when the command works with assets. Every asset-producing stage writes to the content-addressed cache and prints NDJSON when stdout is piped.
 
 ```sh
-splat diffuse "dog" | splat segment - | splat depth - | splat tools displace.height - -o test.obj
+splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth - | splat tools displace.height - -o test.obj
 ```
 
 `-o/--output` writes a convenient copy to the path you choose; it does not replace the cache entry. Cached assets keep provenance so downstream tools can retrieve parents, such as `displace.height` loading the image that produced a depth map.
@@ -174,6 +184,7 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | `POST /diffuse` | `splat diffuse` | image bytes |
 | `POST /segment` | `splat segment` | sticker asset manifest |
 | `POST /depth` | `splat depth` | depth `.npy` bytes |
+| `POST /upscale` | `splat upscale` | image bytes |
 | `POST /mesh` | `splat mesh` | mesh bytes |
 | `POST /gaussian` | `splat gaussian` | Gaussian splat bytes |
 | `POST /convert` | `splat tools convert` | converted file bytes |
@@ -201,7 +212,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `segment`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`.
 
 ```sh
 splat mcp
@@ -229,6 +240,9 @@ Important settings:
 | `SPLAT_ASSET_CACHE_DIR` | Pipeline asset cache |
 | `SPLAT_URL` | Remote `splat http` base URL for client commands |
 | `SPLAT_HOST` | Bind host and port for `splat http` |
+| `SPLAT_UPSCALE_MODEL` | Default model for `splat upscale` |
+| `SPLAT_UPSCALE_FACTOR` | Default factor for `splat upscale` |
+| `SPLAT_UPSCALE_TILE` | Default tile size for `splat upscale` |
 | `SPLAT_<COMMAND>_<PARAM>` | Default value for supported command options |
 
 Run `splat env` to inspect every resolved setting, its source, and whether `SPLAT_URL` is reachable.

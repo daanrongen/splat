@@ -1,12 +1,10 @@
-import io
-
 import numpy as np
 from fastapi.testclient import TestClient
-from PIL import Image
 
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import MIT
 from splat.http.app import app
+from tests.image_helpers import sample_png_bytes
 
 client = TestClient(app)
 
@@ -21,9 +19,7 @@ class FakeSegmentationBackend:
 
 
 def _sample_png_bytes() -> bytes:
-    buf = io.BytesIO()
-    Image.new("RGB", (2, 2)).save(buf, format="PNG")
-    return buf.getvalue()
+    return sample_png_bytes((2, 2))
 
 
 def test_segment_returns_asset_manifest(mocker, tmp_path, monkeypatch):

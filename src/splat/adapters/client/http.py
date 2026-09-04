@@ -19,14 +19,17 @@ from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.upscale import UpscaleRequest
 from splat.http._schemas import (
     AssetSummary,
     DiffuseBody,
     InfoResponse,
     ModelInfoResponse,
+    UpscaleBody,
     ValidationResponse,
 )
 from splat.http._schemas import ModelSummary as WireModelSummary
+from splat.image_io import decode_rgb_or_rgba, read_rgb_or_rgba
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 from splat.registry.wiring import get_asset_cache, get_reader
 
@@ -149,6 +152,38 @@ class RemoteSplatClient:
                     metadata={},
                     parent_ids=[input_asset.id],
                     created_by=f"depth:{request.model}",
+                )
+            )
+        return results
+
+    def upscale(self, request: UpscaleRequest) -> list[Asset]:
+        results = []
+        body = UpscaleBody(model=request.model, factor=request.factor, tile=request.tile)
+        for input_asset in request.inputs:
+            source_image = read_rgb_or_rgba(input_asset.content_path)
+            files = {
+                "image": (input_asset.content_path.name, input_asset.content_path.read_bytes())
+            }
+            response = self._client.post("/upscale", files=files, data=body.model_dump())
+            _raise_for_domain_error(response)
+            output_image = decode_rgb_or_rgba(response.content)
+            results.append(
+                self._store_asset(
+                    response.headers["X-Splat-Asset-Id"],
+                    kind=AssetKind.IMAGE,
+                    content=response.content,
+                    ext="png",
+                    metadata={
+                        "model": request.model,
+                        "factor": request.factor,
+                        "tile": request.tile,
+                        "source_width": source_image.shape[1],
+                        "source_height": source_image.shape[0],
+                        "output_width": output_image.shape[1],
+                        "output_height": output_image.shape[0],
+                    },
+                    parent_ids=[input_asset.id],
+                    created_by=f"upscale:{request.model}",
                 )
             )
         return results

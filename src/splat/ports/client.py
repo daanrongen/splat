@@ -30,6 +30,7 @@ from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.upscale import UpscaleRequest
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,8 @@ class SplatClient(Protocol):
     def segment(self, request: SegmentRequest) -> list[Asset]: ...
 
     def depth(self, request: DepthRequest) -> list[Asset]: ...
+
+    def upscale(self, request: UpscaleRequest) -> list[Asset]: ...
 
     def mesh(self, request: MeshRequest) -> list[Asset]: ...
 

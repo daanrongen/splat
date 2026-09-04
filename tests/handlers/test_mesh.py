@@ -1,13 +1,13 @@
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from splat.domain.asset import AssetKind
 from splat.domain.image_space import Shape3D
 from splat.domain.value_objects import MIT
 from splat.handlers.mesh import MeshRequest, handle
 from splat.registry.wiring import get_asset_cache
+from tests.image_helpers import write_sample_png
 
 
 class FakeMeshBackend:
@@ -22,8 +22,7 @@ class FakeMeshBackend:
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (4, 4)).save(path)
-    return path
+    return write_sample_png(path, (4, 4))
 
 
 def test_handle_predicts_mesh_for_each_input(mocker, tmp_path, monkeypatch):

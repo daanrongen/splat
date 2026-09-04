@@ -12,7 +12,12 @@ def _plain(output: str) -> str:
 
 
 def test_env_reports_defaults(monkeypatch):
-    for var in ("SPLAT_DIFFUSE_MODEL", "SPLAT_SEGMENT_MODEL", "SPLAT_DEPTH_MODEL"):
+    for var in (
+        "SPLAT_DIFFUSE_MODEL",
+        "SPLAT_SEGMENT_MODEL",
+        "SPLAT_DEPTH_MODEL",
+        "SPLAT_UPSCALE_MODEL",
+    ):
         monkeypatch.delenv(var, raising=False)
 
     result = runner.invoke(app, ["env"])
@@ -20,7 +25,9 @@ def test_env_reports_defaults(monkeypatch):
 
     assert result.exit_code == 0, result.output
     assert "SPLAT_DIFFUSE_MODEL" in plain
+    assert "SPLAT_UPSCALE_MODEL" in plain
     assert "sdxl-turbo-mlx" in plain
+    assert "realesrgan-mlx" in plain
     assert "default" in plain
 
 

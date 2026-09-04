@@ -2,7 +2,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
 
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.asset import AssetKind
@@ -15,7 +14,10 @@ from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.upscale import UpscaleRequest
+from splat.image_io import read_rgb_or_rgba
 from splat.registry.wiring import get_asset_cache
+from tests.image_helpers import write_sample_png
 
 
 class FakeDiffusionBackend:
@@ -46,6 +48,15 @@ class FakeSegmentationBackend:
         return [Sticker(rgba=rgba, bbox=(0, 0, 2, 2), score=0.9, area=4)]
 
 
+class FakeUpscaleBackend:
+    name = "fake-upscaler"
+    license = MIT
+    supported_factors = (2, 4)
+
+    def upscale(self, image, *, factor: int, tile: int = 0, **params):
+        return np.repeat(np.repeat(image, factor, axis=0), factor, axis=1)
+
+
 class FakeReconstructionBackend:
     def __init__(self, cloud) -> None:
         self._cloud = cloud
@@ -59,8 +70,7 @@ class FakeReconstructionBackend:
 
 def _sample_image(tmp_path: Path) -> Path:
     path = tmp_path / "scene.png"
-    Image.new("RGB", (2, 2)).save(path)
-    return path
+    return write_sample_png(path, (2, 2))
 
 
 def test_diffuse_stores_asset_locally(mocker, tmp_path, monkeypatch, remote_client):
@@ -109,6 +119,23 @@ def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote
     assert results[0].parent_ids == [asset.id]
 
 
+def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
+    cache = get_asset_cache()
+    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+
+    results = remote_client.upscale(
+        UpscaleRequest(inputs=[asset], model="fake-upscaler", factor=2, tile=8)
+    )
+
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.IMAGE
+    assert results[0].parent_ids == [asset.id]
+    assert results[0].metadata["output_width"] == 4
+    assert read_rgb_or_rgba(results[0].content_path).shape == (4, 4, 3)
+
+
 def test_segment_fetches_each_sticker(mocker, tmp_path, monkeypatch, remote_client):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
@@ -133,7 +160,7 @@ def test_gaussian_writes_local_output(mocker, tmp_path, synthetic_cloud, remote_
     )
     output_path = tmp_path / "out.ply"
     image_a, image_b = _sample_image(tmp_path), tmp_path / "b.png"
-    Image.new("RGB", (2, 2)).save(image_b)
+    write_sample_png(image_b, (2, 2))
 
     result = remote_client.gaussian(
         GaussianRequest(inputs=[image_a, image_b], output_path=output_path)

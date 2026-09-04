@@ -21,6 +21,7 @@ from splat.mcp import inspect as inspect_tool
 from splat.mcp import mesh as mesh_tool
 from splat.mcp import models as models_tool
 from splat.mcp import segment as segment_tool
+from splat.mcp import upscale as upscale_tool
 from splat.mcp.tools import compress as tools_compress
 from splat.mcp.tools import convert as tools_convert
 from splat.mcp.tools import displace_height as tools_displace_height
@@ -45,6 +46,7 @@ def _as_tool_error(fn: Callable[..., Any]) -> Callable[..., Any]:
 server.add_tool(_as_tool_error(diffuse.diffuse), name="diffuse")
 server.add_tool(_as_tool_error(segment_tool.segment), name="segment")
 server.add_tool(_as_tool_error(depth_tool.depth), name="depth")
+server.add_tool(_as_tool_error(upscale_tool.upscale), name="upscale")
 server.add_tool(_as_tool_error(mesh_tool.mesh), name="mesh")
 server.add_tool(_as_tool_error(gaussian.gaussian), name="gaussian")
 server.add_tool(_as_tool_error(tools_convert.convert), name="tools_convert")
