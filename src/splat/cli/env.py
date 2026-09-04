@@ -42,8 +42,6 @@ def _settings() -> list[_Setting]:
         _Setting("http", "--host", "SPLAT_HOST", "127.0.0.1:8000"),
         _Setting("tools compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
         _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
-        _Setting("train", "--iterations", "SPLAT_TRAIN_ITERATIONS", "30000"),
-        _Setting("train", "--backend", "SPLAT_TRAIN_BACKEND", ""),
         _Setting("tools displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO", "glb"),
         _Setting("*", "(client)", "SPLAT_URL", ""),
     ]
