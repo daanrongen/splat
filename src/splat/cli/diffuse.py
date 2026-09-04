@@ -2,12 +2,10 @@ from pathlib import Path
 
 import typer
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.application.pipeline import run_diffuse
 from splat.cli._console import console, error, warn
 from splat.cli._pipeline_io import report
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_diffusion_backend
+from splat.handlers.diffuse import DiffuseRequest, handle
 
 
 def diffuse(
@@ -22,27 +20,29 @@ def diffuse(
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
     """Diffuse an image from a text prompt (cached; the pipeline's origin stage)."""
-    cache = FilesystemAssetCache()
     try:
-        backend = get_diffusion_backend(model, device=device)
-        if not backend.license.is_commercial:
-            warn(f"{model} license: {backend.license}")
-        asset = run_diffuse(
-            backend,
-            cache,
-            model_name=model,
-            prompt=prompt,
-            params={"negative_prompt": negative_prompt, "steps": steps, "seed": seed},
+        result = handle(
+            DiffuseRequest(
+                prompt=prompt,
+                model=model,
+                negative_prompt=negative_prompt,
+                steps=steps,
+                seed=seed,
+                device=device,
+            )
         )
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
 
+    if result.license_warning:
+        warn(result.license_warning)
+
     if output is not None:
-        output.write_bytes(asset.content_path.read_bytes())
+        output.write_bytes(result.asset.content_path.read_bytes())
 
     report(
-        [asset],
+        [result.asset],
         lambda assets: console.print(
             f"[green]diffused[/green] {assets[0].id} ({assets[0].content_path})"
         ),

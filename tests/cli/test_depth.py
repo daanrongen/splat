@@ -37,7 +37,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 def test_depth_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.cli.depth.get_depth_backend", return_value=FakeDepthBackend())
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     image_path = _sample_image(tmp_path)
 
     result = runner.invoke(app, ["depth", str(image_path)])
@@ -51,7 +51,7 @@ def test_depth_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
 
 def test_depth_human_output(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.cli.depth.get_depth_backend", return_value=FakeDepthBackend())
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     mocker.patch("splat.cli._pipeline_io.is_piped", return_value=False)
     image_path = _sample_image(tmp_path)
 
@@ -65,7 +65,7 @@ def test_depth_human_output(mocker, tmp_path, monkeypatch):
 
 def test_depth_output_flag_writes_normalized_png(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.cli.depth.get_depth_backend", return_value=FakeDepthBackend())
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     image_path = _sample_image(tmp_path)
     out_path = tmp_path / "depth.png"
 
@@ -90,7 +90,7 @@ def test_depth_unknown_model_errors(tmp_path, monkeypatch):
 
 def test_depth_asset_id_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.cli.depth.get_depth_backend", return_value=FakeDepthBackend())
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     cache = FilesystemAssetCache(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
 
@@ -103,7 +103,7 @@ def test_depth_asset_id_input(mocker, tmp_path, monkeypatch):
 
 def test_depth_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.cli.depth.get_depth_backend", return_value=FakeDepthBackend())
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     cache = FilesystemAssetCache(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
     stdin_payload = json.dumps({"id": asset.id}) + "\n"

@@ -2,10 +2,9 @@ from pathlib import Path
 
 import typer
 
-from splat.application.inspect import ValidateUseCase
 from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_reader
+from splat.handlers.inspect import validate as validate_handler
 
 
 def validate(
@@ -14,7 +13,7 @@ def validate(
 ) -> None:
     """Check a splat file's domain invariants; exits non-zero on failure (CI-friendly)."""
     try:
-        result = ValidateUseCase(get_reader(path.suffix)).execute(path, strict=strict)
+        result = validate_handler(path, strict=strict)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

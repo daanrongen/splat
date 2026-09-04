@@ -2,16 +2,15 @@ from pathlib import Path
 
 import typer
 
-from splat.application.inspect import InfoUseCase
 from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_reader
+from splat.handlers.inspect import info as info_handler
 
 
 def info(path: Path = typer.Argument(..., help="Splat file to inspect.")) -> None:
     """Print point count, SH degree, bounding box, and file size."""
     try:
-        cloud = InfoUseCase(get_reader(path.suffix)).execute(path)
+        cloud = info_handler(path)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

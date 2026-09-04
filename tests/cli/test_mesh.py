@@ -30,7 +30,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 def test_mesh_predicts_with_wired_backend(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.cli.mesh.get_mesh_backend", return_value=FakeMeshBackend())
+    mocker.patch("splat.handlers.mesh.get_mesh_backend", return_value=FakeMeshBackend())
     image_path = _sample_image(tmp_path)
 
     result = runner.invoke(app, ["mesh", str(image_path)])

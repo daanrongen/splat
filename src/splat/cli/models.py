@@ -1,14 +1,8 @@
 import typer
 
-from splat.application.models_admin import (
-    ListModelsUseCase,
-    ModelInfoUseCase,
-    PullModelUseCase,
-    RemoveModelUseCase,
-)
 from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_model_source
+from splat.handlers import models as models_handler
 
 models_app = typer.Typer(
     help="Manage locally cached models (reconstruction, generation, segmentation, depth).",
@@ -19,7 +13,7 @@ models_app = typer.Typer(
 @models_app.command("list")
 def list_models() -> None:
     """List catalog models and whether their weights are cached locally."""
-    rows = ListModelsUseCase(get_model_source()).execute()
+    rows = models_handler.list_models()
     for descriptor, cached in rows:
         status = "cached" if cached else "not pulled"
         runtime = getattr(descriptor, "runtime", "-")
@@ -30,7 +24,7 @@ def list_models() -> None:
 def pull(name: str = typer.Argument(...)) -> None:
     """Download a model's weights from HuggingFace Hub."""
     try:
-        PullModelUseCase(get_model_source()).execute(name)
+        models_handler.pull(name)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
@@ -41,7 +35,7 @@ def pull(name: str = typer.Argument(...)) -> None:
 def info(name: str = typer.Argument(...)) -> None:
     """Show a model's license, source repo, and expected input shape."""
     try:
-        descriptor = ModelInfoUseCase().execute(name)
+        descriptor = models_handler.info(name)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
@@ -58,7 +52,7 @@ def info(name: str = typer.Argument(...)) -> None:
 def rm(name: str = typer.Argument(...)) -> None:
     """Remove a model's cached weights."""
     try:
-        RemoveModelUseCase(get_model_source()).execute(name)
+        models_handler.rm(name)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

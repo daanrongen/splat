@@ -7,6 +7,7 @@ from pathlib import Path
 
 from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
+from splat.ports.asset_cache import AssetCache
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.mesh import MeshPredictionBackend
@@ -40,6 +41,12 @@ def get_model_source() -> ModelSource:
     from splat.adapters.model_sources.huggingface import HuggingFaceModelSource
 
     return HuggingFaceModelSource()
+
+
+def get_asset_cache() -> AssetCache:
+    from splat.adapters.cache.filesystem import FilesystemAssetCache
+
+    return FilesystemAssetCache()
 
 
 def get_reconstruction_backend(
