@@ -1,6 +1,6 @@
-"""End-to-end: SPLAT_HOST redirects a CLI command to a live `splat http`
+"""End-to-end: SPLAT_URL redirects a CLI command to a live `splat http`
 server, matching the target scenario (one machine runs `splat http`,
-another drives it with SPLAT_HOST set)."""
+another drives it with SPLAT_URL set)."""
 
 import socket
 import threading
@@ -51,7 +51,7 @@ def live_server_url():
     thread.join(timeout=5)
 
 
-def test_splat_host_redirects_diffuse_to_remote_server(
+def test_splat_url_redirects_diffuse_to_remote_server(
     mocker, tmp_path, monkeypatch, live_server_url
 ):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
@@ -63,7 +63,7 @@ def test_splat_host_redirects_diffuse_to_remote_server(
     result = runner.invoke(
         app,
         ["diffuse", "a fox", "--model", "fake-diffuser", "-o", str(out_path)],
-        env={"SPLAT_HOST": live_server_url},
+        env={"SPLAT_URL": live_server_url},
     )
 
     assert result.exit_code == 0, result.output

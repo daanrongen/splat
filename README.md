@@ -136,19 +136,25 @@ network (e.g. running it on one machine and driving it from another on the
 same LAN); don't expose it beyond that without adding your own auth layer
 in front of it. It always executes locally and never proxies elsewhere.
 
-## Distributed execution (`SPLAT_HOST`)
+## Distributed execution (`SPLAT_URL`)
 
 Run `splat http` on one machine (e.g. a Mac with more GPU/Neural Engine
 headroom) and point the CLI at it from another host on the same network:
 
 ```
 # on macbook:
-splat http --host 0.0.0.0 --port 8000
+SPLAT_HOST=0.0.0.0:8000 splat http
 
 # on macmini:
-export SPLAT_HOST=http://macbook.local:8000
+export SPLAT_URL=http://macbook:8000
 splat diffuse "a fox in a garden" -o test.png
 ```
+
+`SPLAT_HOST` (`--host`, default `127.0.0.1:8000`) and `SPLAT_URL` are
+deliberately distinct: `SPLAT_HOST` is only ever read by `splat http`
+itself, to pick its own bind address; `SPLAT_URL` is only ever read by
+every other command, to decide whether to run here or redirect to a
+remote server. No process ever needs both at once.
 
 `splat diffuse` runs on `macbook`; `test.png` is written locally on
 `macmini`, exactly as if it had run there. Every CLI command that has an
@@ -159,10 +165,10 @@ into your local cache under the same id the server computed, so `-o` and
 NDJSON piping work unchanged; `gaussian`/`convert`/`compress` write their
 output to the local path you gave, same as running locally.
 
-`splat mcp` and `splat http` itself never consult `SPLAT_HOST` — only the
+`splat mcp` and `splat http` itself never consult `SPLAT_URL` — only the
 CLI does, since it's the only one of the three that ever needs to decide
 between "run this here" and "run this over there." `splat env` reports
-`SPLAT_HOST`'s resolved value and whether it's currently reachable.
+`SPLAT_URL`'s resolved value and whether it's currently reachable.
 
 ## MCP server
 
@@ -177,7 +183,7 @@ Image/asset arguments accept a local file path or `@<asset-id>`, same as
 the CLI's own addressing — chain tool calls the way you'd pipe CLI
 commands (call `depth`, then feed its returned asset id into
 `tools_displace_height`). Like `splat http`, this always executes locally
-and never consults `SPLAT_HOST`.
+and never consults `SPLAT_URL`.
 
 ## Model catalog
 
@@ -234,7 +240,7 @@ CLI flag > `os.environ` > `mise env --json` (queried lazily when the var
 isn't in `os.environ` and `mise` is on `PATH`) > built-in default. Run
 `splat env` to see every setting's resolved value and source.
 
-`SPLAT_HOST` (see [Distributed execution](#distributed-execution-splat_host)
+`SPLAT_URL` (see [Distributed execution](#distributed-execution-splat_url)
 above) follows the same `os.environ` > `mise env --json` > default (empty,
 meaning local) precedence, and is the one setting `splat env` also checks
 for live reachability.
@@ -276,7 +282,7 @@ concrete adapter directly.
 in-process: instead of calling `handlers/*.py` directly, it calls
 `registry.wiring.get_client()`, which returns a `SplatClient`
 (`ports/client.py`) — `LocalSplatClient` (`adapters/client/local.py`, a
-pass-through to `handlers/*.py`) when `SPLAT_HOST` is unset, or
+pass-through to `handlers/*.py`) when `SPLAT_URL` is unset, or
 `RemoteSplatClient` (`adapters/client/http.py`, HTTP calls to a remote
 `splat http` server, reusing `http/_schemas.py`'s wire models) when it's
 set. `http/` and `mcp/` always call `handlers/*.py` directly — they're

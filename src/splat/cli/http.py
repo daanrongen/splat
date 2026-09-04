@@ -2,12 +2,12 @@ import typer
 
 
 def http(
-    host: str = typer.Option("127.0.0.1", "--host", envvar="SPLAT_HTTP_BIND_HOST"),
-    port: int = typer.Option(8000, "--port", envvar="SPLAT_HTTP_BIND_PORT"),
+    host: str = typer.Option("127.0.0.1:8000", "--host", envvar="SPLAT_HOST"),
 ) -> None:
     """Start splat's HTTP server (no authentication — trusted-LAN use only)."""
     import uvicorn
 
     from splat.http.app import app
 
-    uvicorn.run(app, host=host, port=port)
+    bind_host, _, bind_port = host.rpartition(":")
+    uvicorn.run(app, host=bind_host or host, port=int(bind_port) if bind_port else 8000)

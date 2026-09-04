@@ -2,7 +2,7 @@
 LocalSplatClient (adapters/client/local.py) calls handlers/*.py in-process;
 RemoteSplatClient (adapters/client/http.py) calls a remote `splat http`
 server instead. Every CLI command goes through registry.wiring.get_client()
-rather than importing handlers/*.py directly, so SPLAT_HOST transparently
+rather than importing handlers/*.py directly, so SPLAT_URL transparently
 redirects execution without any command needing to know which client it got.
 
 Asset-producing methods return real domain objects (Asset, GaussianCloud)
@@ -17,7 +17,7 @@ full, so both clients report through the same reduced shape.
 
 `splat tools displace.height` isn't part of this contract: `splat http`
 doesn't expose a route for it (out of #13's scope), so it stays wired
-directly to handlers.tools, unaffected by SPLAT_HOST, until a future PR
+directly to handlers.tools, unaffected by SPLAT_URL, until a future PR
 adds that route.
 """
 

@@ -44,21 +44,21 @@ def test_env_flags_unknown_model_value(monkeypatch):
     assert "unknown value" in result.output
 
 
-def test_env_reports_splat_host_row(monkeypatch):
-    monkeypatch.delenv("SPLAT_HOST", raising=False)
+def test_env_reports_splat_url_row(monkeypatch):
+    monkeypatch.delenv("SPLAT_URL", raising=False)
 
     result = runner.invoke(app, ["env"])
     plain = _plain(result.output)
 
     assert result.exit_code == 0, result.output
-    assert "SPLAT_HOST" in plain
+    assert "SPLAT_URL" in plain
 
 
-def test_env_checks_splat_host_reachability(monkeypatch):
-    monkeypatch.setenv("SPLAT_HOST", "http://127.0.0.1:1")
+def test_env_checks_splat_url_reachability(monkeypatch):
+    monkeypatch.setenv("SPLAT_URL", "http://127.0.0.1:1")
 
     result = runner.invoke(app, ["env"])
     plain = _plain(result.output)
 
     assert result.exit_code == 0, result.output
-    assert "SPLAT_HOST reachable: no" in plain
+    assert "SPLAT_URL reachable: no" in plain

@@ -39,15 +39,14 @@ def _settings() -> list[_Setting]:
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
         _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "triposr", MESH_PREDICTION_CATALOG),
         _Setting("mesh", "--device", "SPLAT_MESH_DEVICE", "auto"),
-        _Setting("http", "--host", "SPLAT_HTTP_BIND_HOST", "127.0.0.1"),
-        _Setting("http", "--port", "SPLAT_HTTP_BIND_PORT", "8000"),
+        _Setting("http", "--host", "SPLAT_HOST", "127.0.0.1:8000"),
         _Setting("compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
         _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
         _Setting("train", "--iterations", "SPLAT_TRAIN_ITERATIONS", "30000"),
         _Setting("train", "--backend", "SPLAT_TRAIN_BACKEND", ""),
         _Setting("displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO", "glb"),
         _Setting("extract.surface", "--device", "SPLAT_EXTRACT_SURFACE_DEVICE", "auto"),
-        _Setting("*", "(client)", "SPLAT_HOST", ""),
+        _Setting("*", "(client)", "SPLAT_URL", ""),
     ]
 
 
@@ -81,9 +80,9 @@ def env() -> None:
 
     Console(width=120).print(table)
 
-    host = resolve_verbose("SPLAT_HOST", "").value
-    if host:
-        Console(width=120).print(f"SPLAT_HOST reachable: {'yes' if _reachable(host) else 'no'}")
+    url = resolve_verbose("SPLAT_URL", "").value
+    if url:
+        Console(width=120).print(f"SPLAT_URL reachable: {'yes' if _reachable(url) else 'no'}")
 
     if invalid:
         for setting in invalid:

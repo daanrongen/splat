@@ -57,11 +57,11 @@ def get_asset_cache() -> AssetCache:
 
 
 def get_client() -> "SplatClient":
-    host = resolve_env("SPLAT_HOST", "")
-    if host:
+    url = resolve_env("SPLAT_URL", "")
+    if url:
         from splat.adapters.client.http import RemoteSplatClient
 
-        return RemoteSplatClient(host)
+        return RemoteSplatClient(url)
 
     from splat.adapters.client.local import LocalSplatClient
 

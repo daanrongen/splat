@@ -25,7 +25,7 @@ from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationS
 
 class LocalSplatClient:
     """In-process pass-through to handlers/*.py — the client used when
-    SPLAT_HOST isn't set."""
+    SPLAT_URL isn't set."""
 
     def diffuse(self, request: DiffuseRequest) -> DiffuseResult:
         return handle_diffuse(request)

@@ -1,7 +1,7 @@
 """Assembles the `splat mcp` server — the MCP driving adapter, mirroring
 cli/main.py's per-command registration. Every tool calls handlers/*.py
 directly (never registry/application/adapters directly), and always
-executes locally: this server never consults SPLAT_HOST.
+executes locally: this server never consults SPLAT_URL.
 """
 
 import functools

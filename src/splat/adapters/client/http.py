@@ -1,5 +1,5 @@
 """HTTP client for a remote `splat http` server — used by the CLI when
-SPLAT_HOST is set. Reuses http/_schemas.py's pydantic models as the wire
+SPLAT_URL is set. Reuses http/_schemas.py's pydantic models as the wire
 contract, so there is exactly one definition of each request/response
 shape, shared with the server that produces/consumes it.
 """
