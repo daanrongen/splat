@@ -33,7 +33,7 @@ class DepthMap:
 class Shape3D:
     """A predicted 3D mesh: vertex positions and triangle indices, plus an
     optional per-vertex UV + source texture for the surface it was lifted
-    from. Gaussian splats use `AssetKind.GAUSSIAN_CLOUD` instead."""
+    from. Gaussian splats use `ManifestKind.GAUSSIAN_CLOUD` instead."""
 
     vertices: np.ndarray  # (V, 3) float32, meters
     faces: np.ndarray  # (F, 3) int64, indices into vertices

@@ -1,10 +1,22 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from splat.domain.contracts import Requirement, StageContract
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import ModelLicense
 from splat.ports.embedding import EmbeddingBackend
 
 Runtime = Literal["mlx", "coreml", "torch"]
+
+# Only the image branch fits a StageContract — embed's image-XOR-text choice
+# stays bespoke handler logic (see handlers/embed.py).
+EMBED_IMAGE_CONTRACT = StageContract(
+    stage="embed",
+    inputs=(
+        Requirement(name="image", any_of_tags=frozenset({"colorlike", "text"}), max_count=None),
+    ),
+    produces=ManifestKind.EMBEDDING,
+)
 
 
 @dataclass(frozen=True)

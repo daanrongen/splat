@@ -4,8 +4,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.segment import SegmentRequest
 from splat.registry.wiring import get_asset_cache, get_client
 
@@ -24,7 +24,7 @@ def segment(
     """Segment image(s) into RGBA sticker cutouts (cached; fans out to many assets)."""
     cache = get_asset_cache()
     try:
-        inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+        inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         all_stickers = get_client().segment(
             SegmentRequest(inputs=inputs, model=model, max_stickers=max_stickers, device=device)
         )
@@ -43,7 +43,7 @@ def segment(
         console.print(f"[green]segmented[/green] {len(assets)} stickers")
         for asset in assets:
             console.print(
-                f"  {asset.id}  score={asset.metadata['score']:.3f}  bbox={asset.metadata['bbox']}"
+                f"  {asset.id}  score={asset.metadata.score:.3f}  bbox={asset.metadata.bbox}"
             )
 
     report(all_stickers, _human)

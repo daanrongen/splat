@@ -2,8 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from splat.domain.asset import AssetKind
 from splat.domain.image_space import Sticker
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.handlers.segment import SegmentRequest, handle
 from splat.registry.wiring import get_asset_cache
@@ -31,10 +31,10 @@ def test_handle_fans_out_stickers(mocker, tmp_path, monkeypatch):
         return_value=FakeSegmentationBackend(),
     )
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = handle(SegmentRequest(inputs=[asset], model="fake-sam"))
 
     assert len(result) == 1
-    assert result[0].kind == AssetKind.STICKER
+    assert result[0].kind == ManifestKind.STICKER
     assert result[0].parent_ids == [asset.id]

@@ -16,5 +16,10 @@ class ReconstructionBackend(Protocol):
     ) -> GaussianCloud: ...
 
     def required_image_count(self) -> tuple[int, int | None]:
-        """(min, max) images accepted; max=None means unbounded."""
+        """(min, max) images accepted; max=None means unbounded.
+
+        Implementations are classmethods — the count is a fact about the
+        backend, not a loaded model — so `models info` and the gaussian
+        handler's contract can both read it without pulling weights.
+        """
         ...

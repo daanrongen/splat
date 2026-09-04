@@ -38,5 +38,6 @@ class MVSplatBackend:
             "the current adapter requirements."
         )
 
-    def required_image_count(self) -> tuple[int, int | None]:
+    @classmethod
+    def required_image_count(cls) -> tuple[int, int | None]:
         return (2, None)

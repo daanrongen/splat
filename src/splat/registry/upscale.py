@@ -1,10 +1,18 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from splat.domain.contracts import Requirement, StageContract
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import BSD_3_CLAUSE, ModelLicense
 from splat.ports.upscaling import UpscalingBackend
 
 Runtime = Literal["mlx", "coreml", "torch"]
+
+UPSCALE_CONTRACT = StageContract(
+    stage="upscale",
+    inputs=(Requirement(name="image", any_of_tags=frozenset({"colorlike"}), max_count=None),),
+    produces=ManifestKind.IMAGE,
+)
 
 
 @dataclass(frozen=True)

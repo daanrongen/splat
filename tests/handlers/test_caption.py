@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.handlers.caption import CaptionRequest, handle
 from splat.registry.wiring import get_asset_cache
@@ -28,7 +28,7 @@ def test_handle_captions_each_input(mocker, tmp_path, monkeypatch):
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     cache = get_asset_cache()
     asset = cache.put_external(
-        write_sample_png(tmp_path / "scene.png", (3, 2)), kind=AssetKind.IMAGE
+        write_sample_png(tmp_path / "scene.png", (3, 2)), kind=ManifestKind.IMAGE
     )
 
     results = handle(
@@ -42,6 +42,6 @@ def test_handle_captions_each_input(mocker, tmp_path, monkeypatch):
     )
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.CAPTION
+    assert results[0].kind == ManifestKind.CAPTION
     assert results[0].content_path.read_text(encoding="utf-8") == "Describe (12, 0.0)"
     assert results[0].parent_ids == [asset.id]

@@ -40,6 +40,18 @@ def model_source_label(descriptor: Any) -> str:
     return ", ".join(model_sources(descriptor)) or "local runtime"
 
 
+def image_count_range(descriptor: Any) -> tuple[int | None, int | None]:
+    """(min, max) images a reconstruction backend accepts, read straight off
+    the backend class — `required_image_count` is a classmethod so this
+    doesn't need to pull weights or instantiate anything just to display it.
+    """
+    backend_cls = getattr(descriptor, "backend_cls", None)
+    required_image_count = getattr(backend_cls, "required_image_count", None)
+    if required_image_count is None:
+        return (None, None)
+    return required_image_count()
+
+
 def _lookup(name: str) -> Any:
     catalog = _all_catalogs()
     try:

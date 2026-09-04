@@ -5,7 +5,7 @@ from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.cli.main import app
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from tests.image_helpers import write_sample_png
 
@@ -66,8 +66,8 @@ def test_gaussian_asset_inputs_output_flag_writes_file(
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
     cache = FilesystemAssetCache(tmp_path / "cache")
-    a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=AssetKind.IMAGE)
-    b = cache.put_external(_sample_image(tmp_path, "b.png"), kind=AssetKind.IMAGE)
+    a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=ManifestKind.IMAGE)
+    b = cache.put_external(_sample_image(tmp_path, "b.png"), kind=ManifestKind.IMAGE)
     out_path = tmp_path / "out.splat"
 
     result = runner.invoke(
@@ -85,8 +85,8 @@ def test_gaussian_stdin_ndjson_input(mocker, tmp_path, monkeypatch, synthetic_cl
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
     cache = FilesystemAssetCache(tmp_path / "cache")
-    a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=AssetKind.IMAGE)
-    b = cache.put_external(_sample_image(tmp_path, "b.png"), kind=AssetKind.IMAGE)
+    a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=ManifestKind.IMAGE)
+    b = cache.put_external(_sample_image(tmp_path, "b.png"), kind=ManifestKind.IMAGE)
     stdin_payload = json.dumps({"id": a.id}) + "\n" + json.dumps({"id": b.id}) + "\n"
 
     result = runner.invoke(app, ["gaussian", "-", "--model", "fake-recon"], input=stdin_payload)

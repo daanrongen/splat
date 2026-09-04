@@ -2,8 +2,9 @@ import numpy as np
 import pytest
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
+from splat.domain.manifest_metadata import DepthMetadata
 from splat.domain.value_objects import MIT
 from splat.handlers.upscale import UpscaleRequest, handle
 from tests.image_helpers import write_sample_png
@@ -24,13 +25,13 @@ def test_handle_upscales_each_input(mocker, tmp_path, monkeypatch):
     cache = FilesystemAssetCache(tmp_path / "cache")
     asset = cache.put_external(
         write_sample_png(tmp_path / "image.png", (2, 2)),
-        kind=AssetKind.IMAGE,
+        kind=ManifestKind.IMAGE,
     )
 
     results = handle(UpscaleRequest(inputs=[asset], model="fake-upscaler", factor=2, tile=8))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.IMAGE
+    assert results[0].kind == ManifestKind.IMAGE
     assert results[0].parent_ids == [asset.id]
     assert results[0].created_by == "upscale:fake-upscaler"
 
@@ -41,10 +42,10 @@ def test_handle_rejects_non_image_input(mocker, tmp_path, monkeypatch):
     cache = FilesystemAssetCache(tmp_path / "cache")
     asset = cache.put(
         "depth",
-        kind=AssetKind.DEPTH_MAP,
+        kind=ManifestKind.DEPTH_MAP,
         content_bytes=b"",
         ext="npy",
-        metadata={},
+        metadata=DepthMetadata(),
         parent_ids=[],
         created_by="depth:test",
     )

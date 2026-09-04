@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 
 from splat.adapters.formats.ply import PlyWriter
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Sticker
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
@@ -131,12 +131,12 @@ def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.depth(DepthRequest(inputs=[asset]))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.DEPTH_MAP
+    assert results[0].kind == ManifestKind.DEPTH_MAP
     assert results[0].parent_ids == [asset.id]
 
 
@@ -144,14 +144,14 @@ def test_caption_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remo
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.caption(
         CaptionRequest(inputs=[asset], model="fake-captioner", prompt="Look")
     )
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.CAPTION
+    assert results[0].kind == ManifestKind.CAPTION
     assert results[0].parent_ids == [asset.id]
     assert results[0].content_path.read_text(encoding="utf-8") == "Look: small scene"
 
@@ -163,22 +163,22 @@ def test_embed_stores_text_asset(mocker, tmp_path, monkeypatch, remote_client):
     results = remote_client.embed(EmbedRequest(text="red chair", model="fake-embedder"))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.EMBEDDING
-    assert results[0].metadata["input_type"] == "text"
-    assert results[0].metadata["dimension"] == 2
-    assert results[0].metadata["text_length"] == len("red chair")
+    assert results[0].kind == ManifestKind.EMBEDDING
+    assert results[0].metadata.input_type == "text"
+    assert results[0].metadata.dimension == 2
+    assert results[0].metadata.text_length == len("red chair")
 
 
 def test_embed_stores_image_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.embed(EmbedRequest(inputs=[asset], model="fake-embedder"))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.EMBEDDING
+    assert results[0].kind == ManifestKind.EMBEDDING
     assert results[0].parent_ids == [asset.id]
 
 
@@ -186,16 +186,16 @@ def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remo
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.upscale(
         UpscaleRequest(inputs=[asset], model="fake-upscaler", factor=2, tile=8)
     )
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.IMAGE
+    assert results[0].kind == ManifestKind.IMAGE
     assert results[0].parent_ids == [asset.id]
-    assert results[0].metadata["output_width"] == 4
+    assert results[0].metadata.output_width == 4
     assert read_rgb_or_rgba(results[0].content_path).shape == (4, 4, 3)
 
 
@@ -206,12 +206,12 @@ def test_segment_fetches_each_sticker(mocker, tmp_path, monkeypatch, remote_clie
         return_value=FakeSegmentationBackend(),
     )
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.segment(SegmentRequest(inputs=[asset]))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.STICKER
+    assert results[0].kind == ManifestKind.STICKER
     assert len(results[0].content_path.read_bytes()) > 0
 
 
@@ -227,14 +227,14 @@ def test_gaussian_stores_remote_asset(
     image_a, image_b = _sample_image(tmp_path), tmp_path / "b.png"
     write_sample_png(image_b, (2, 2))
     cache = get_asset_cache()
-    asset_a = cache.put_external(image_a, kind=AssetKind.IMAGE)
-    asset_b = cache.put_external(image_b, kind=AssetKind.IMAGE)
+    asset_a = cache.put_external(image_a, kind=ManifestKind.IMAGE)
+    asset_b = cache.put_external(image_b, kind=ManifestKind.IMAGE)
 
     results = remote_client.gaussian(GaussianRequest(inputs=[asset_a, asset_b]))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.GAUSSIAN_CLOUD
-    assert results[0].metadata["point_count"] == synthetic_cloud.point_count
+    assert results[0].kind == ManifestKind.GAUSSIAN_CLOUD
+    assert results[0].metadata.point_count == synthetic_cloud.point_count
     assert results[0].parent_ids == [asset_a.id, asset_b.id]
 
 

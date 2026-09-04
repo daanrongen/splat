@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from splat.application.pipeline import run_diffuse
-from splat.domain.asset import Asset
+from splat.domain.manifest import Manifest
 from splat.registry.wiring import get_asset_cache, get_diffusion_backend
 
 
@@ -17,7 +17,7 @@ class DiffuseRequest:
 
 @dataclass(frozen=True)
 class DiffuseResult:
-    asset: Asset
+    asset: Manifest
     license_warning: str | None
 
 

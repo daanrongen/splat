@@ -3,7 +3,7 @@ from pathlib import Path
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.adapters.formats.ply import PlyReader
 from splat.application.pipeline import run_gaussian
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from tests.image_helpers import write_sample_png
 
@@ -25,7 +25,7 @@ class FakeReconstructionBackend:
 
 
 def _image_asset(cache: FilesystemAssetCache, tmp_path: Path, name: str):
-    return cache.put_external(write_sample_png(tmp_path / name, (2, 2)), kind=AssetKind.IMAGE)
+    return cache.put_external(write_sample_png(tmp_path / name, (2, 2)), kind=ManifestKind.IMAGE)
 
 
 def test_run_gaussian_creates_cached_ply_asset(tmp_path, synthetic_cloud):
@@ -41,11 +41,11 @@ def test_run_gaussian_creates_cached_ply_asset(tmp_path, synthetic_cloud):
         params={"device": "cpu"},
     )
 
-    assert result.kind == AssetKind.GAUSSIAN_CLOUD
+    assert result.kind == ManifestKind.GAUSSIAN_CLOUD
     assert result.content_path.suffix == ".ply"
     assert result.parent_ids == [a.id, b.id]
     assert result.created_by == "gaussian:fake-recon"
-    assert result.metadata["point_count"] == synthetic_cloud.point_count
+    assert result.metadata.point_count == synthetic_cloud.point_count
     assert PlyReader().read(result.content_path).point_count == synthetic_cloud.point_count
 
 

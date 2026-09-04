@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from splat.application.pipeline import run_caption
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.registry.wiring import get_asset_cache
 from tests.image_helpers import write_sample_png
@@ -30,7 +30,7 @@ class CountingCaptionBackend:
 def _sample_asset(tmp_path: Path):
     cache = get_asset_cache()
     image_path = write_sample_png(tmp_path / "scene.png", (3, 2))
-    return cache.put_external(image_path, kind=AssetKind.IMAGE)
+    return cache.put_external(image_path, kind=ManifestKind.IMAGE)
 
 
 def test_run_caption_creates_text_asset(tmp_path, monkeypatch):
@@ -46,10 +46,10 @@ def test_run_caption_creates_text_asset(tmp_path, monkeypatch):
         params={"prompt": "Describe", "max_tokens": 12, "temperature": 0.0},
     )
 
-    assert result.kind == AssetKind.CAPTION
+    assert result.kind == ManifestKind.CAPTION
     assert result.content_path.suffix == ".txt"
     assert result.content_path.read_text(encoding="utf-8") == "Describe caption 12 0.0"
-    assert result.metadata["text_length"] == len("Describe caption 12 0.0")
+    assert result.metadata.text_length == len("Describe caption 12 0.0")
     assert result.parent_ids == [asset.id]
     assert result.created_by == "caption:fake-captioner"
 

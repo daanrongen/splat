@@ -1,6 +1,6 @@
 import mcp.types as types
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.handlers.mesh import MeshRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
@@ -14,6 +14,6 @@ def mesh(
 ) -> list[types.ContentBlock]:
     """Predict a 3D mesh from an image (path or @<asset-id>) using a learned model."""
     cache = get_asset_cache()
-    asset = resolve_input_asset(image, cache, default_kind=AssetKind.IMAGE)
+    asset = resolve_input_asset(image, cache, default_kind=ManifestKind.IMAGE)
     result = get_client().mesh(MeshRequest(inputs=[asset], model=model, device=device))[0]
     return [text_content(f"asset id: {result.id}"), resource_content(result)]

@@ -5,8 +5,15 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import Manifest, ManifestKind
+from splat.domain.manifest_metadata import (
+    KIND_METADATA_CLS,
+    MANIFEST_MARKER_EXT,
+    ManifestMetadata,
+    metadata_from_dict,
+    metadata_to_dict,
+)
 from splat.paths import asset_cache_dir
 
 
@@ -44,11 +51,12 @@ class FilesystemAssetCache:
             return None
         return meta if isinstance(meta, dict) else None
 
-    def _asset_from_meta(self, asset_id: str, meta: dict[str, Any]) -> Asset | None:
+    def _asset_from_meta(self, asset_id: str, meta: dict[str, Any]) -> Manifest | None:
         try:
             content_file = meta["content_file"]
-            kind = AssetKind(meta["kind"])
-            metadata = meta["metadata"]
+            kind = ManifestKind(meta["kind"])
+            raw_metadata = meta["metadata"]
+            params = meta.get("params", {})
             parent_ids = meta["parent_ids"]
             created_by = meta["created_by"]
         except (KeyError, TypeError, ValueError):
@@ -56,13 +64,19 @@ class FilesystemAssetCache:
 
         if not isinstance(content_file, str) or Path(content_file).name != content_file:
             return None
-        if not isinstance(metadata, dict):
+        if not isinstance(raw_metadata, dict) or not isinstance(params, dict):
             return None
         if not isinstance(parent_ids, list) or not all(
             isinstance(parent_id, str) for parent_id in parent_ids
         ):
             return None
         if not isinstance(created_by, str):
+            return None
+
+        is_marker = Path(content_file).suffix == f".{MANIFEST_MARKER_EXT}"
+        try:
+            metadata = metadata_from_dict(kind, raw_metadata, is_manifest_marker=is_marker)
+        except TypeError:
             return None
 
         content_path = self._dir / content_file
@@ -77,16 +91,17 @@ class FilesystemAssetCache:
         if digest is not None and digest != hashlib.sha256(content).hexdigest():
             return None
 
-        return Asset(
+        return Manifest(
             id=asset_id,
             kind=kind,
             content_path=content_path,
             metadata=metadata,
+            params=params,
             parent_ids=parent_ids,
             created_by=created_by,
         )
 
-    def find(self, asset_id: str) -> Asset | None:
+    def find(self, asset_id: str) -> Manifest | None:
         meta_path = self._meta_path(asset_id)
         if not meta_path.exists():
             return None
@@ -95,7 +110,7 @@ class FilesystemAssetCache:
             return None
         return self._asset_from_meta(asset_id, meta)
 
-    def get(self, asset_id: str) -> Asset:
+    def get(self, asset_id: str) -> Manifest:
         asset = self.find(asset_id)
         if asset is None:
             raise AssetNotFound(f"No cached asset with id {asset_id!r}")
@@ -105,13 +120,14 @@ class FilesystemAssetCache:
         self,
         asset_id: str,
         *,
-        kind: AssetKind,
+        kind: ManifestKind,
         content_bytes: bytes,
         ext: str,
-        metadata: dict,
+        metadata: ManifestMetadata,
+        params: dict | None = None,
         parent_ids: list[str],
         created_by: str,
-    ) -> Asset:
+    ) -> Manifest:
         content_file = f"{asset_id}.{ext.lstrip('.')}"
         self._atomic_write_bytes(self._dir / content_file, content_bytes)
         meta = {
@@ -119,7 +135,8 @@ class FilesystemAssetCache:
             "content_file": content_file,
             "content_size": len(content_bytes),
             "content_sha256": hashlib.sha256(content_bytes).hexdigest(),
-            "metadata": metadata,
+            "metadata": metadata_to_dict(metadata),
+            "params": params or {},
             "parent_ids": parent_ids,
             "created_by": created_by,
         }
@@ -129,7 +146,7 @@ class FilesystemAssetCache:
         )
         return self.get(asset_id)
 
-    def put_external(self, path: Path, *, kind: AssetKind) -> Asset:
+    def put_external(self, path: Path, *, kind: ManifestKind) -> Manifest:
         content_bytes = path.read_bytes()
         asset_id = hashlib.sha256(content_bytes).hexdigest()[:16]
         existing = self.find(asset_id)
@@ -140,7 +157,8 @@ class FilesystemAssetCache:
             kind=kind,
             content_bytes=content_bytes,
             ext=path.suffix.lstrip("."),
-            metadata={"source": "external", "original_name": path.name},
+            metadata=KIND_METADATA_CLS[kind](),
+            params={"source": "external", "original_name": path.name},
             parent_ids=[],
             created_by="external",
         )

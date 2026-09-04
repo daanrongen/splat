@@ -6,7 +6,8 @@ from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.cli.main import app
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
+from splat.domain.manifest_metadata import DepthMetadata
 from tests.image_helpers import write_sample_png
 
 runner = CliRunner()
@@ -18,15 +19,15 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):
-    image_asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
     depth_path = tmp_path / "depth.npy"
     np.save(depth_path, np.full((4, 4), 2.0, dtype=np.float32))
     return cache.put(
         "depthkey1",
-        kind=AssetKind.DEPTH_MAP,
+        kind=ManifestKind.DEPTH_MAP,
         content_bytes=depth_path.read_bytes(),
         ext="npy",
-        metadata={"focal_length_px": 50.0, "field_of_view_deg": 30.0},
+        metadata=DepthMetadata(focal_length_px=50.0, field_of_view_deg=30.0),
         parent_ids=[image_asset.id],
         created_by="depth:depth-pro",
     ), image_asset
@@ -65,7 +66,7 @@ def test_displace_height_output_flag_writes_file(tmp_path, monkeypatch):
 def test_displace_height_rejects_non_depth_input(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemAssetCache(tmp_path / "cache")
-    image_asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = runner.invoke(app, ["tools", "displace.height", f"@{image_asset.id}"])
 

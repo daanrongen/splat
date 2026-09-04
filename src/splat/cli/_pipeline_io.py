@@ -4,13 +4,14 @@ command (diffuse/segment/depth/...): resolve INPUT from a file path,
 piped, or a human summary in an interactive terminal.
 """
 
+import dataclasses
 import json
 import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import Manifest, ManifestKind
 from splat.ports.asset_cache import AssetCache
 
 
@@ -19,8 +20,8 @@ def is_piped() -> bool:
 
 
 def resolve_inputs(
-    input_arg: str | None, cache: AssetCache, *, default_kind: AssetKind = AssetKind.IMAGE
-) -> list[Asset]:
+    input_arg: str | None, cache: AssetCache, *, default_kind: ManifestKind = ManifestKind.IMAGE
+) -> list[Manifest]:
     if input_arg in (None, "-"):
         if sys.stdin.isatty():
             raise SplatDomainError(
@@ -49,7 +50,7 @@ def resolve_inputs(
     return [cache.put_external(path, kind=default_kind)]
 
 
-def report(assets: list[Asset], human: Callable[[list[Asset]], None]) -> None:
+def report(assets: list[Manifest], human: Callable[[list[Manifest]], None]) -> None:
     if is_piped():
         for asset in assets:
             print(
@@ -58,7 +59,8 @@ def report(assets: list[Asset], human: Callable[[list[Asset]], None]) -> None:
                         "id": asset.id,
                         "kind": asset.kind.value,
                         "path": str(asset.content_path),
-                        "metadata": asset.metadata,
+                        "metadata": dataclasses.asdict(asset.metadata),
+                        "params": asset.params,
                         "parent_ids": asset.parent_ids,
                         "created_by": asset.created_by,
                     }

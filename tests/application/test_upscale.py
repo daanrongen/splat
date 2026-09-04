@@ -4,8 +4,8 @@ import pytest
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.application.pipeline import run_upscale
 from splat.application.upscale import UpscaleUseCase
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.image_io import read_rgb_or_rgba
 from tests.image_helpers import sample_rgba, write_sample_png
@@ -52,7 +52,7 @@ def test_run_upscale_uses_cache_key(tmp_path):
     cache = FilesystemAssetCache(tmp_path / "cache")
     source = cache.put_external(
         write_sample_png(tmp_path / "image.png", (2, 2)),
-        kind=AssetKind.IMAGE,
+        kind=ManifestKind.IMAGE,
     )
     backend = FakeUpscaleBackend()
 
@@ -74,4 +74,4 @@ def test_run_upscale_uses_cache_key(tmp_path):
     assert first.id == second.id
     assert backend.calls == 1
     assert read_rgb_or_rgba(first.content_path).shape == (4, 4, 3)
-    assert first.metadata["variant"] == "fake-2x"
+    assert first.metadata.variant == "fake-2x"

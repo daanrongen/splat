@@ -24,10 +24,19 @@ from splat.application.reconstruct import ReconstructUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
 from splat.application.upscale import UpscaleUseCase
-from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
 from splat.domain.image_space import DepthMap, Shape3D
+from splat.domain.manifest import Manifest, ManifestKind
+from splat.domain.manifest_metadata import (
+    CaptionMetadata,
+    DepthMetadata,
+    EmbeddingMetadata,
+    MeshMetadata,
+    RasterMetadata,
+    SegmentManifestMetadata,
+    StickerMetadata,
+)
 from splat.image_io import encode_png
 from splat.ports.asset_cache import AssetCache
 from splat.ports.caption import CaptioningBackend
@@ -58,10 +67,9 @@ def run_diffuse(
     model_name: str,
     prompt: str,
     params: dict,
-) -> Asset:
-    cache_key = compute_cache_key(
-        stage="diffuse", model=model_name, params={"prompt": prompt, **params}
-    )
+) -> Manifest:
+    invocation = {"prompt": prompt, **params}
+    cache_key = compute_cache_key(stage="diffuse", model=model_name, params=invocation)
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
@@ -72,10 +80,11 @@ def run_diffuse(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.IMAGE,
+        kind=ManifestKind.IMAGE,
         content_bytes=content_bytes,
         ext="png",
-        metadata={"prompt": prompt, **params},
+        metadata=RasterMetadata(),
+        params=invocation,
         parent_ids=[],
         created_by=f"diffuse:{model_name}",
     )
@@ -86,28 +95,31 @@ def run_segment(
     cache: AssetCache,
     *,
     model_name: str,
-    input_asset: Asset,
+    input_asset: Manifest,
     params: dict,
-) -> list[Asset]:
+) -> list[Manifest]:
     cache_key = compute_cache_key(
         stage="segment", model=model_name, params=params, parent_ids=(input_asset.id,)
     )
     manifest = cache.find(cache_key)
     if manifest is not None:
-        return [cache.get(child_id) for child_id in manifest.metadata["children"]]
+        return [cache.get(child_id) for child_id in manifest.metadata.children]
 
     stickers = SegmentUseCase(backend).execute(input_asset.content_path, **params)
 
-    children: list[Asset] = []
+    children: list[Manifest] = []
     for i, sticker in enumerate(stickers):
         child_id = f"{cache_key}-{i:03d}"
         children.append(
             cache.put(
                 child_id,
-                kind=AssetKind.STICKER,
+                kind=ManifestKind.STICKER,
                 content_bytes=encode_png(sticker.rgba),
                 ext="png",
-                metadata={"bbox": sticker.bbox, "score": sticker.score, "area": sticker.area},
+                metadata=StickerMetadata(
+                    bbox=sticker.bbox, score=sticker.score, area=sticker.area
+                ),
+                params=params,
                 parent_ids=[input_asset.id],
                 created_by=f"segment:{model_name}",
             )
@@ -116,10 +128,11 @@ def run_segment(
     # A zero-byte marker asset recording the fan-out, so a rerun short-circuits.
     cache.put(
         cache_key,
-        kind=AssetKind.STICKER,
+        kind=ManifestKind.STICKER,
         content_bytes=b"",
         ext="manifest",
-        metadata={"children": [c.id for c in children]},
+        metadata=SegmentManifestMetadata(children=[c.id for c in children]),
+        params=params,
         parent_ids=[input_asset.id],
         created_by=f"segment:{model_name}",
     )
@@ -131,9 +144,9 @@ def run_depth(
     cache: AssetCache,
     *,
     model_name: str,
-    input_asset: Asset,
+    input_asset: Manifest,
     params: dict,
-) -> Asset:
+) -> Manifest:
     cache_key = compute_cache_key(
         stage="depth", model=model_name, params=params, parent_ids=(input_asset.id,)
     )
@@ -147,14 +160,15 @@ def run_depth(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.DEPTH_MAP,
+        kind=ManifestKind.DEPTH_MAP,
         content_bytes=buf.getvalue(),
         ext="npy",
-        metadata={
-            "focal_length_px": depth_map.focal_length_px,
-            "field_of_view_deg": depth_map.field_of_view_deg,
-            **depth_map.metadata,
-        },
+        metadata=DepthMetadata(
+            focal_length_px=depth_map.focal_length_px,
+            field_of_view_deg=depth_map.field_of_view_deg,
+            extra=depth_map.metadata,
+        ),
+        params=params,
         parent_ids=[input_asset.id],
         created_by=f"depth:{model_name}",
     )
@@ -165,9 +179,9 @@ def run_caption(
     cache: AssetCache,
     *,
     model_name: str,
-    input_asset: Asset,
+    input_asset: Manifest,
     params: dict,
-) -> Asset:
+) -> Manifest:
     cache_key = compute_cache_key(
         stage="caption", model=model_name, params=params, parent_ids=(input_asset.id,)
     )
@@ -179,10 +193,11 @@ def run_caption(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.CAPTION,
+        kind=ManifestKind.CAPTION,
         content_bytes=content_bytes,
         ext="txt",
-        metadata={**params, "text_length": len(text)},
+        metadata=CaptionMetadata(text_length=len(text)),
+        params=params,
         parent_ids=[input_asset.id],
         created_by=f"caption:{model_name}",
     )
@@ -193,19 +208,19 @@ def _embedding_metadata(
     *,
     input_type: str,
     model_name: str,
-    params: dict,
-    extra: dict,
-) -> dict:
-    return {
-        **params,
-        **extra,
-        "input_type": input_type,
-        "dtype": str(embedding.dtype),
-        "shape": list(embedding.shape),
-        "dimension": int(embedding.shape[0]),
-        "normalized": True,
-        "model": model_name,
-    }
+    text_sha256: str | None = None,
+    text_length: int | None = None,
+) -> EmbeddingMetadata:
+    return EmbeddingMetadata(
+        input_type=input_type,
+        dtype=str(embedding.dtype),
+        shape=list(embedding.shape),
+        dimension=int(embedding.shape[0]),
+        normalized=True,
+        model=model_name,
+        text_sha256=text_sha256,
+        text_length=text_length,
+    )
 
 
 def _embedding_bytes(embedding: np.ndarray) -> bytes:
@@ -219,9 +234,9 @@ def run_embed_image(
     cache: AssetCache,
     *,
     model_name: str,
-    input_asset: Asset,
+    input_asset: Manifest,
     params: dict,
-) -> Asset:
+) -> Manifest:
     cache_key = compute_cache_key(
         stage="embed",
         model=model_name,
@@ -235,16 +250,11 @@ def run_embed_image(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.EMBEDDING,
+        kind=ManifestKind.EMBEDDING,
         content_bytes=_embedding_bytes(embedding),
         ext="npy",
-        metadata=_embedding_metadata(
-            embedding,
-            input_type="image",
-            model_name=model_name,
-            params=params,
-            extra={},
-        ),
+        metadata=_embedding_metadata(embedding, input_type="image", model_name=model_name),
+        params=params,
         parent_ids=[input_asset.id],
         created_by=f"embed:{model_name}",
     )
@@ -257,8 +267,8 @@ def run_embed_text(
     model_name: str,
     text: str,
     params: dict,
-    input_asset: Asset | None = None,
-) -> Asset:
+    input_asset: Manifest | None = None,
+) -> Manifest:
     text_sha256 = hashlib.sha256(text.encode("utf-8")).hexdigest()
     parent_ids = (input_asset.id,) if input_asset is not None else ()
     key_params = {"input_type": "text", **params}
@@ -277,16 +287,17 @@ def run_embed_text(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.EMBEDDING,
+        kind=ManifestKind.EMBEDDING,
         content_bytes=_embedding_bytes(embedding),
         ext="npy",
         metadata=_embedding_metadata(
             embedding,
             input_type="text",
             model_name=model_name,
-            params=params,
-            extra={"text_sha256": text_sha256, "text_length": len(text)},
+            text_sha256=text_sha256,
+            text_length=len(text),
         ),
+        params=params,
         parent_ids=list(parent_ids),
         created_by=f"embed:{model_name}",
     )
@@ -297,9 +308,9 @@ def run_upscale(
     cache: AssetCache,
     *,
     model_name: str,
-    input_asset: Asset,
+    input_asset: Manifest,
     params: dict,
-) -> Asset:
+) -> Manifest:
     cache_key = compute_cache_key(
         stage="upscale", model=model_name, params=params, parent_ids=(input_asset.id,)
     )
@@ -313,19 +324,17 @@ def run_upscale(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.IMAGE,
+        kind=ManifestKind.IMAGE,
         content_bytes=encode_png(result.image),
         ext="png",
-        metadata={
-            "model": model_name,
-            "variant": variant,
-            "factor": params["factor"],
-            "tile": params.get("tile", 0),
-            "source_width": result.source_width,
-            "source_height": result.source_height,
-            "output_width": result.output_width,
-            "output_height": result.output_height,
-        },
+        metadata=RasterMetadata(
+            variant=variant,
+            source_width=result.source_width,
+            source_height=result.source_height,
+            output_width=result.output_width,
+            output_height=result.output_height,
+        ),
+        params={"model": model_name, **params},
         parent_ids=[input_asset.id],
         created_by=f"upscale:{model_name}",
     )
@@ -348,9 +357,9 @@ def run_mesh(
     cache: AssetCache,
     *,
     model_name: str,
-    input_asset: Asset,
+    input_asset: Manifest,
     params: dict,
-) -> Asset:
+) -> Manifest:
     cache_key = compute_cache_key(
         stage="mesh", model=model_name, params=params, parent_ids=(input_asset.id,)
     )
@@ -361,10 +370,11 @@ def run_mesh(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.SHAPE_3D,
+        kind=ManifestKind.SHAPE_3D,
         content_bytes=_shape_to_mesh_bytes(shape, "glb"),
         ext="glb",
-        metadata={**shape.metadata},
+        metadata=MeshMetadata(extra=shape.metadata),
+        params=params,
         parent_ids=[input_asset.id],
         created_by=f"mesh:{model_name}",
     )
@@ -382,9 +392,9 @@ def run_gaussian(
     cache: AssetCache,
     *,
     model_name: str,
-    input_assets: list[Asset],
+    input_assets: list[Manifest],
     params: dict,
-) -> Asset:
+) -> Manifest:
     parent_ids = tuple(asset.id for asset in input_assets)
     cache_key = compute_cache_key(
         stage="gaussian", model=model_name, params=params, parent_ids=parent_ids
@@ -398,23 +408,17 @@ def run_gaussian(
         device=params.get("device", "auto"),
         **execute_params,
     )
+    cloud.metadata.source_model = model_name
+    cloud.metadata.source_format = "ply"
     content_bytes = _gaussian_to_ply_bytes(cloud)
 
     return cache.put(
         cache_key,
-        kind=AssetKind.GAUSSIAN_CLOUD,
+        kind=ManifestKind.GAUSSIAN_CLOUD,
         content_bytes=content_bytes,
         ext="ply",
-        metadata={
-            **params,
-            "model": model_name,
-            "source_model": model_name,
-            "source_format": "ply",
-            "point_count": cloud.point_count,
-            "sh_degree": cloud.sh_degree,
-            "scale_activation": cloud.scale_activation,
-            "opacity_activation": cloud.opacity_activation,
-        },
+        metadata=cloud.metadata,
+        params={"model": model_name, **params},
         parent_ids=list(parent_ids),
         created_by=f"gaussian:{model_name}",
     )
@@ -423,17 +427,18 @@ def run_gaussian(
 def run_displace_height(
     cache: AssetCache,
     *,
-    image_asset: Asset,
-    depth_asset: Asset,
+    image_asset: Manifest,
+    depth_asset: Manifest,
     depth_map: DepthMap,
     params: dict,
     export_format: str = "glb",
-) -> Asset:
+) -> Manifest:
     parent_ids = (image_asset.id, depth_asset.id)
+    invocation = {"format": export_format, **params}
     cache_key = compute_cache_key(
         stage="tools",
         model="displace.height",
-        params={"format": export_format, **params},
+        params=invocation,
         parent_ids=parent_ids,
     )
     if (hit := cache.find(cache_key)) is not None:
@@ -443,10 +448,11 @@ def run_displace_height(
 
     return cache.put(
         cache_key,
-        kind=AssetKind.SHAPE_3D,
+        kind=ManifestKind.SHAPE_3D,
         content_bytes=_shape_to_mesh_bytes(shape, export_format),
         ext=export_format,
-        metadata={**shape.metadata},
+        metadata=MeshMetadata(extra=shape.metadata),
+        params=invocation,
         parent_ids=list(parent_ids),
         created_by="tools:displace.height",
     )

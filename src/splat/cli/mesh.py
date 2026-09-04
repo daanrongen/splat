@@ -4,8 +4,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.mesh import MeshRequest
 from splat.registry.wiring import get_asset_cache, get_client
 
@@ -21,7 +21,7 @@ def mesh(
     """Predict a 3D mesh from an image using a learned model."""
     cache = get_asset_cache()
     try:
-        inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+        inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().mesh(MeshRequest(inputs=inputs, model=model, device=device))
     except (SplatDomainError, NotImplementedError) as exc:
         error(str(exc))
@@ -33,7 +33,7 @@ def mesh(
     def _human(assets: list) -> None:
         for asset in assets:
             console.print(
-                f"[green]mesh[/green] {asset.id}  faces={asset.metadata.get('face_count')}"
+                f"[green]mesh[/green] {asset.id}  faces={asset.metadata.extra.get('face_count')}"
             )
 
     report(results, _human)

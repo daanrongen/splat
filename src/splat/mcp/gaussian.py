@@ -2,7 +2,7 @@ from pathlib import Path
 
 import mcp.types as types
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.handlers.gaussian import GaussianRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
@@ -25,7 +25,7 @@ def gaussian(
 ) -> list[types.ContentBlock]:
     """Reconstruct a Gaussian splat from image paths or @asset ids."""
     cache = get_asset_cache()
-    inputs = [resolve_input_asset(p, cache, default_kind=AssetKind.IMAGE) for p in images]
+    inputs = [resolve_input_asset(p, cache, default_kind=ManifestKind.IMAGE) for p in images]
     result = get_client().gaussian(
         GaussianRequest(
             inputs=inputs,
@@ -53,7 +53,7 @@ def gaussian(
         writer.write(cloud, output)
         content.insert(
             0,
-            text_content(f"wrote {output_path} ({result.metadata.get('point_count', 0):,} points)"),
+            text_content(f"wrote {output_path} ({result.metadata.point_count:,} points)"),
         )
         content.extend(text_content(f"warning: {w}") for w in warnings)
     return content

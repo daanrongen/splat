@@ -4,12 +4,13 @@ import json
 import pytest
 
 from splat.adapters.cache.filesystem import AssetNotFound, FilesystemAssetCache
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
+from splat.domain.manifest_metadata import RasterMetadata
 
 
 def _meta(*, content_file: str, content: bytes = b"asset-bytes") -> dict:
     return {
-        "kind": AssetKind.IMAGE.value,
+        "kind": ManifestKind.IMAGE.value,
         "content_file": content_file,
         "content_size": len(content),
         "content_sha256": hashlib.sha256(content).hexdigest(),
@@ -50,10 +51,11 @@ def test_put_writes_validated_metadata(tmp_path):
 
     asset = cache.put(
         "asset",
-        kind=AssetKind.IMAGE,
+        kind=ManifestKind.IMAGE,
         content_bytes=b"asset-bytes",
         ext="png",
-        metadata={"prompt": "test"},
+        metadata=RasterMetadata(),
+        params={"prompt": "test"},
         parent_ids=[],
         created_by="diffuse:test",
     )
@@ -68,10 +70,10 @@ def test_find_returns_none_when_content_digest_mismatches(tmp_path):
     cache = FilesystemAssetCache(tmp_path)
     asset = cache.put(
         "asset",
-        kind=AssetKind.IMAGE,
+        kind=ManifestKind.IMAGE,
         content_bytes=b"asset-bytes",
         ext="png",
-        metadata={},
+        metadata=RasterMetadata(),
         parent_ids=[],
         created_by="test",
     )

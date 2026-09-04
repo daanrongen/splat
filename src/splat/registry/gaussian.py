@@ -13,8 +13,6 @@ class GaussianModelDescriptor:
     backend_cls: type[ReconstructionBackend]
     hf_repo_id: str | None
     license: ModelLicense
-    min_images: int
-    max_images: int | None
     runtime: Runtime
     notes: str = ""
 
@@ -33,8 +31,6 @@ def _build_catalog() -> dict[str, GaussianModelDescriptor]:
             backend_cls=MLX3DCaptureBackend,
             hf_repo_id=None,
             license=MIT,
-            min_images=3,
-            max_images=None,
             runtime="mlx",
             notes=(
                 "Local Apple Silicon backend using mlx3d's optimization-based capture "
@@ -46,8 +42,6 @@ def _build_catalog() -> dict[str, GaussianModelDescriptor]:
             backend_cls=MVSplatBackend,
             hf_repo_id="dylanebert/mvsplat",
             license=MIT,
-            min_images=2,
-            max_images=None,
             runtime="torch",
             notes="Feed-forward research target; adapter is not implemented yet.",
         ),
