@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
-from splat.handlers.convert import ConvertRequest, handle
+from splat.handlers.tools.convert import ConvertRequest, handle
 
 router = APIRouter()
 

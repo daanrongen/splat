@@ -24,7 +24,7 @@ def handle(request: DisplaceHeightRequest) -> list[Asset]:
 def _displace_height_one(asset: Asset, cache: AssetCache, export_format: str) -> Asset:
     if asset.kind != AssetKind.DEPTH_MAP:
         raise SplatDomainError(
-            "displace.height requires a depth map — pipe through `splat depth` first, "
+            "displace.height requires a depth map - pipe through `splat depth` first, "
             "e.g. `splat depth image.png | splat tools displace.height -o out.glb`."
         )
     if not asset.parent_ids:

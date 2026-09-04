@@ -37,7 +37,7 @@ def test_convert_writes_output_file(tmp_path, synthetic_cloud, call_tool):
     PlyWriter().write(synthetic_cloud, ply_path)
     splat_path = tmp_path / "out.splat"
 
-    result = call_tool("convert", input_path=str(ply_path), output_path=str(splat_path))
+    result = call_tool("tools_convert", input_path=str(ply_path), output_path=str(splat_path))
 
     assert result.is_error is False
     assert splat_path.exists()
@@ -48,7 +48,7 @@ def test_compress_writes_output_file(tmp_path, synthetic_cloud, call_tool):
     PlyWriter().write(synthetic_cloud, ply_path)
     out_path = tmp_path / "out.ply"
 
-    result = call_tool("compress", input_path=str(ply_path), output_path=str(out_path))
+    result = call_tool("tools_compress", input_path=str(ply_path), output_path=str(out_path))
 
     assert result.is_error is False
     assert out_path.exists()

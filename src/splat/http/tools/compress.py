@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
-from splat.handlers.compress import CompressRequest, handle
+from splat.handlers.tools.compress import CompressRequest, handle
 
 router = APIRouter()
 

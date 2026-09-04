@@ -17,7 +17,7 @@ not a real rasterizer capable of training on photograph-sized scenes.
 
 Implementing this for real means vendoring MVSplat's cost-volume encoder as
 a git dependency, extracting the bare nn.Module from its Lightning
-wrapper, and adding a calibrated-input path to `splat convert`/`splat train`
+wrapper, and adding a calibrated-input path to `splat tools convert`/`splat train`
 (e.g. a COLMAP directory or a poses.json) — a substantially bigger, riskier
 piece of work than fits this pass. The port and registry entry are real;
 this adapter is the honest placeholder until that's taken on deliberately.

@@ -5,7 +5,7 @@ import typer
 from splat.adapters.compression.prune_quantize import PROFILES
 from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
-from splat.handlers.compress import CompressRequest
+from splat.handlers.tools.compress import CompressRequest
 from splat.registry.wiring import get_client
 
 

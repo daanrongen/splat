@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from splat.adapters.formats.ply import PlyWriter
-from splat.handlers.convert import ConvertRequest, handle
+from splat.handlers.tools.convert import ConvertRequest, handle
 
 
 def test_handle_converts_ply_to_splat(tmp_path: Path, synthetic_cloud):
