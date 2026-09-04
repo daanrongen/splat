@@ -4,7 +4,8 @@ import typer
 
 from splat.cli._console import console, error, warn
 from splat.domain.errors import SplatDomainError
-from splat.handlers.gaussian import GaussianRequest, handle
+from splat.handlers.gaussian import GaussianRequest
+from splat.registry.wiring import get_client
 
 
 def gaussian(
@@ -17,7 +18,7 @@ def gaussian(
 ) -> None:
     """Reconstruct a Gaussian splat from images (feed-forward, no per-scene optimization)."""
     try:
-        result = handle(
+        result = get_client().gaussian(
             GaussianRequest(inputs=inputs, output_path=output, model=model, device=device)
         )
     except SplatDomainError as exc:

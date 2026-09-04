@@ -1,7 +1,7 @@
 """Assembles the `splat http` server — the HTTP driving adapter, mirroring
 cli/main.py's per-command router assembly. Every route calls handlers/*.py
 directly (never registry/application/adapters directly), and always
-executes locally: this server never consults SPLAT_HOST.
+executes locally: this server never consults SPLAT_URL.
 """
 
 from fastapi import FastAPI, Request

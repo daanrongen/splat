@@ -1,37 +1,32 @@
-from splat.handlers import models as models_handler
+from splat.registry.wiring import get_client
 
 
 def list_models() -> list[dict]:
     """List catalog models and whether their weights are cached locally."""
     return [
-        {
-            "name": descriptor.name,
-            "runtime": getattr(descriptor, "runtime", "-"),
-            "license": str(descriptor.license),
-            "cached": cached,
-        }
-        for descriptor, cached in models_handler.list_models()
+        {"name": row.name, "runtime": row.runtime, "license": row.license, "cached": row.cached}
+        for row in get_client().models_list()
     ]
 
 
 def pull(name: str) -> str:
     """Download a model's weights from HuggingFace Hub."""
-    models_handler.pull(name)
+    get_client().models_pull(name)
     return f"pulled {name}"
 
 
 def info(name: str) -> dict:
     """Show a model's license, source repo, and expected input shape."""
-    descriptor = models_handler.info(name)
+    summary = get_client().models_info(name)
     return {
-        "name": descriptor.name,
-        "runtime": getattr(descriptor, "runtime", "-"),
-        "source": descriptor.hf_repo_id,
-        "license": str(descriptor.license),
+        "name": summary.name,
+        "runtime": summary.runtime,
+        "source": summary.source,
+        "license": summary.license,
     }
 
 
 def rm(name: str) -> str:
     """Remove a model's cached weights."""
-    models_handler.rm(name)
+    get_client().models_rm(name)
     return f"removed {name}"

@@ -4,7 +4,7 @@ import typer
 
 from splat.cli._console import console, error
 from splat.domain.errors import SplatDomainError
-from splat.handlers.inspect import validate as validate_handler
+from splat.registry.wiring import get_client
 
 
 def validate(
@@ -13,14 +13,14 @@ def validate(
 ) -> None:
     """Check a splat file's domain invariants; exits non-zero on failure (CI-friendly)."""
     try:
-        result = validate_handler(path, strict=strict)
+        summary = get_client().validate(path, strict=strict)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
 
-    if result.issues:
-        for issue in result.issues:
+    if summary.issues:
+        for issue in summary.issues:
             console.print(f"[yellow]issue:[/yellow] {issue}")
         raise typer.Exit(code=1)
 
-    console.print(f"[green]valid[/green] — {result.cloud.point_count:,} points")
+    console.print(f"[green]valid[/green] — {summary.points:,} points")

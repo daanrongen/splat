@@ -1,7 +1,10 @@
 """Assembles the `splat mcp` server — the MCP driving adapter, mirroring
-cli/main.py's per-command registration. Every tool calls handlers/*.py
-directly (never registry/application/adapters directly), and always
-executes locally: this server never consults SPLAT_HOST.
+cli/main.py's per-command registration. Every tool (except
+tools_displace_height, outside SplatClient's contract) goes through
+registry.wiring.get_client(), same as cli/*.py, so SPLAT_URL transparently
+redirects tool calls to a remote `splat http` server exactly like the CLI.
+`splat mcp` itself is still always a local stdio process — only where its
+tools *execute* can be remote.
 """
 
 import functools

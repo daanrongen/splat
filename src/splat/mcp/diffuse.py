@@ -1,7 +1,8 @@
 import mcp.types as types
 
-from splat.handlers.diffuse import DiffuseRequest, handle
+from splat.handlers.diffuse import DiffuseRequest
 from splat.mcp._content import image_content, text_content
+from splat.registry.wiring import get_client
 
 
 def diffuse(
@@ -13,7 +14,7 @@ def diffuse(
     device: str = "auto",
 ) -> list[types.ContentBlock]:
     """Diffuse an image from a text prompt (cached; the pipeline's origin stage)."""
-    result = handle(
+    result = get_client().diffuse(
         DiffuseRequest(
             prompt=prompt,
             model=model,

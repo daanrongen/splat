@@ -1,7 +1,7 @@
 """Pydantic wire models for the HTTP driving adapter. Kept separate from
 handlers/*.py's plain dataclasses so that layer stays framework-agnostic —
 these are the one place "what a request/response looks like on the wire"
-is defined, reused by RemoteSplatClient (SPLAT_HOST) later.
+is defined, reused by RemoteSplatClient (SPLAT_URL) later.
 """
 
 from pydantic import BaseModel
@@ -43,8 +43,17 @@ class ModelSummary(BaseModel):
     cached: bool | None = None
 
 
+class ModelInfoResponse(BaseModel):
+    name: str
+    runtime: str
+    source: str
+    license: str
+    min_images: int | None = None
+    max_images: int | None = None
+
+
 class InfoResponse(BaseModel):
-    format: str
+    format: str | None
     points: int
     sh_degree: int
     bbox_min: list[float]

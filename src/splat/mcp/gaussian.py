@@ -2,8 +2,9 @@ from pathlib import Path
 
 import mcp.types as types
 
-from splat.handlers.gaussian import GaussianRequest, handle
+from splat.handlers.gaussian import GaussianRequest
 from splat.mcp._content import text_content
+from splat.registry.wiring import get_client
 
 
 def gaussian(
@@ -13,7 +14,7 @@ def gaussian(
     device: str = "auto",
 ) -> list[types.ContentBlock]:
     """Reconstruct a Gaussian splat from 2+ image paths, written to output_path."""
-    result = handle(
+    result = get_client().gaussian(
         GaussianRequest(
             inputs=[Path(p) for p in images],
             output_path=Path(output_path),

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from splat.handlers import models as models_handler
-from splat.http._schemas import ModelSummary
+from splat.http._schemas import ModelInfoResponse, ModelSummary
 
 router = APIRouter()
 
@@ -27,12 +27,15 @@ def pull(name: str) -> dict:
 
 
 @router.get("/models/{name}")
-def info(name: str) -> ModelSummary:
+def info(name: str) -> ModelInfoResponse:
     descriptor = models_handler.info(name)
-    return ModelSummary(
+    return ModelInfoResponse(
         name=descriptor.name,
         runtime=getattr(descriptor, "runtime", "-"),
+        source=descriptor.hf_repo_id,
         license=str(descriptor.license),
+        min_images=getattr(descriptor, "min_images", None),
+        max_images=getattr(descriptor, "max_images", None),
     )
 
 
