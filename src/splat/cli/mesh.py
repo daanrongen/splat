@@ -2,13 +2,12 @@ from pathlib import Path
 
 import typer
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.application.pipeline import run_mesh
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_mesh_backend
+from splat.handlers.mesh import MeshRequest, handle
+from splat.registry.wiring import get_asset_cache
 
 
 def mesh(
@@ -20,14 +19,10 @@ def mesh(
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
     """Predict a 3D mesh from an image using a learned model."""
-    cache = FilesystemAssetCache()
+    cache = get_asset_cache()
     try:
-        backend = get_mesh_backend(model, device=device)
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
-        results = [
-            run_mesh(backend, cache, model_name=model, input_asset=asset, params={})
-            for asset in inputs
-        ]
+        results = handle(MeshRequest(inputs=inputs, model=model, device=device))
     except (SplatDomainError, NotImplementedError) as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

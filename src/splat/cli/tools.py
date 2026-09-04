@@ -1,15 +1,13 @@
 from pathlib import Path
 
-import numpy as np
 import typer
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.application.pipeline import run_displace_height
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import Asset, AssetKind
+from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.domain.image_space import DepthMap
+from splat.handlers.tools import DisplaceHeightRequest, handle
+from splat.registry.wiring import get_asset_cache
 
 tools_app = typer.Typer(
     help="Deterministic, non-ML operators that compose between pipeline stages.",
@@ -29,10 +27,10 @@ def displace_height(
 ) -> None:
     """Displace a depth map's per-pixel height into a triangulated, textured mesh."""
     export_format = to or (output.suffix.lstrip(".") if output else "glb")
-    cache = FilesystemAssetCache()
+    cache = get_asset_cache()
     try:
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.DEPTH_MAP)
-        results = [_displace_height_one(asset, cache, export_format) for asset in inputs]
+        results = handle(DisplaceHeightRequest(inputs=inputs, export_format=export_format))
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
@@ -46,33 +44,6 @@ def displace_height(
             console.print(f"[green]displace.height[/green] {asset.id}  faces={faces}")
 
     report(results, _human)
-
-
-def _displace_height_one(asset: Asset, cache, export_format: str) -> Asset:
-    if asset.kind != AssetKind.DEPTH_MAP:
-        raise SplatDomainError(
-            "displace.height requires a depth map — pipe through `splat depth` first, "
-            "e.g. `splat depth image.png | splat tools displace.height -o out.glb`."
-        )
-    if not asset.parent_ids:
-        raise SplatDomainError(
-            f"Depth asset {asset.id} has no source image to texture the mesh with."
-        )
-    image_asset = cache.get(asset.parent_ids[0])
-    depth_map = DepthMap(
-        depth=np.load(asset.content_path),
-        focal_length_px=asset.metadata.get("focal_length_px"),
-        field_of_view_deg=asset.metadata.get("field_of_view_deg"),
-        metadata=asset.metadata,
-    )
-    return run_displace_height(
-        cache,
-        image_asset=image_asset,
-        depth_asset=asset,
-        depth_map=depth_map,
-        params={},
-        export_format=export_format,
-    )
 
 
 @tools_app.command("extract.surface")

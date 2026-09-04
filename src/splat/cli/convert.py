@@ -2,10 +2,9 @@ from pathlib import Path
 
 import typer
 
-from splat.application.convert import ConvertUseCase
 from splat.cli._console import console, error, warn
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_reader, get_writer
+from splat.handlers.convert import ConvertRequest, handle
 
 
 def convert(
@@ -37,9 +36,14 @@ def convert(
                 raise SplatDomainError("Provide INPUT and OUTPUT paths, or use -o/--output.")
             input_path, output_path = inputs
 
-        reader = get_reader(from_format or input_path.suffix)
-        writer = get_writer(to_format or output_path.suffix)
-        result = ConvertUseCase(reader, writer).execute(input_path, output_path)
+        result = handle(
+            ConvertRequest(
+                input_path=input_path,
+                output_path=output_path,
+                from_format=from_format,
+                to_format=to_format,
+            )
+        )
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

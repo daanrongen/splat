@@ -4,13 +4,12 @@ import numpy as np
 import typer
 from PIL import Image
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.application.pipeline import run_depth
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_depth_backend
+from splat.handlers.depth import DepthRequest, handle
+from splat.registry.wiring import get_asset_cache
 
 
 def depth(
@@ -24,14 +23,10 @@ def depth(
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
     """Estimate per-pixel metric depth for image(s) (cached losslessly as .npy)."""
-    cache = FilesystemAssetCache()
+    cache = get_asset_cache()
     try:
-        backend = get_depth_backend(model, device=device)
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
-        results = [
-            run_depth(backend, cache, model_name=model, input_asset=asset, params={})
-            for asset in inputs
-        ]
+        results = handle(DepthRequest(inputs=inputs, model=model, device=device))
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

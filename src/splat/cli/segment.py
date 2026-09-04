@@ -2,13 +2,12 @@ from pathlib import Path
 
 import typer
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
-from splat.application.pipeline import run_segment
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.registry.wiring import get_segmentation_backend
+from splat.handlers.segment import SegmentRequest, handle
+from splat.registry.wiring import get_asset_cache
 
 
 def segment(
@@ -23,21 +22,12 @@ def segment(
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
     """Segment image(s) into RGBA sticker cutouts (cached; fans out to many assets)."""
-    cache = FilesystemAssetCache()
+    cache = get_asset_cache()
     try:
-        backend = get_segmentation_backend(model, device=device)
         inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
-        all_stickers = []
-        for asset in inputs:
-            all_stickers.extend(
-                run_segment(
-                    backend,
-                    cache,
-                    model_name=model,
-                    input_asset=asset,
-                    params={"max_stickers": max_stickers},
-                )
-            )
+        all_stickers = handle(
+            SegmentRequest(inputs=inputs, model=model, max_stickers=max_stickers, device=device)
+        )
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
