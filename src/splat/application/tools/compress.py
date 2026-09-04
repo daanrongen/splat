@@ -6,6 +6,8 @@ from splat.ports.splat_io import SplatReader, SplatWriter
 
 
 class CompressUseCase:
+    """Deterministically prune and quantize a GaussianCloud for a delivery profile."""
+
     def __init__(self, reader: SplatReader, writer: SplatWriter, compressor: Compressor) -> None:
         self._reader = reader
         self._writer = writer

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import mcp.types as types
 
-from splat.handlers.convert import ConvertRequest
+from splat.handlers.tools.convert import ConvertRequest
 from splat.mcp._content import text_content
 from splat.registry.wiring import get_client
 
@@ -13,7 +13,6 @@ def convert(
     from_format: str | None = None,
     to_format: str | None = None,
 ) -> list[types.ContentBlock]:
-    """Convert between splat file formats."""
     result = get_client().convert(
         ConvertRequest(
             input_path=Path(input_path),
@@ -22,6 +21,4 @@ def convert(
             to_format=to_format,
         )
     )
-    content = [text_content(f"wrote {output_path} ({result.cloud.point_count:,} points)")]
-    content.extend(text_content(f"warning: {w}") for w in result.warnings)
-    return content
+    return [text_content(f"wrote {output_path} ({result.cloud.point_count} points)")]

@@ -8,17 +8,17 @@ from pathlib import Path
 
 import httpx
 
-from splat.application.convert import ConvertResult
+from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
-from splat.handlers.compress import CompressRequest
-from splat.handlers.convert import ConvertRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.gaussian import GaussianRequest, GaussianResult
 from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
+from splat.handlers.tools.compress import CompressRequest
+from splat.handlers.tools.convert import ConvertRequest
 from splat.http._schemas import (
     AssetSummary,
     DiffuseBody,

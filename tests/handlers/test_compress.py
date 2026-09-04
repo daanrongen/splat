@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from splat.adapters.formats.ply import PlyWriter
-from splat.handlers.compress import CompressRequest, handle
+from splat.handlers.tools.compress import CompressRequest, handle
 
 
 def test_handle_compresses_and_writes(tmp_path: Path, synthetic_cloud):

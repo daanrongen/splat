@@ -7,7 +7,7 @@ from PIL import Image
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.handlers.tools import DisplaceHeightRequest, handle
+from splat.handlers.tools.displace_height import DisplaceHeightRequest, handle
 
 
 def _sample_image(tmp_path: Path) -> Path:

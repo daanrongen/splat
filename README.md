@@ -1,318 +1,258 @@
 # splat
 
-A universal converter for "3D image space" — from a text prompt to a
-Gaussian Splat, and between Gaussian Splat file formats — built like
-`pandoc`: every command reads and writes a small set of universal,
-content-addressed representations instead of one converter per pair of
-formats. Runs fully locally on Apple Silicon (MLX and CoreML backends, no
-NVIDIA required); no model weights ship in the package, they're pulled from
-HuggingFace Hub on first use and cached like `ollama pull`.
+`splat` is a local 3D image-space toolkit for generating, segmenting, estimating depth, predicting meshes, reconstructing Gaussian splats, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, and PyTorch/MPS backends, and it downloads model weights on demand instead of shipping them in the package.
 
-## What it does
+The CLI is split by behavior:
 
-Two halves, one architecture:
+- **Model-backed stages** live at the top level: `diffuse`, `segment`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
+- **Deterministic tools** live under `splat tools`: `convert`, `compress`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
+- **Inspection, services, and administration** stay separate: `info`, `validate`, `models`, `http`, `mcp`, and `env`.
 
-- **Splat file tooling** — convert, inspect, validate, and compress
-  `.ply`/`.splat` Gaussian Splat files.
-- **Generative pipeline** — `diffuse → segment → depth → mesh → …` turns a
-  text prompt into an image, cuts a subject out as an RGBA "sticker",
-  estimates its depth, and predicts a mesh from it. Each stage caches its
-  output as an `Asset` and can read the previous stage's output directly,
-  by cache ID, or piped from another `splat` command — the same
-  "everything is one universal object" idea `pandoc` uses for documents.
-
-Both halves are ports & adapters: a command talks to a `Protocol` port, and
-a *runtime* (`mlx`, `coreml`, or `torch`) provides the adapter. The point of
-splitting runtime from port is that adapters chain — a CoreML `diffuse`
-can feed an MLX `segment`, or vice versa.
-
-Sitting alongside that pipeline is **`splat tools`** — deterministic,
-non-ML operators that compose between the stochastic ML stages via the
-same `Asset`/cache/pipe contract, but carry none of the swappable-backend
-machinery (no `Protocol` port, no model catalog, no license) since there's
-nothing to pick between. `diffuse`/`segment`/`depth`/`mesh` all imply
-"pick a backend, get non-deterministic output"; a `tools` command is
-always the same pure function.
-
-## Quick tour
-
-```sh
-# splat file tooling
-splat convert scene.ply scene.splat
-splat compress scene.ply scene.web.ply --profile web-delivery
-splat info scene.ply
-splat validate scene.ply --strict
-
-# generative pipeline
-splat diffuse "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
-splat segment robot.png --model sam-mlx -o stickers/ --max-stickers 5
-splat depth stickers/sticker_000.png --model depth-pro -o depth.png
-splat mesh stickers/sticker_000.png -o sticker.glb   # not yet implemented, see below
-
-# a deterministic `tools` operator spliced into the same pipeline
-splat depth stickers/sticker_000.png | splat tools displace.height - -o sticker.glb
-
-# chained via Unix pipes — same pipeline, one line
-splat diffuse "a small red toy robot" | splat segment - | splat depth - \
-  | splat tools displace.height - -o robot.glb
-```
-
-## Installation
-
-### Homebrew
-
-```sh
-brew install daanrongen/splat/splat
-```
-
-### From source
+## Getting Started
 
 ```sh
 git clone https://github.com/daanrongen/splat.git
 cd splat
 mise install
 uv sync
+uv run splat --help
 ```
 
-## CLI reference
+Install from Homebrew when using a released build:
 
-| Command | Does | Key options |
+```sh
+brew install daanrongen/splat/splat
+```
+
+Check the model catalog and pull weights explicitly:
+
+```sh
+splat models list
+splat models info sdxl-turbo-mlx
+splat models pull sdxl-turbo-mlx
+splat models rm sdxl-turbo-mlx
+```
+
+## Model-Backed Stages
+
+### diffuse
+
+`splat diffuse` turns a text prompt into an image asset.
+
+```sh
+splat diffuse "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
+```
+
+Key options: `--model sdxl-turbo-mlx|sd21-coreml`, `--negative`, `--steps`, `--seed`, `--device`, `-o/--output`.
+
+### segment
+
+`splat segment` turns an image asset into RGBA sticker cutouts.
+
+```sh
+splat segment robot.png --model sam-mlx --max-stickers 5 -o stickers/
+```
+
+Key options: `--model sam-mlx|sam2-coreml`, `--max-stickers`, `--device`, `-o/--output`.
+
+### depth
+
+`splat depth` turns an image or sticker into a metric depth-map asset stored losslessly as `.npy`, with `-o` writing a normalized preview PNG.
+
+```sh
+splat depth stickers/sticker_000.png --model depth-pro -o depth.png
+```
+
+Key options: `--model depth-pro`, `--device`, `-o/--output`.
+
+### gaussian
+
+`splat gaussian` reconstructs a Gaussian splat from input images via a feed-forward reconstruction backend.
+
+```sh
+splat gaussian view-a.png view-b.png --model mvsplat -o scene.ply
+```
+
+Key options: `--model mvsplat`, `--device`, `-o/--output`. `mvsplat` is currently a deliberate stub because the available license-clean, Apple-native feed-forward options are not ready for this package.
+
+### mesh
+
+`splat mesh` predicts a mesh from an image via a learned image-to-mesh backend.
+
+```sh
+splat mesh sticker.png --model triposr -o sticker.glb
+```
+
+Key options: `--model triposr`, `--device`, `-o/--output`. `triposr` is currently a deliberate stub; use `splat tools displace.height` for the deterministic depth-map-to-mesh path available today.
+
+### train
+
+`splat train` is reserved for per-scene Gaussian splat optimization and is currently a stub.
+
+```sh
+splat train dataset/
+```
+
+## Deterministic Tools
+
+`splat tools` contains transforms whose output is fully determined by their inputs and options. These commands do not have `--model`, `--device`, model downloads, or model-license warnings.
+
+```sh
+splat tools --help
+```
+
+### tools convert
+
+`splat tools convert` rewrites Gaussian splat files between registered file formats.
+
+```sh
+splat tools convert scene.ply scene.splat
+splat tools convert scene.ply -o scene.splat
+```
+
+Key options: `-f/--from`, `-t/--to`, `-o/--output`.
+
+### tools compress
+
+`splat tools compress` prunes and quantizes a Gaussian splat for a named delivery profile.
+
+```sh
+splat tools compress scene.ply scene.web.ply --profile web-delivery
+```
+
+Key options: `--profile web-delivery|archival`.
+
+### tools displace.height
+
+`splat tools displace.height` turns a depth-map asset into a triangulated, textured mesh. It reads the source image through the depth asset's provenance.
+
+```sh
+splat depth sticker.png | splat tools displace.height - -o sticker.glb
+splat tools displace.height @depth_asset_id -o sticker.obj
+```
+
+Key options: `-t/--to glb|obj|ply`, `-o/--output`.
+
+### tools extract.surface
+
+`splat tools extract.surface` is reserved for deterministic Gaussian-splat-to-surface extraction and is currently a stub.
+
+```sh
+splat tools extract.surface scene.ply scene.obj
+```
+
+## Inspection
+
+`info` and `validate` remain top-level debug commands because they inspect data rather than transform it.
+
+```sh
+splat info scene.ply
+splat validate scene.ply --strict
+```
+
+## Piping And Assets
+
+Pipeline commands accept a file path, `@<asset-id>`, or `-` for NDJSON records from stdin when the command works with assets. Every asset-producing stage writes to the content-addressed cache and prints NDJSON when stdout is piped.
+
+```sh
+splat diffuse "dog" | splat segment - | splat depth - | splat tools displace.height - -o test.obj
+```
+
+`-o/--output` writes a convenient copy to the path you choose; it does not replace the cache entry. Cached assets keep provenance so downstream tools can retrieve parents, such as `displace.height` loading the image that produced a depth map.
+
+## HTTP Server
+
+`splat http` exposes the same work over a trusted-local-network REST API. Requests execute on the machine running the server.
+
+```sh
+splat http --host 127.0.0.1:8000
+SPLAT_HOST=0.0.0.0:8000 splat http
+```
+
+| Route | CLI surface | Response |
 |---|---|---|
-| `diffuse PROMPT` | Text → image | `--model sdxl-turbo-mlx\|sd21-coreml`, `--negative`, `--steps`, `--seed`, `-o FILE` |
-| `segment INPUT` | Image → RGBA sticker cutouts | `--model sam-mlx\|sam2-coreml`, `--max-stickers`, `-o DIR` |
-| `depth INPUT` | Image → per-pixel metric depth | `--model depth-pro`, `-o FILE` (normalized preview PNG) |
-| `mesh INPUT` | Image → mesh, via a learned model | not yet implemented, stubbed intentionally; `--model triposr`, `--device`, `-o FILE` |
-| `gaussian INPUT...` | Image(s) → Gaussian splat (feed-forward reconstruction) | `--model mvsplat`, `--device`, `-o FILE` |
-| `convert INPUT... [OUTPUT]` | Splat↔splat format conversion | `-f/--from`, `-t/--to`, `-o FILE` |
-| `info PATH` | Point count, SH degree, bounding box | |
-| `validate PATH` | Check domain invariants, exit non-zero on failure | `--strict` |
-| `compress INPUT OUTPUT` | Prune + quantize for delivery | `--profile web-delivery\|archival` |
-| `train DATASET_DIR` | Per-scene optimization | not yet implemented, stubbed intentionally |
-| `tools displace.height INPUT` | Depth map → triangulated, textured mesh | `-t/--to glb\|obj\|ply`, `-o FILE` |
-| `tools extract.surface INPUT OUTPUT` | Gaussian splat → mesh export (SuGaR-style) | not yet implemented, stubbed intentionally; `-t/--to`, `--device` |
-| `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
-| `http` | Start splat's HTTP server | `--host`, `--port` (default `8000`) |
-| `mcp` | Start splat's MCP server (stdio) | |
-| `env` | Show every `SPLAT_*` default and where it resolved from | |
+| `POST /diffuse` | `splat diffuse` | image bytes |
+| `POST /segment` | `splat segment` | sticker asset manifest |
+| `POST /depth` | `splat depth` | depth `.npy` bytes |
+| `POST /mesh` | `splat mesh` | mesh bytes |
+| `POST /gaussian` | `splat gaussian` | Gaussian splat bytes |
+| `POST /convert` | `splat tools convert` | converted file bytes |
+| `POST /compress` | `splat tools compress` | compressed file bytes |
+| `POST /info` | `splat info` | JSON summary |
+| `POST /validate` | `splat validate` | JSON summary |
+| `GET /assets/{id}` | asset fetch | raw asset bytes |
+| `GET/POST/DELETE /models...` | `splat models list|pull|info|rm` | JSON |
 
-`INPUT` on `segment`/`depth`/`mesh`/`tools displace.height` accepts a file
-path, `@<asset-id>` to address a cached asset directly, or `-` to read
-piped NDJSON asset records from an earlier `splat` command.
-`displace.height` specifically requires that asset to be a `depth_map` —
-pipe it through `splat depth` first; it fetches the source image for
-texturing via the depth asset's own provenance (`parent_ids`), it never
-invokes `depth` itself.
+There is no authentication in v1. Bind it only on trusted interfaces or put authentication in front of it.
 
-### Piping contract
+## Remote Execution
 
-Every pipeline command prints one NDJSON record per output asset when
-stdout is piped (`{"id", "kind", "path", "metadata", ...}`), or a
-human-readable summary in an interactive terminal — the same
-machine/human duality `jq`, `ripgrep --json`, and friends use. `-o` writes
-a plain file alongside the cache entry; it never replaces caching.
+Set `SPLAT_URL` on a client machine to send remote-capable CLI commands to a running `splat http` server. Outputs are written locally, and asset-producing results are mirrored into the local asset cache under the same id.
 
-## HTTP server
+```sh
+# on the compute machine
+SPLAT_HOST=0.0.0.0:8000 splat http
 
-`splat http` exposes the same pipeline over a REST API — one route per CLI
-command, synchronous (a request blocks until the result is ready, then
-returns the asset bytes directly):
+# on another machine
+SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
+```
 
-| Route | Mirrors |
+`SPLAT_HOST` controls where `splat http` binds. `SPLAT_URL` controls where client commands execute. The two settings are intentionally separate.
+
+## MCP Server
+
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `segment`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`.
+
+```sh
+splat mcp
+```
+
+When `SPLAT_URL` is set, remote-capable MCP tools route through the configured `splat http` server just like the CLI.
+
+## Environment
+
+Cache roots default under `$XDG_CACHE_HOME/splat` or `~/.cache/splat`:
+
+```text
+$XDG_CACHE_HOME/splat/
+|-- huggingface/
+|-- models/
+`-- assets/
+```
+
+Important settings:
+
+| Env var | Purpose |
 |---|---|
-| `POST /diffuse` | `splat diffuse` — JSON body, response body is the image |
-| `POST /segment` | `splat segment` — multipart upload, JSON manifest of sticker asset ids |
-| `POST /depth` | `splat depth` — multipart upload, response body is the depth `.npy` |
-| `POST /mesh` | `splat mesh` — multipart upload, response body is the `.glb` |
-| `POST /gaussian` | `splat gaussian` — multipart upload(s), response body is the splat file |
-| `POST /convert` | `splat convert` — multipart upload + `to`/`from_format`, response body is the converted file |
-| `POST /compress` | `splat compress` — multipart upload + `profile`, response body is the compressed file |
-| `POST /info` | `splat info` — multipart upload, JSON |
-| `POST /validate` | `splat validate` — multipart upload + `strict`, JSON |
-| `GET/POST/DELETE /models...` | `splat models list\|pull\|info\|rm` — JSON |
-| `GET /assets/{id}` | fetch a cached asset's raw bytes by id |
+| `SPLAT_CACHE_ROOT` | Base cache directory |
+| `SPLAT_MODEL_CACHE_DIR` | Converted or compiled model cache |
+| `SPLAT_ASSET_CACHE_DIR` | Pipeline asset cache |
+| `SPLAT_URL` | Remote `splat http` base URL for client commands |
+| `SPLAT_HOST` | Bind host and port for `splat http` |
+| `SPLAT_<COMMAND>_<PARAM>` | Default value for supported command options |
 
-**No authentication in v1** — `splat http` is intended for a trusted local
-network (e.g. running it on one machine and driving it from another on the
-same LAN); don't expose it beyond that without adding your own auth layer
-in front of it. It always executes locally and never proxies elsewhere.
+Run `splat env` to inspect every resolved setting, its source, and whether `SPLAT_URL` is reachable.
 
-## Distributed execution (`SPLAT_URL`)
-
-Run `splat http` on one machine (e.g. one with more GPU/Neural Engine
-headroom) and point the CLI at it from another host on the same network:
-
-```
-# on the machine with the models:
-SPLAT_HOST=0.0.0.0:8000 splat http
-
-# on the machine you're working from:
-export SPLAT_URL=http://gpu-host:8000
-splat diffuse "a fox in a garden" -o test.png
-```
-
-`SPLAT_HOST` (`--host`, default `127.0.0.1:8000`) and `SPLAT_URL` are
-deliberately distinct: `SPLAT_HOST` is only ever read by `splat http`
-itself, to pick its own bind address; `SPLAT_URL` is only ever read by
-every other command, to decide whether to run here or redirect to a
-remote server. No process ever needs both at once.
-
-`splat diffuse` runs on the remote host; `test.png` is written locally,
-exactly as if it had run there. Every CLI command that has an HTTP route
-(everything except `splat tools displace.height`, not yet exposed over
-HTTP) transparently redirects the same way — asset-producing commands
-(`diffuse`/`segment`/`depth`/`mesh`) mirror the resulting asset into your
-local cache under the same id the server computed, so `-o` and NDJSON
-piping work unchanged; `gaussian`/`convert`/`compress` write their output
-to the local path you gave, same as running locally.
-
-`splat http` itself never consults `SPLAT_URL` — only the CLI (and, as of
-below, `splat mcp`'s tools) ever needs to decide between "run this here"
-and "run this over there." `splat env` reports `SPLAT_URL`'s resolved
-value and whether it's currently reachable.
-
-## MCP server
-
-`splat mcp` exposes the same pipeline as MCP tools over stdio — the way
-Claude Desktop/Claude Code spawn local MCP servers. One tool per CLI
-command (`diffuse`, `segment`, `depth`, `mesh`, `gaussian`, `convert`,
-`compress`, `info`, `validate`, `models_list`/`pull`/`info`/`rm`,
-`tools_displace_height`), all built on the same `handlers/` layer as
-`splat http` — no logic duplicated between the two servers.
-
-Image/asset arguments accept a local file path or `@<asset-id>`, same as
-the CLI's own addressing — chain tool calls the way you'd pipe CLI
-commands (call `depth`, then feed its returned asset id into
-`tools_displace_height`).
-
-`splat mcp` is always a local stdio process — that's how Claude Desktop/
-Claude Code spawn it — but every tool except `tools_displace_height`
-(outside `SplatClient`'s contract, same exception as the CLI) honors
-`SPLAT_URL` exactly like the CLI does, so its tool calls can run on a
-remote `splat http` server:
-
-```
-# on the machine with the models:
-SPLAT_HOST=0.0.0.0:8000 splat http
-
-# wherever Claude Code runs:
-claude mcp add splat -e SPLAT_URL=http://gpu-host:8000 -- splat mcp
-```
-
-## Model catalog
-
-| Model | Task | Runtime | License |
-|---|---|---|---|
-| `sdxl-turbo-mlx` | diffuse | MLX | StabilityAI-NC-Community (non-commercial) |
-| `sd21-coreml` | diffuse | CoreML | OpenRAIL-M |
-| `sam-mlx` | segment | MLX | Apache-2.0 |
-| `sam2-coreml` | segment | CoreML | Apache-2.0 |
-| `depth-pro` | depth | PyTorch/MPS | Apple-ASCL |
-| `triposr` | mesh | PyTorch/MPS | MIT (stub — see below) |
-| `mvsplat` | image → splat | PyTorch/MPS | MIT (stub — see below) |
-
-`splat models info <name>` prints a model's exact source repo and license.
-Non-commercial licenses print a loud warning when used.
-
-`mvsplat` (feed-forward image → Gaussian reconstruction) is deliberately
-left as a stub raising `NotImplementedError`: every currently-available
-license-clean, pose-free, Apple-Silicon-ready alternative surveyed turned
-out to have a disqualifying issue (hard CUDA dependency, non-commercial
-license, or a pre-alpha rasterizer). See the docstring in
-`src/splat/adapters/reconstruction/mvsplat.py` for the full survey. Per-scene
-optimization training (`splat train`) is stubbed for the same reason: the
-reference 3DGS rasterizer is CUDA-only with no settled MPS equivalent yet.
-
-`triposr` (single-image → mesh) is stubbed the same way: no Apple-native or
-depth-conditioned image-to-mesh model exists anywhere surveyed, and
-TripoSR's own `tsr` package isn't vendored yet. See the docstring in
-`src/splat/adapters/mesh/triposr.py` for the full survey. Depth-map → mesh
-via pure geometry (no model, no license, no download) is available today
-as `splat tools displace.height` instead.
-
-## Caching
-
-Nothing ships in the package. Everything lands under one root:
-
-```
-$XDG_CACHE_HOME/splat/        (defaults to ~/.cache/splat)
-├── huggingface/               HF_HOME — raw HF downloads
-├── models/                    SPLAT_MODEL_CACHE_DIR — converted/compiled weights
-└── assets/                    SPLAT_ASSET_CACHE_DIR — pipeline outputs (images, stickers, depth maps)
-```
-
-`splat models pull <name>` / `splat models rm <name>` manage the model
-cache explicitly; pipeline commands populate the asset cache automatically
-as they run. Override any of the three via the matching env var (set in
-`mise.toml`'s `[env]`, or a gitignored `mise.local.toml` for `HF_TOKEN`).
-
-Every command's `--model`/`--device`/parameter flags also fall back to a
-`SPLAT_<COMMAND>_<PARAM>` env var (e.g. `SPLAT_DIFFUSE_MODEL`,
-`SPLAT_SEGMENT_DEVICE`) before their built-in default — set globally via
-shell `export`, or per-project via `mise.toml`'s `[env]`. Precedence:
-CLI flag > `os.environ` > `mise env --json` (queried lazily when the var
-isn't in `os.environ` and `mise` is on `PATH`) > built-in default. Run
-`splat env` to see every setting's resolved value and source.
-
-`SPLAT_URL` (see [Distributed execution](#distributed-execution-splat_url)
-above) follows the same `os.environ` > `mise env --json` > default (empty,
-meaning local) precedence, and is the one setting `splat env` also checks
-for live reachability.
+Precedence for command defaults is CLI flag, `os.environ`, `mise env --json`, then built-in default.
 
 ## Architecture
 
-Domain-driven design, ports & adapters, two aggregates at the hub instead
-of one converter per format/model pair:
+The implementation follows a ports-and-adapters layout with a small transport-neutral handler layer.
 
-- `GaussianCloud` (`domain/gaussians.py`) — the splat file side. Every
-  format reader/writer and reconstruction backend reads or writes this.
-- `Asset` (`domain/asset.py`) — the generative pipeline side. A typed,
-  content-addressed envelope (`kind`, `content_path`, `parent_ids`,
-  `metadata`) that every `diffuse`/`segment`/`depth`/`mesh`/`tools`
-  command reads and writes, cached by `FilesystemAssetCache`.
+| Layer | Role |
+|---|---|
+| `domain/` | Core value objects such as `GaussianCloud`, `Asset`, `DepthMap`, and errors |
+| `ports/` | Protocols for model backends, file IO, compression, cache, and client dispatch |
+| `application/` | Model-backed use cases and cache-aware orchestration |
+| `application/tools/` | Deterministic tool use cases |
+| `adapters/` | ML runtimes, file formats, cache implementation, local client, and HTTP client |
+| `registry/` | Model and format catalogs plus simple factory wiring |
+| `handlers/` | Transport-neutral request handlers for model-backed commands |
+| `handlers/tools/` | Transport-neutral request handlers for deterministic tools |
+| `cli/` | Top-level Typer commands for model-backed stages and service/debug commands |
+| `cli/tools/` | Typer subcommands for deterministic tools |
+| `http/` | REST routes that call handlers directly and always execute locally |
+| `http/tools/` | REST route modules backed by deterministic tool handlers |
+| `mcp/` | MCP stdio tools using the same command taxonomy |
 
-`ports/` defines the `Protocol` interfaces (`SplatReader`/`SplatWriter`,
-`ReconstructionBackend`, `DiffusionBackend`, `SegmentationBackend`,
-`DepthEstimationBackend`, `MeshPredictionBackend`, `MeshExporter`,
-`ModelSource`, `Compressor`); `adapters/` implements them per runtime;
-`registry/` is the entire dependency-wiring
-layer — plain dict catalogs, no framework. `splat tools` operators skip
-this entirely — no port, no registry, no `--model` — since a deterministic
-function has nothing to swap; `application/tools/` holds the plain
-functions directly.
-
-`handlers/` sits one level above `application/`: one module per capability,
-each resolving a backend/cache from `registry/wiring.py` and invoking the
-matching use case — the one place that logic lives, so it isn't duplicated
-per driving adapter. `cli/`, `http/`, and `mcp/` are all thin driving
-adapters on top of `handlers/`: `cli/` maps argv to a request and renders
-the result as console output or a written file; `http/` maps a REST
-request to the same request type and renders the result as an HTTP
-response; `mcp/` maps an MCP tool call to the same request type and
-renders the result as MCP content blocks. None of the three imports a
-concrete adapter directly.
-
-`cli/` is the one driving adapter that can execute somewhere other than
-in-process: instead of calling `handlers/*.py` directly, it calls
-`registry.wiring.get_client()`, which returns a `SplatClient`
-(`ports/client.py`) — `LocalSplatClient` (`adapters/client/local.py`, a
-pass-through to `handlers/*.py`) when `SPLAT_URL` is unset, or
-`RemoteSplatClient` (`adapters/client/http.py`, HTTP calls to a remote
-`splat http` server, reusing `http/_schemas.py`'s wire models) when it's
-set. `http/` and `mcp/` always call `handlers/*.py` directly — they're
-never on the "remote" end of a `SplatClient`, only ever the thing a remote
-CLI talks to.
-
-## Development
-
-```sh
-mise trust && mise install   # python, uv, lefthook
-uv sync
-lefthook install
-
-mise run test    # uv run pytest
-mise run check   # lint + format-check + tests, the CI-equivalent
-```
-
-## License
-
-MIT
+The key boundary is intentional: choosing a model/runtime belongs to top-level model-backed commands; deterministic transforms belong under `tools`; inspection commands stay top-level because they report facts without transforming data.

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.adapters.formats.splat_fmt import SplatFormatReader, SplatFormatWriter
-from splat.application.convert import ConvertUseCase
+from splat.application.tools.convert import ConvertUseCase
 
 
 def test_convert_ply_to_splat(tmp_path: Path, synthetic_cloud):

@@ -12,8 +12,7 @@ class ConvertResult:
 
 
 class ConvertUseCase:
-    """Reads a GaussianCloud from one format and writes it in another —
-    the hub-and-spoke conversion at the heart of `splat convert`."""
+    """Deterministically rewrite a GaussianCloud from one file format to another."""
 
     def __init__(self, reader: SplatReader, writer: SplatWriter) -> None:
         self._reader = reader

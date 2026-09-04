@@ -4,7 +4,7 @@ import typer
 
 from splat.cli._console import console, error, warn
 from splat.domain.errors import SplatDomainError
-from splat.handlers.convert import ConvertRequest
+from splat.handlers.tools.convert import ConvertRequest
 from splat.registry.wiring import get_client
 
 
@@ -26,7 +26,7 @@ def convert(
         help="Force output format, e.g. .splat (inferred from extension by default).",
     ),
 ) -> None:
-    """Convert between splat file formats."""
+    """Convert between Gaussian splat file formats."""
     try:
         if output is not None:
             if len(inputs) != 1:

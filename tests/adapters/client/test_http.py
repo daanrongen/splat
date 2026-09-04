@@ -9,12 +9,12 @@ from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Sticker
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
-from splat.handlers.compress import CompressRequest
-from splat.handlers.convert import ConvertRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
+from splat.handlers.tools.compress import CompressRequest
+from splat.handlers.tools.convert import ConvertRequest
 from splat.registry.wiring import get_asset_cache
 
 

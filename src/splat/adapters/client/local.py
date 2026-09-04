@@ -1,13 +1,9 @@
 from pathlib import Path
 
-from splat.application.convert import ConvertResult
+from splat.application.tools.convert import ConvertResult
 from splat.domain.asset import Asset
 from splat.domain.gaussians import GaussianCloud
 from splat.handlers import models as models_handler
-from splat.handlers.compress import CompressRequest
-from splat.handlers.compress import handle as handle_compress
-from splat.handlers.convert import ConvertRequest
-from splat.handlers.convert import handle as handle_convert
 from splat.handlers.depth import DepthRequest
 from splat.handlers.depth import handle as handle_depth
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
@@ -20,6 +16,10 @@ from splat.handlers.mesh import MeshRequest
 from splat.handlers.mesh import handle as handle_mesh
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.segment import handle as handle_segment
+from splat.handlers.tools.compress import CompressRequest
+from splat.handlers.tools.compress import handle as handle_compress
+from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.tools.convert import handle as handle_convert
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 
 

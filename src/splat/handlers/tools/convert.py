@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from splat.application.convert import ConvertResult, ConvertUseCase
+from splat.application.tools.convert import ConvertResult, ConvertUseCase
 from splat.registry.wiring import get_reader, get_writer
 
 

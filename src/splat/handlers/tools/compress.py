@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from splat.adapters.compression.prune_quantize import PruneQuantizeCompressor
-from splat.application.compress import CompressUseCase
+from splat.application.tools.compress import CompressUseCase
 from splat.domain.gaussians import GaussianCloud
 from splat.registry.wiring import get_reader, get_writer
 
