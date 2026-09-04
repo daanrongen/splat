@@ -32,11 +32,12 @@ def model_sources(descriptor: Any) -> list[str]:
     repo_ids = getattr(descriptor, "hf_repo_ids", None)
     if isinstance(repo_ids, dict):
         return [repo_ids[key] for key in sorted(repo_ids)]
-    return [descriptor.hf_repo_id]
+    repo_id = getattr(descriptor, "hf_repo_id", None)
+    return [repo_id] if repo_id else []
 
 
 def model_source_label(descriptor: Any) -> str:
-    return ", ".join(model_sources(descriptor))
+    return ", ".join(model_sources(descriptor)) or "local runtime"
 
 
 def _lookup(name: str) -> Any:

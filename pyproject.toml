@@ -30,6 +30,7 @@ dependencies = [
     "opencv-python>=5.0.0.93",
     "open-clip-torch>=3.2",
     "realesrgan-mlx",
+    "mlx3d[capture]>=0.3.0",
 ]
 
 [project.scripts]

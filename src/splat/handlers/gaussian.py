@@ -1,31 +1,37 @@
 from dataclasses import dataclass
-from pathlib import Path
 
-from splat.application.reconstruct import ReconstructUseCase
+from splat.application.pipeline import run_gaussian
+from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
-from splat.domain.gaussians import GaussianCloud
-from splat.registry.wiring import get_model_source, get_reconstruction_backend, get_writer
+from splat.registry.wiring import get_asset_cache, get_model_source, get_reconstruction_backend
 
 
 @dataclass(frozen=True)
 class GaussianRequest:
-    inputs: list[Path]
-    output_path: Path
-    model: str = "mvsplat"
+    inputs: list[Asset]
+    model: str = "mlx3d-capture"
     device: str = "auto"
+    quality: str = "fast"
+    iters: int | None = None
+    max_dim: int | None = None
+    sh_degree: int | None = None
+    poses: str = "auto"
+    refine_poses: str = "auto"
+    low_memory: bool = False
+    seed: int = 0
 
 
-@dataclass(frozen=True)
-class GaussianResult:
-    cloud: GaussianCloud
-    warnings: list[str]
-
-
-def handle(request: GaussianRequest) -> GaussianResult:
+def handle(request: GaussianRequest) -> list[Asset]:
     model_source = get_model_source()
     backend = get_reconstruction_backend(
         request.model, model_source=model_source, device=request.device
     )
+
+    for asset in request.inputs:
+        if asset.kind not in (AssetKind.IMAGE, AssetKind.STICKER):
+            raise SplatDomainError(
+                f"Gaussian reconstruction requires image/sticker assets, got {asset.kind.value}."
+            )
 
     min_images, max_images = backend.required_image_count()
     if len(request.inputs) < min_images or (
@@ -37,8 +43,28 @@ def handle(request: GaussianRequest) -> GaussianResult:
             f"got {len(request.inputs)}."
         )
 
-    cloud = ReconstructUseCase(backend).execute(request.inputs, device=request.device)
-    writer = get_writer(request.output_path.suffix)
-    warnings = writer.supports(cloud)
-    writer.write(cloud, request.output_path)
-    return GaussianResult(cloud=cloud, warnings=warnings)
+    cache = get_asset_cache()
+    params = {
+        "device": request.device,
+        "quality": request.quality,
+        "poses": request.poses,
+        "refine_poses": request.refine_poses,
+        "low_memory": request.low_memory,
+        "seed": request.seed,
+    }
+    if request.iters is not None:
+        params["iters"] = request.iters
+    if request.max_dim is not None:
+        params["max_dim"] = request.max_dim
+    if request.sh_degree is not None:
+        params["sh_degree"] = request.sh_degree
+
+    return [
+        run_gaussian(
+            backend,
+            cache,
+            model_name=request.model,
+            input_assets=request.inputs,
+            params=params,
+        )
+    ]

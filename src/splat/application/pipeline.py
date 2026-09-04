@@ -14,16 +14,19 @@ from pathlib import Path
 import numpy as np
 import trimesh
 
+from splat.adapters.formats.ply import PlyWriter
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
 from splat.application.embed import EmbedUseCase
 from splat.application.mesh import PredictMeshUseCase
+from splat.application.reconstruct import ReconstructUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.gaussians import GaussianCloud
 from splat.domain.image_space import DepthMap, Shape3D
 from splat.image_io import encode_png
 from splat.ports.asset_cache import AssetCache
@@ -32,6 +35,7 @@ from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.embedding import EmbeddingBackend
 from splat.ports.mesh import MeshPredictionBackend
+from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.upscaling import UpscalingBackend
 
@@ -363,6 +367,56 @@ def run_mesh(
         metadata={**shape.metadata},
         parent_ids=[input_asset.id],
         created_by=f"mesh:{model_name}",
+    )
+
+
+def _gaussian_to_ply_bytes(cloud: GaussianCloud) -> bytes:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir) / "cloud.ply"
+        PlyWriter().write(cloud, path)
+        return path.read_bytes()
+
+
+def run_gaussian(
+    backend: ReconstructionBackend,
+    cache: AssetCache,
+    *,
+    model_name: str,
+    input_assets: list[Asset],
+    params: dict,
+) -> Asset:
+    parent_ids = tuple(asset.id for asset in input_assets)
+    cache_key = compute_cache_key(
+        stage="gaussian", model=model_name, params=params, parent_ids=parent_ids
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    execute_params = {key: value for key, value in params.items() if key != "device"}
+    cloud = ReconstructUseCase(backend).execute(
+        [asset.content_path for asset in input_assets],
+        device=params.get("device", "auto"),
+        **execute_params,
+    )
+    content_bytes = _gaussian_to_ply_bytes(cloud)
+
+    return cache.put(
+        cache_key,
+        kind=AssetKind.GAUSSIAN_CLOUD,
+        content_bytes=content_bytes,
+        ext="ply",
+        metadata={
+            **params,
+            "model": model_name,
+            "source_model": model_name,
+            "source_format": "ply",
+            "point_count": cloud.point_count,
+            "sh_degree": cloud.sh_degree,
+            "scale_activation": cloud.scale_activation,
+            "opacity_activation": cloud.opacity_activation,
+        },
+        parent_ids=list(parent_ids),
+        created_by=f"gaussian:{model_name}",
     )
 
 

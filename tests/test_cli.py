@@ -96,12 +96,15 @@ def test_compress(tmp_path: Path, synthetic_cloud) -> None:
 
 
 def test_gaussian_unknown_model_errors(tmp_path: Path) -> None:
+    a = write_sample_png(tmp_path / "a.png", (2, 2))
+    b = write_sample_png(tmp_path / "b.png", (2, 2))
+
     result = runner.invoke(
         app,
         [
             "gaussian",
-            str(tmp_path / "a.png"),
-            str(tmp_path / "b.png"),
+            str(a),
+            str(b),
             "-o",
             str(tmp_path / "out.splat"),
             "--model",

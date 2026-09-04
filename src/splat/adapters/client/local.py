@@ -13,7 +13,7 @@ from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.diffuse import handle as handle_diffuse
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.embed import handle as handle_embed
-from splat.handlers.gaussian import GaussianRequest, GaussianResult
+from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.gaussian import handle as handle_gaussian
 from splat.handlers.inspect import info as handle_info
 from splat.handlers.inspect import validate as handle_validate
@@ -55,7 +55,7 @@ class LocalSplatClient:
     def mesh(self, request: MeshRequest) -> list[Asset]:
         return handle_mesh(request)
 
-    def gaussian(self, request: GaussianRequest) -> GaussianResult:
+    def gaussian(self, request: GaussianRequest) -> list[Asset]:
         return handle_gaussian(request)
 
     def tools_convert(self, request: ConvertRequest) -> ConvertResult:

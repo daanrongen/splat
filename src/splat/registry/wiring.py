@@ -80,7 +80,9 @@ def get_reconstruction_backend(
         available = ", ".join(sorted(GAUSSIAN_CATALOG))
         raise UnsupportedFormat(f"Unknown model {name!r}. Available: {available}") from exc
 
-    weights_path: Path = model_source.pull(descriptor.hf_repo_id)
+    weights_path: Path | None = None
+    if descriptor.hf_repo_id is not None:
+        weights_path = model_source.pull(descriptor.hf_repo_id)
     return descriptor.backend_cls(
         weights_path=weights_path, device=device, license=descriptor.license
     )

@@ -3,28 +3,77 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
+from splat.cli._pipeline_io import is_piped, report, resolve_inputs
+from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.handlers.gaussian import GaussianRequest
-from splat.registry.wiring import get_client
+from splat.registry.wiring import get_asset_cache, get_client, get_reader, get_writer
+
+
+def _export_gaussian(asset: Asset, output: Path) -> list[str]:
+    cloud = get_reader(asset.content_path.suffix).read(asset.content_path)
+    writer = get_writer(output.suffix)
+    warnings = writer.supports(cloud)
+    writer.write(cloud, output)
+    return warnings
 
 
 def gaussian(
-    inputs: list[Path] = typer.Argument(
-        ..., help="Two or more images to reconstruct into a Gaussian splat."
+    inputs: list[str] = typer.Argument(
+        ..., help="Image paths, @<asset-id>s, or '-' to read piped asset records."
     ),
-    output: Path = typer.Option(..., "-o", "--output", help="Output splat file path."),
-    model: str = typer.Option("mvsplat", "--model", help="Reconstruction model, e.g. mvsplat."),
+    output: Path | None = typer.Option(None, "-o", "--output", help="Output splat file path."),
+    model: str = typer.Option(
+        "mlx3d-capture", "--model", help="Reconstruction model, e.g. mlx3d-capture."
+    ),
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
+    quality: str = typer.Option("fast", "--quality", help="mlx3d quality preset."),
+    iters: int | None = typer.Option(None, "--iters", help="Override training iterations."),
+    max_dim: int | None = typer.Option(None, "--max-dim", help="Max training image dimension."),
+    sh_degree: int | None = typer.Option(None, "--sh-degree", help="Spherical harmonic degree."),
+    poses: str = typer.Option("auto", "--poses", help="auto | colmap | builtin | existing"),
+    refine_poses: str = typer.Option("auto", "--refine-poses", help="auto | on | off"),
+    low_memory: bool = typer.Option(False, "--low-mem", help="Use mlx3d low-memory mode."),
+    seed: int = typer.Option(0, "--seed", help="Random seed; <0 disables seeding."),
 ) -> None:
-    """Reconstruct a Gaussian splat from images (feed-forward, no per-scene optimization)."""
+    """Reconstruct a Gaussian splat from images."""
+    cache = get_asset_cache()
     try:
-        result = get_client().gaussian(
-            GaussianRequest(inputs=inputs, output_path=output, model=model, device=device)
+        assets: list[Asset] = []
+        for input_arg in inputs:
+            assets.extend(resolve_inputs(input_arg, cache, default_kind=AssetKind.IMAGE))
+        results = get_client().gaussian(
+            GaussianRequest(
+                inputs=assets,
+                model=model,
+                device=device,
+                quality=quality,
+                iters=iters,
+                max_dim=max_dim,
+                sh_degree=sh_degree,
+                poses=poses,
+                refine_poses=refine_poses,
+                low_memory=low_memory,
+                seed=seed,
+            )
         )
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
 
-    for warning in result.warnings:
-        warn(warning)
-    console.print(f"[green]wrote[/green] {output} ({result.cloud.point_count:,} points)")
+    if output is not None and results:
+        for warning in _export_gaussian(results[0], output):
+            warn(warning)
+        if not is_piped():
+            console.print(
+                f"[green]wrote[/green] {output} "
+                f"({results[0].metadata.get('point_count', 0):,} points)"
+            )
+
+    def _human(assets: list[Asset]) -> None:
+        for asset in assets:
+            console.print(
+                f"[green]gaussian[/green] {asset.id}  points={asset.metadata.get('point_count')}"
+            )
+
+    report(results, _human)
