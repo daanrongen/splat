@@ -91,6 +91,7 @@ uv sync
 | `tools displace.height INPUT` | Depth map → triangulated, textured mesh | `-t/--to glb\|obj\|ply`, `-o FILE` |
 | `tools extract.surface INPUT OUTPUT` | Gaussian splat → mesh export (SuGaR-style) | not yet implemented, stubbed intentionally; `-t/--to`, `--device` |
 | `models list\|pull\|info\|rm NAME` | Manage cached model weights | |
+| `http` | Start splat's HTTP server | `--host`, `--port` (default `8000`) |
 | `env` | Show every `SPLAT_*` default and where it resolved from | |
 
 `INPUT` on `segment`/`depth`/`mesh`/`tools displace.height` accepts a file
@@ -108,6 +109,31 @@ stdout is piped (`{"id", "kind", "path", "metadata", ...}`), or a
 human-readable summary in an interactive terminal — the same
 machine/human duality `jq`, `ripgrep --json`, and friends use. `-o` writes
 a plain file alongside the cache entry; it never replaces caching.
+
+## HTTP server
+
+`splat http` exposes the same pipeline over a REST API — one route per CLI
+command, synchronous (a request blocks until the result is ready, then
+returns the asset bytes directly):
+
+| Route | Mirrors |
+|---|---|
+| `POST /diffuse` | `splat diffuse` — JSON body, response body is the image |
+| `POST /segment` | `splat segment` — multipart upload, JSON manifest of sticker asset ids |
+| `POST /depth` | `splat depth` — multipart upload, response body is the depth `.npy` |
+| `POST /mesh` | `splat mesh` — multipart upload, response body is the `.glb` |
+| `POST /gaussian` | `splat gaussian` — multipart upload(s), response body is the splat file |
+| `POST /convert` | `splat convert` — multipart upload + `to`/`from_format`, response body is the converted file |
+| `POST /compress` | `splat compress` — multipart upload + `profile`, response body is the compressed file |
+| `POST /info` | `splat info` — multipart upload, JSON |
+| `POST /validate` | `splat validate` — multipart upload + `strict`, JSON |
+| `GET/POST/DELETE /models...` | `splat models list\|pull\|info\|rm` — JSON |
+| `GET /assets/{id}` | fetch a cached asset's raw bytes by id |
+
+**No authentication in v1** — `splat http` is intended for a trusted local
+network (e.g. running it on one machine and driving it from another on the
+same LAN); don't expose it beyond that without adding your own auth layer
+in front of it. It always executes locally and never proxies elsewhere.
 
 ## Model catalog
 
@@ -181,12 +207,19 @@ of one converter per format/model pair:
 `DepthEstimationBackend`, `MeshPredictionBackend`, `MeshExporter`,
 `ModelSource`, `Compressor`); `adapters/` implements them per runtime;
 `registry/` is the entire dependency-wiring
-layer — plain dict catalogs, no framework. `cli/` is a thin Typer
-presentation layer that resolves adapters through `registry/wiring.py` and
-never imports a concrete adapter directly. `splat tools` operators skip
+layer — plain dict catalogs, no framework. `splat tools` operators skip
 this entirely — no port, no registry, no `--model` — since a deterministic
 function has nothing to swap; `application/tools/` holds the plain
 functions directly.
+
+`handlers/` sits one level above `application/`: one module per capability,
+each resolving a backend/cache from `registry/wiring.py` and invoking the
+matching use case — the one place that logic lives, so it isn't duplicated
+per driving adapter. `cli/` and `http/` are both thin driving adapters on
+top of `handlers/`: `cli/` maps argv to a request and renders the result as
+console output or a written file; `http/` maps a REST request to the same
+request type and renders the result as an HTTP response. Neither imports a
+concrete adapter directly.
 
 ## Development
 
