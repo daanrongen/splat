@@ -39,6 +39,8 @@ def _settings() -> list[_Setting]:
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
         _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "triposr", MESH_PREDICTION_CATALOG),
         _Setting("mesh", "--device", "SPLAT_MESH_DEVICE", "auto"),
+        _Setting("http", "--host", "SPLAT_HTTP_HOST", "127.0.0.1"),
+        _Setting("http", "--port", "SPLAT_HTTP_PORT", "8000"),
         _Setting("compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
         _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
         _Setting("train", "--iterations", "SPLAT_TRAIN_ITERATIONS", "30000"),

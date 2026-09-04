@@ -1,2 +1,51 @@
-# Copy to mise.local.toml (gitignored) and fill in real values.
-# mise auto-merges this over mise.toml — do not commit the real file.
+# Copy to mise.local.toml (gitignored) and edit whichever values you want to
+# override — every line below is already set to its built-in default, so an
+# untouched copy changes nothing. mise auto-merges this over mise.toml.
+
+[env]
+# splat http
+SPLAT_HTTP_HOST = "127.0.0.1"
+SPLAT_HTTP_PORT = "8000"
+
+# cache locations
+SPLAT_CACHE_ROOT = "{{env.XDG_CACHE_HOME | default(value=env.HOME ~ '/.cache')}}/splat"
+SPLAT_MODEL_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/models"
+SPLAT_ASSET_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/assets"
+HF_HOME = "{{env.XDG_CACHE_HOME | default(value=env.HOME ~ '/.cache')}}/huggingface"
+
+# diffuse
+SPLAT_DIFFUSE_MODEL = "sdxl-turbo-mlx"
+SPLAT_DIFFUSE_DEVICE = "auto"
+SPLAT_DIFFUSE_STEPS = ""
+SPLAT_DIFFUSE_SEED = ""
+SPLAT_DIFFUSE_NEGATIVE = ""
+
+# segment
+SPLAT_SEGMENT_MODEL = "sam-mlx"
+SPLAT_SEGMENT_DEVICE = "auto"
+SPLAT_SEGMENT_MAX_STICKERS = "20"
+
+# depth
+SPLAT_DEPTH_MODEL = "depth-pro"
+SPLAT_DEPTH_DEVICE = "auto"
+
+# gaussian
+SPLAT_GAUSSIAN_MODEL = "mvsplat"
+SPLAT_GAUSSIAN_DEVICE = "auto"
+
+# mesh
+SPLAT_MESH_MODEL = "triposr"
+SPLAT_MESH_DEVICE = "auto"
+
+# tools
+SPLAT_COMPRESS_PROFILE = "web-delivery"
+SPLAT_VALIDATE_STRICT = "false"
+SPLAT_DISPLACE_HEIGHT_TO = "glb"
+SPLAT_EXTRACT_SURFACE_DEVICE = "auto"
+
+# train (stub, not yet implemented)
+SPLAT_TRAIN_ITERATIONS = "30000"
+SPLAT_TRAIN_BACKEND = ""
+
+# distributed CLI — point at another host's `splat http` server
+SPLAT_HOST = ""
