@@ -22,6 +22,7 @@ from splat.ports.manifest_repository import ManifestRepository
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
+from splat.ports.render import RenderBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.splat_io import SplatReader, SplatWriter
 from splat.ports.upscaling import UpscalingBackend
@@ -139,6 +140,14 @@ def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBacken
     return descriptor.backend_cls(
         hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
     )
+
+
+def get_render_backend(name: str = "blender") -> RenderBackend:
+    if name != "blender":
+        raise UnsupportedFormat(f"Unknown render backend {name!r}. Available: blender")
+    from splat.adapters.render.blender import BlenderRenderBackend
+
+    return BlenderRenderBackend()
 
 
 def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:

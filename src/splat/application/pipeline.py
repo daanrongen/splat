@@ -14,13 +14,14 @@ from pathlib import Path
 import numpy as np
 import trimesh
 
-from splat.adapters.formats.ply import PlyWriter
+from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
 from splat.application.embed import EmbedUseCase
 from splat.application.mesh import PredictMeshUseCase
 from splat.application.reconstruct import ReconstructUseCase
+from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
 from splat.application.upscale import UpscaleUseCase
@@ -45,6 +46,7 @@ from splat.ports.embedding import EmbeddingBackend
 from splat.ports.manifest_repository import ManifestRepository
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.reconstruction import ReconstructionBackend
+from splat.ports.render import RenderBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.upscaling import UpscalingBackend
 
@@ -434,6 +436,38 @@ def run_gaussian(
         params={"model": model_name, **params},
         parent_ids=list(parent_ids),
         created_by=f"gaussian:{model_name}",
+    )
+
+
+def run_blender(
+    backend: RenderBackend,
+    cache: ManifestRepository,
+    *,
+    input_asset: Manifest,
+    params: dict,
+) -> Manifest:
+    cache_key = compute_cache_key(
+        stage="blender", model=backend.name, params=params, parent_ids=(input_asset.id,)
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    cloud = PlyReader().read(input_asset.content_path)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir) / "render.png"
+        RenderUseCase(backend).execute(cloud, tmp_path, **params)
+        content_bytes = tmp_path.read_bytes()
+
+    output = decode_rgb_or_rgba(content_bytes)
+    return cache.put(
+        cache_key,
+        kind=ManifestKind.IMAGE,
+        content_bytes=content_bytes,
+        ext="png",
+        metadata=RasterMetadata(output_width=output.shape[1], output_height=output.shape[0]),
+        params=params,
+        parent_ids=[input_asset.id],
+        created_by=f"blender:{backend.name}",
     )
 
 
