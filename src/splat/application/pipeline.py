@@ -25,7 +25,7 @@ from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
-from splat.domain.gaussians import GaussianCloud
+from splat.domain.gaussians import GaussianCloud, normalize_gaussian_cloud
 from splat.domain.image_space import DepthMap, Shape3D
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
@@ -415,8 +415,14 @@ def run_gaussian(
         device=params.get("device", "auto"),
         **execute_params,
     )
+    cloud = normalize_gaussian_cloud(cloud)
     cloud.metadata.source_model = model_name
     cloud.metadata.source_format = "ply"
+    # Reconstruction backends here calibrate/triangulate in the OpenCV/COLMAP
+    # convention (X-right, Y-down, Z-forward) — same as the original INRIA
+    # 3DGS codebase, so this stays as-is for viewer/tool compatibility; a
+    # consumer that needs a different up-axis (e.g. Blender) converts on import.
+    cloud.metadata.coordinate_convention = "colmap"
     content_bytes = _gaussian_to_ply_bytes(cloud)
 
     return cache.put(

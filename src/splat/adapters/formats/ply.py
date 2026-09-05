@@ -40,8 +40,10 @@ class PlyReader:
     name = "ply"
 
     def read(self, path: Path) -> GaussianCloud:
-        vertex = PlyData.read(str(path))["vertex"]
+        ply = PlyData.read(str(path))
+        vertex = ply["vertex"]
         names = vertex.data.dtype.names
+        comments = dict(c.split(" ", 1) for c in ply.comments if " " in c)
         n = vertex["x"].shape[0]
 
         means = np.stack([vertex["x"], vertex["y"], vertex["z"]], axis=1).astype(np.float32)
@@ -81,7 +83,11 @@ class PlyReader:
             sh_degree=sh_degree,
             scale_activation="log",
             opacity_activation="logit",
-            metadata=GaussianCloudMetadata(source_format="ply"),
+            metadata=GaussianCloudMetadata(
+                source_format="ply",
+                up_axis=comments.get("up_axis", "y"),
+                coordinate_convention=comments.get("coordinate_convention", "opengl"),
+            ),
         )
 
 
@@ -144,7 +150,11 @@ class PlyWriter:
         )
 
         element = PlyElement.describe(vertices, "vertex")
-        PlyData([element], text=False).write(str(path))
+        comments = [
+            f"up_axis {cloud.metadata.up_axis}",
+            f"coordinate_convention {cloud.metadata.coordinate_convention}",
+        ]
+        PlyData([element], text=False, comments=comments).write(str(path))
 
     def supports(self, cloud: GaussianCloud) -> list[str]:
         return []  # .ply carries full SH degree and float precision losslessly
