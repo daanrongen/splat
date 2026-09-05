@@ -30,6 +30,8 @@ class StickerMetadata:
     bbox: tuple[int, int, int, int]
     score: float
     area: int
+    width: int | None = None
+    height: int | None = None
 
 
 @dataclass
@@ -48,6 +50,7 @@ class SegmentManifestMetadata:
 @dataclass
 class CaptionMetadata:
     text_length: int
+    model: str | None = None
 
 
 @dataclass
@@ -66,6 +69,8 @@ class EmbeddingMetadata:
 class DepthMetadata:
     focal_length_px: float | None = None
     field_of_view_deg: float | None = None
+    width: int | None = None
+    height: int | None = None
     extra: dict = field(default_factory=dict)
 
 

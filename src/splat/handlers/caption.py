@@ -4,7 +4,7 @@ from splat.application.pipeline import run_caption
 from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
 from splat.registry.caption import CAPTION_CONTRACT
-from splat.registry.wiring import get_asset_cache, get_caption_backend
+from splat.registry.wiring import get_caption_backend, get_manifest_repository
 
 DEFAULT_CAPTION_PROMPT = "Describe this image in one concise sentence."
 
@@ -21,7 +21,7 @@ class CaptionRequest:
 
 def handle(request: CaptionRequest) -> list[Manifest]:
     validate_inputs(CAPTION_CONTRACT, request.inputs)
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     backend = get_caption_backend(request.model, device=request.device)
     params = {
         "prompt": request.prompt,

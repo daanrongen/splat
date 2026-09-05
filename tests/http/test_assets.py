@@ -3,14 +3,14 @@ from fastapi.testclient import TestClient
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import RasterMetadata
 from splat.http.app import app
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 
 client = TestClient(app)
 
 
 def test_get_asset_returns_content_bytes(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put(
         "abc123",
         kind=ManifestKind.IMAGE,

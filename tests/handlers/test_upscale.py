@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import DepthMetadata
@@ -22,7 +22,7 @@ class FakeUpscaleBackend:
 def test_handle_upscales_each_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(
         write_sample_png(tmp_path / "image.png", (2, 2)),
         kind=ManifestKind.IMAGE,
@@ -39,7 +39,7 @@ def test_handle_upscales_each_input(mocker, tmp_path, monkeypatch):
 def test_handle_rejects_non_image_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put(
         "depth",
         kind=ManifestKind.DEPTH_MAP,

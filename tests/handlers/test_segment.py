@@ -6,7 +6,7 @@ from splat.domain.image_space import Sticker
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.handlers.segment import SegmentRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
 
@@ -30,7 +30,7 @@ def test_handle_fans_out_stickers(mocker, tmp_path, monkeypatch):
         "splat.handlers.segment.get_segmentation_backend",
         return_value=FakeSegmentationBackend(),
     )
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = handle(SegmentRequest(inputs=[asset], model="fake-sam"))
@@ -38,3 +38,5 @@ def test_handle_fans_out_stickers(mocker, tmp_path, monkeypatch):
     assert len(result) == 1
     assert result[0].kind == ManifestKind.STICKER
     assert result[0].parent_ids == [asset.id]
+    assert result[0].metadata.width == 2
+    assert result[0].metadata.height == 2

@@ -10,7 +10,7 @@ from splat.handlers.embed import EmbedRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.upscale import UpscaleRequest
-from tests.image_helpers import write_sample_png
+from tests.image_helpers import sample_png_bytes, write_sample_png
 
 
 class FakeDiffusionBackend:
@@ -18,7 +18,7 @@ class FakeDiffusionBackend:
     license = MIT
 
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
-        output_path.write_bytes(b"fake-png-bytes")
+        output_path.write_bytes(sample_png_bytes())
         return output_path
 
 
@@ -54,16 +54,16 @@ def test_diffuse_delegates_to_handler(mocker, tmp_path, monkeypatch):
 
     result = client.diffuse(DiffuseRequest(prompt="a fox", model="fake-diffuser"))
 
-    assert result.asset.content_path.read_bytes() == b"fake-png-bytes"
+    assert result.asset.content_path.read_bytes() == sample_png_bytes()
     assert result.license_warning is None
 
 
 def test_caption_delegates_to_handler(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
-    from splat.registry.wiring import get_asset_cache
+    from splat.registry.wiring import get_manifest_repository
 
-    asset = get_asset_cache().put_external(
+    asset = get_manifest_repository().put_external(
         write_sample_png(tmp_path / "image.png", (2, 2)), kind=ManifestKind.IMAGE
     )
     client = LocalSplatClient()
@@ -147,9 +147,9 @@ def test_upscale_delegates_to_handler(mocker, tmp_path, monkeypatch):
             return np.repeat(np.repeat(image, factor, axis=0), factor, axis=1)
 
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
-    from splat.registry.wiring import get_asset_cache
+    from splat.registry.wiring import get_manifest_repository
 
-    asset = get_asset_cache().put_external(
+    asset = get_manifest_repository().put_external(
         write_sample_png(tmp_path / "image.png", (2, 2)), kind=ManifestKind.IMAGE
     )
     client = LocalSplatClient()

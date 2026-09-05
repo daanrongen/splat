@@ -15,7 +15,7 @@ from splat.cli.main import app
 from splat.domain.value_objects import MIT
 from splat.http.app import app as http_app
 from splat.image_io import read_rgb_or_rgba
-from tests.image_helpers import write_sample_png
+from tests.image_helpers import sample_png_bytes, write_sample_png
 
 runner = CliRunner()
 
@@ -25,7 +25,7 @@ class FakeDiffusionBackend:
     license = MIT
 
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
-        output_path.write_bytes(b"fake-png-bytes")
+        output_path.write_bytes(sample_png_bytes())
         return output_path
 
 
@@ -80,7 +80,7 @@ def test_splat_url_redirects_diffuse_to_remote_server(
     )
 
     assert result.exit_code == 0, result.output
-    assert out_path.read_bytes() == b"fake-png-bytes"
+    assert out_path.read_bytes() == sample_png_bytes()
 
 
 def test_splat_url_redirects_upscale_to_remote_server(

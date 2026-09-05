@@ -12,7 +12,7 @@ from pathlib import Path
 
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
-from splat.ports.asset_cache import AssetCache
+from splat.ports.manifest_repository import ManifestRepository
 
 
 def is_piped() -> bool:
@@ -20,7 +20,10 @@ def is_piped() -> bool:
 
 
 def resolve_inputs(
-    input_arg: str | None, cache: AssetCache, *, default_kind: ManifestKind = ManifestKind.IMAGE
+    input_arg: str | None,
+    cache: ManifestRepository,
+    *,
+    default_kind: ManifestKind = ManifestKind.IMAGE,
 ) -> list[Manifest]:
     if input_arg in (None, "-"):
         if sys.stdin.isatty():

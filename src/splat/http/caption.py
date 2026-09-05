@@ -3,7 +3,7 @@ from fastapi import APIRouter, File, Form, Response, UploadFile
 from splat.domain.manifest import ManifestKind
 from splat.handlers.caption import DEFAULT_CAPTION_PROMPT, CaptionRequest, handle
 from splat.http._files import saved_upload
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ def caption(
     temperature: float = Form(0.0),
     device: str = Form("auto"),
 ) -> Response:
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     with saved_upload(image) as path:
         asset = cache.put_external(path, kind=ManifestKind.IMAGE)
     result = handle(

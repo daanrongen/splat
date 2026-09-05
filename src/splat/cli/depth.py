@@ -9,7 +9,7 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.depth import DepthRequest
 from splat.image_io import write_png
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def depth(
@@ -23,7 +23,7 @@ def depth(
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
     """Estimate per-pixel metric depth for image(s) (cached losslessly as .npy)."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().depth(DepthRequest(inputs=inputs, model=model, device=device))

@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import DepthMetadata
@@ -16,7 +16,7 @@ def _sample_image(tmp_path: Path) -> Path:
     return write_sample_png(path, (4, 4))
 
 
-def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):
+def _depth_asset(tmp_path: Path, cache: FilesystemManifestRepository):
     image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
     depth_path = tmp_path / "depth.npy"
     np.save(depth_path, np.full((4, 4), 2.0, dtype=np.float32))
@@ -34,7 +34,7 @@ def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):
 
 def test_handle_produces_mesh_asset(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     depth_asset, image_asset = _depth_asset(tmp_path, cache)
 
     results = handle(DisplaceHeightRequest(inputs=[depth_asset]))
@@ -46,7 +46,7 @@ def test_handle_produces_mesh_asset(tmp_path: Path, monkeypatch):
 
 def test_handle_rejects_non_depth_input(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     with pytest.raises(SplatDomainError, match="requires a depth map"):

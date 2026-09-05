@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.application.pipeline import run_upscale
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
@@ -49,7 +49,7 @@ def test_upscale_use_case_rejects_unsupported_factor(tmp_path):
 
 
 def test_run_upscale_uses_cache_key(tmp_path):
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     source = cache.put_external(
         write_sample_png(tmp_path / "image.png", (2, 2)),
         kind=ManifestKind.IMAGE,

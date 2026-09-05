@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.cli.main import app
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
@@ -65,7 +65,7 @@ def test_gaussian_asset_inputs_output_flag_writes_file(
 ):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=ManifestKind.IMAGE)
     b = cache.put_external(_sample_image(tmp_path, "b.png"), kind=ManifestKind.IMAGE)
     out_path = tmp_path / "out.splat"
@@ -84,7 +84,7 @@ def test_gaussian_asset_inputs_output_flag_writes_file(
 def test_gaussian_stdin_ndjson_input(mocker, tmp_path, monkeypatch, synthetic_cloud):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=ManifestKind.IMAGE)
     b = cache.put_external(_sample_image(tmp_path, "b.png"), kind=ManifestKind.IMAGE)
     stdin_payload = json.dumps({"id": a.id}) + "\n" + json.dumps({"id": b.id}) + "\n"

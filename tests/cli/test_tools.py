@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from typer.testing import CliRunner
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.cli.main import app
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import DepthMetadata
@@ -18,7 +18,7 @@ def _sample_image(tmp_path: Path) -> Path:
     return write_sample_png(path, (4, 4))
 
 
-def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):
+def _depth_asset(tmp_path: Path, cache: FilesystemManifestRepository):
     image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
     depth_path = tmp_path / "depth.npy"
     np.save(depth_path, np.full((4, 4), 2.0, dtype=np.float32))
@@ -35,7 +35,7 @@ def _depth_asset(tmp_path: Path, cache: FilesystemAssetCache):
 
 def test_displace_height_from_piped_depth_asset(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     depth_asset, image_asset = _depth_asset(tmp_path, cache)
     stdin_payload = json.dumps({"id": depth_asset.id}) + "\n"
 
@@ -50,7 +50,7 @@ def test_displace_height_from_piped_depth_asset(tmp_path, monkeypatch):
 
 def test_displace_height_output_flag_writes_file(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     depth_asset, _ = _depth_asset(tmp_path, cache)
     out_path = tmp_path / "mesh.glb"
 
@@ -65,7 +65,7 @@ def test_displace_height_output_flag_writes_file(tmp_path, monkeypatch):
 
 def test_displace_height_rejects_non_depth_input(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = runner.invoke(app, ["tools", "displace.height", f"@{image_asset.id}"])

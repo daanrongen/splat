@@ -7,7 +7,7 @@ from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.embed import EmbedRequest
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def embed(
@@ -22,7 +22,7 @@ def embed(
     device: str = typer.Option("auto", "--device", help="'auto', 'mps', or 'cpu'."),
 ) -> None:
     """Embed image or text inputs as normalized vector assets."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     try:
         if text is not None:
             if input is not None:

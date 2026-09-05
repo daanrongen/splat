@@ -6,11 +6,11 @@ minus the stdin/NDJSON piping that has no MCP equivalent.
 from pathlib import Path
 
 from splat.domain.manifest import Manifest, ManifestKind
-from splat.ports.asset_cache import AssetCache
+from splat.ports.manifest_repository import ManifestRepository
 
 
 def resolve_input_asset(
-    path_or_ref: str, cache: AssetCache, *, default_kind: ManifestKind = ManifestKind.IMAGE
+    path_or_ref: str, cache: ManifestRepository, *, default_kind: ManifestKind = ManifestKind.IMAGE
 ) -> Manifest:
     if path_or_ref.startswith("@"):
         return cache.get(path_or_ref[1:])

@@ -37,12 +37,12 @@ from splat.domain.manifest_metadata import (
     SegmentManifestMetadata,
     StickerMetadata,
 )
-from splat.image_io import encode_png
-from splat.ports.asset_cache import AssetCache
+from splat.image_io import decode_rgb_or_rgba, encode_png
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.embedding import EmbeddingBackend
+from splat.ports.manifest_repository import ManifestRepository
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.segmentation import SegmentationBackend
@@ -62,7 +62,7 @@ def compute_cache_key(
 
 def run_diffuse(
     backend: DiffusionBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     prompt: str,
@@ -78,12 +78,13 @@ def run_diffuse(
         DiffuseUseCase(backend).execute(prompt, output_path=tmp_path, **params)
         content_bytes = tmp_path.read_bytes()
 
+    output = decode_rgb_or_rgba(content_bytes)
     return cache.put(
         cache_key,
         kind=ManifestKind.IMAGE,
         content_bytes=content_bytes,
         ext="png",
-        metadata=RasterMetadata(),
+        metadata=RasterMetadata(output_width=output.shape[1], output_height=output.shape[0]),
         params=invocation,
         parent_ids=[],
         created_by=f"diffuse:{model_name}",
@@ -92,7 +93,7 @@ def run_diffuse(
 
 def run_segment(
     backend: SegmentationBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_asset: Manifest,
@@ -117,7 +118,11 @@ def run_segment(
                 content_bytes=encode_png(sticker.rgba),
                 ext="png",
                 metadata=StickerMetadata(
-                    bbox=sticker.bbox, score=sticker.score, area=sticker.area
+                    bbox=sticker.bbox,
+                    score=sticker.score,
+                    area=sticker.area,
+                    width=sticker.rgba.shape[1],
+                    height=sticker.rgba.shape[0],
                 ),
                 params=params,
                 parent_ids=[input_asset.id],
@@ -141,7 +146,7 @@ def run_segment(
 
 def run_depth(
     backend: DepthEstimationBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_asset: Manifest,
@@ -166,6 +171,8 @@ def run_depth(
         metadata=DepthMetadata(
             focal_length_px=depth_map.focal_length_px,
             field_of_view_deg=depth_map.field_of_view_deg,
+            width=depth_map.depth.shape[1],
+            height=depth_map.depth.shape[0],
             extra=depth_map.metadata,
         ),
         params=params,
@@ -176,7 +183,7 @@ def run_depth(
 
 def run_caption(
     backend: CaptioningBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_asset: Manifest,
@@ -196,7 +203,7 @@ def run_caption(
         kind=ManifestKind.CAPTION,
         content_bytes=content_bytes,
         ext="txt",
-        metadata=CaptionMetadata(text_length=len(text)),
+        metadata=CaptionMetadata(text_length=len(text), model=model_name),
         params=params,
         parent_ids=[input_asset.id],
         created_by=f"caption:{model_name}",
@@ -231,7 +238,7 @@ def _embedding_bytes(embedding: np.ndarray) -> bytes:
 
 def run_embed_image(
     backend: EmbeddingBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_asset: Manifest,
@@ -262,7 +269,7 @@ def run_embed_image(
 
 def run_embed_text(
     backend: EmbeddingBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     text: str,
@@ -305,7 +312,7 @@ def run_embed_text(
 
 def run_upscale(
     backend: UpscalingBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_asset: Manifest,
@@ -354,7 +361,7 @@ def _shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
 
 def run_mesh(
     backend: MeshPredictionBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_asset: Manifest,
@@ -389,7 +396,7 @@ def _gaussian_to_ply_bytes(cloud: GaussianCloud) -> bytes:
 
 def run_gaussian(
     backend: ReconstructionBackend,
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     model_name: str,
     input_assets: list[Manifest],
@@ -425,7 +432,7 @@ def run_gaussian(
 
 
 def run_displace_height(
-    cache: AssetCache,
+    cache: ManifestRepository,
     *,
     image_asset: Manifest,
     depth_asset: Manifest,

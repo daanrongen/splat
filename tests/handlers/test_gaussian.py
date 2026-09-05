@@ -3,7 +3,7 @@ import pytest
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.gaussian import GaussianRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
 
@@ -27,7 +27,7 @@ def test_handle_creates_gaussian_asset(mocker, tmp_path, monkeypatch, synthetic_
         "splat.handlers.gaussian.get_reconstruction_backend",
         return_value=FakeReconstructionBackend(synthetic_cloud),
     )
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     a = cache.put_external(write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE)
     b = cache.put_external(write_sample_png(tmp_path / "b.png", (2, 2)), kind=ManifestKind.IMAGE)
     request = GaussianRequest(inputs=[a, b], model="fake-recon")
@@ -48,7 +48,7 @@ def test_handle_rejects_too_few_images(mocker, tmp_path, monkeypatch, synthetic_
         "splat.handlers.gaussian.get_reconstruction_backend",
         return_value=FakeReconstructionBackend(synthetic_cloud),
     )
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(
         write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE
     )

@@ -3,7 +3,7 @@ from fastapi import APIRouter, File, Form, Response, UploadFile
 from splat.domain.manifest import ManifestKind
 from splat.handlers.embed import EmbedRequest, handle
 from splat.http._files import saved_upload
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ def embed(
     model: str = Form("mobileclip2-s0"),
     device: str = Form("auto"),
 ) -> Response:
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     inputs = None
     if image is not None:
         with saved_upload(image) as path:

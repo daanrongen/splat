@@ -18,8 +18,8 @@ from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.image_io import read_rgb_or_rgba
-from splat.registry.wiring import get_asset_cache
-from tests.image_helpers import write_sample_png
+from splat.registry.wiring import get_manifest_repository
+from tests.image_helpers import sample_png_bytes, write_sample_png
 
 
 class FakeDiffusionBackend:
@@ -29,7 +29,7 @@ class FakeDiffusionBackend:
         self.license = license
 
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
-        output_path.write_bytes(b"fake-png-bytes")
+        output_path.write_bytes(sample_png_bytes())
         return output_path
 
 
@@ -103,9 +103,9 @@ def test_diffuse_stores_asset_locally(mocker, tmp_path, monkeypatch, remote_clie
 
     result = remote_client.diffuse(DiffuseRequest(prompt="a fox", model="fake-diffuser"))
 
-    assert result.asset.content_path.read_bytes() == b"fake-png-bytes"
+    assert result.asset.content_path.read_bytes() == sample_png_bytes()
     assert result.license_warning is None
-    assert get_asset_cache().get(result.asset.id) is not None
+    assert get_manifest_repository().get(result.asset.id) is not None
 
 
 def test_diffuse_surfaces_license_warning(mocker, tmp_path, monkeypatch, remote_client):
@@ -130,7 +130,7 @@ def test_diffuse_unknown_model_raises_domain_error(tmp_path, monkeypatch, remote
 def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.depth(DepthRequest(inputs=[asset]))
@@ -143,7 +143,7 @@ def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote
 def test_caption_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.caption(
@@ -172,7 +172,7 @@ def test_embed_stores_text_asset(mocker, tmp_path, monkeypatch, remote_client):
 def test_embed_stores_image_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.embed(EmbedRequest(inputs=[asset], model="fake-embedder"))
@@ -185,7 +185,7 @@ def test_embed_stores_image_asset_with_parent_id(mocker, tmp_path, monkeypatch, 
 def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.upscale(
@@ -205,7 +205,7 @@ def test_segment_fetches_each_sticker(mocker, tmp_path, monkeypatch, remote_clie
         "splat.handlers.segment.get_segmentation_backend",
         return_value=FakeSegmentationBackend(),
     )
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = remote_client.segment(SegmentRequest(inputs=[asset]))
@@ -226,7 +226,7 @@ def test_gaussian_stores_remote_asset(
     )
     image_a, image_b = _sample_image(tmp_path), tmp_path / "b.png"
     write_sample_png(image_b, (2, 2))
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset_a = cache.put_external(image_a, kind=ManifestKind.IMAGE)
     asset_b = cache.put_external(image_b, kind=ManifestKind.IMAGE)
 

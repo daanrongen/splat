@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.cli.main import app
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
@@ -78,7 +78,7 @@ def test_caption_output_flag_writes_text(mocker, tmp_path, monkeypatch):
 def test_caption_asset_id_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = runner.invoke(app, ["caption", f"@{asset.id}"])
@@ -91,7 +91,7 @@ def test_caption_asset_id_input(mocker, tmp_path, monkeypatch):
 def test_caption_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
     stdin_payload = json.dumps({"id": asset.id}) + "\n"
 

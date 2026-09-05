@@ -7,7 +7,7 @@ from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import CaptionMetadata
 from splat.domain.value_objects import MIT
 from splat.handlers.embed import EmbedRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
 
@@ -25,7 +25,7 @@ class FakeEmbeddingBackend:
 def test_handle_embeds_each_image_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(
         write_sample_png(tmp_path / "scene.png", (3, 2)), kind=ManifestKind.IMAGE
     )
@@ -51,7 +51,7 @@ def test_handle_embeds_text_input(mocker, tmp_path, monkeypatch):
 def test_handle_embeds_caption_asset_as_text(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     caption = cache.put(
         "caption-input",
         kind=ManifestKind.CAPTION,
@@ -73,7 +73,7 @@ def test_handle_embeds_caption_asset_as_text(mocker, tmp_path, monkeypatch):
 def test_handle_rejects_invalid_mode_combinations(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(
         write_sample_png(tmp_path / "scene.png", (3, 2)), kind=ManifestKind.IMAGE
     )

@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,17 +12,22 @@ from splat.domain.manifest_metadata import (
     KIND_METADATA_CLS,
     MANIFEST_MARKER_EXT,
     ManifestMetadata,
+    RasterMetadata,
+    StickerMetadata,
     metadata_from_dict,
     metadata_to_dict,
 )
+from splat.image_io import decode_rgb_or_rgba
 from splat.paths import asset_cache_dir
 
+_RASTER_KINDS = (ManifestKind.IMAGE, ManifestKind.STICKER)
 
-class AssetNotFound(SplatDomainError):
+
+class ManifestNotFound(SplatDomainError):
     pass
 
 
-class FilesystemAssetCache:
+class FilesystemManifestRepository:
     """Content-addressed cache: `<id>.<ext>` for the payload, `<id>.meta.json`
     for everything else. Both live flat in one directory — simple enough not
     to need sharding at this project's scale."""
@@ -30,8 +36,8 @@ class FilesystemAssetCache:
         self._dir = cache_dir or asset_cache_dir()
         self._dir.mkdir(parents=True, exist_ok=True)
 
-    def _meta_path(self, asset_id: str) -> Path:
-        return self._dir / f"{asset_id}.meta.json"
+    def _meta_path(self, manifest_id: str) -> Path:
+        return self._dir / f"{manifest_id}.meta.json"
 
     def _atomic_write_bytes(self, path: Path, data: bytes) -> None:
         with tempfile.NamedTemporaryFile(dir=self._dir, delete=False) as tmp:
@@ -51,7 +57,10 @@ class FilesystemAssetCache:
             return None
         return meta if isinstance(meta, dict) else None
 
-    def _asset_from_meta(self, asset_id: str, meta: dict[str, Any]) -> Manifest | None:
+    def _manifest_from_meta(self, manifest_id: str, meta_path: Path) -> Manifest | None:
+        meta = self._load_meta(meta_path)
+        if meta is None:
+            return None
         try:
             content_file = meta["content_file"]
             kind = ManifestKind(meta["kind"])
@@ -85,40 +94,47 @@ class FilesystemAssetCache:
         except OSError:
             return None
 
-        if meta.get("content_size") is not None and meta["content_size"] != len(content):
+        content_size = meta.get("content_size")
+        if content_size is not None and content_size != len(content):
             return None
-        digest = meta.get("content_sha256")
-        if digest is not None and digest != hashlib.sha256(content).hexdigest():
+        content_sha256 = meta.get("content_sha256")
+        if content_sha256 is not None and content_sha256 != hashlib.sha256(content).hexdigest():
             return None
 
+        # Cache entries written before `created_at` existed fall back to the
+        # metadata file's own mtime rather than losing the manifest.
+        created_at = meta.get("created_at")
+        if not isinstance(created_at, str) or not created_at:
+            created_at = datetime.fromtimestamp(meta_path.stat().st_mtime, tz=UTC).isoformat()
+
         return Manifest(
-            id=asset_id,
+            id=manifest_id,
             kind=kind,
             content_path=content_path,
             metadata=metadata,
             params=params,
             parent_ids=parent_ids,
             created_by=created_by,
+            content_size=content_size if content_size is not None else len(content),
+            content_sha256=content_sha256 or hashlib.sha256(content).hexdigest(),
+            created_at=created_at,
         )
 
-    def find(self, asset_id: str) -> Manifest | None:
-        meta_path = self._meta_path(asset_id)
+    def find(self, manifest_id: str) -> Manifest | None:
+        meta_path = self._meta_path(manifest_id)
         if not meta_path.exists():
             return None
-        meta = self._load_meta(meta_path)
-        if meta is None:
-            return None
-        return self._asset_from_meta(asset_id, meta)
+        return self._manifest_from_meta(manifest_id, meta_path)
 
-    def get(self, asset_id: str) -> Manifest:
-        asset = self.find(asset_id)
-        if asset is None:
-            raise AssetNotFound(f"No cached asset with id {asset_id!r}")
-        return asset
+    def get(self, manifest_id: str) -> Manifest:
+        manifest = self.find(manifest_id)
+        if manifest is None:
+            raise ManifestNotFound(f"No cached manifest with id {manifest_id!r}")
+        return manifest
 
     def put(
         self,
-        asset_id: str,
+        manifest_id: str,
         *,
         kind: ManifestKind,
         content_bytes: bytes,
@@ -128,8 +144,12 @@ class FilesystemAssetCache:
         parent_ids: list[str],
         created_by: str,
     ) -> Manifest:
-        content_file = f"{asset_id}.{ext.lstrip('.')}"
+        content_file = f"{manifest_id}.{ext.lstrip('.')}"
         self._atomic_write_bytes(self._dir / content_file, content_bytes)
+
+        existing_meta = self._load_meta(self._meta_path(manifest_id))
+        created_at = (existing_meta or {}).get("created_at") or datetime.now(UTC).isoformat()
+
         meta = {
             "kind": kind.value,
             "content_file": content_file,
@@ -139,26 +159,71 @@ class FilesystemAssetCache:
             "params": params or {},
             "parent_ids": parent_ids,
             "created_by": created_by,
+            "created_at": created_at,
         }
         self._atomic_write_text(
-            self._meta_path(asset_id),
+            self._meta_path(manifest_id),
             json.dumps(meta, sort_keys=True),
         )
-        return self.get(asset_id)
+        return self.get(manifest_id)
+
+    def _external_metadata(self, kind: ManifestKind, content_bytes: bytes) -> ManifestMetadata:
+        if kind not in _RASTER_KINDS:
+            return KIND_METADATA_CLS[kind]()
+        image = decode_rgb_or_rgba(content_bytes)
+        dims = {"output_width": image.shape[1], "output_height": image.shape[0]}
+        if kind is ManifestKind.STICKER:
+            return StickerMetadata(
+                bbox=(0, 0, image.shape[1], image.shape[0]),
+                score=1.0,
+                area=int(image.shape[0] * image.shape[1]),
+                width=image.shape[1],
+                height=image.shape[0],
+            )
+        return RasterMetadata(**dims)
 
     def put_external(self, path: Path, *, kind: ManifestKind) -> Manifest:
         content_bytes = path.read_bytes()
-        asset_id = hashlib.sha256(content_bytes).hexdigest()[:16]
-        existing = self.find(asset_id)
+        manifest_id = hashlib.sha256(content_bytes).hexdigest()[:16]
+        existing = self.find(manifest_id)
         if existing is not None:
             return existing
         return self.put(
-            asset_id,
+            manifest_id,
             kind=kind,
             content_bytes=content_bytes,
             ext=path.suffix.lstrip("."),
-            metadata=KIND_METADATA_CLS[kind](),
+            metadata=self._external_metadata(kind, content_bytes),
             params={"source": "external", "original_name": path.name},
             parent_ids=[],
             created_by="external",
         )
+
+    def list(
+        self,
+        *,
+        kind: ManifestKind | None = None,
+        created_by: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[Manifest]:
+        manifests = []
+        for meta_path in self._dir.glob("*.meta.json"):
+            manifest_id = meta_path.name.removesuffix(".meta.json")
+            manifest = self._manifest_from_meta(manifest_id, meta_path)
+            if manifest is None:
+                continue
+            if kind is not None and manifest.kind != kind:
+                continue
+            if created_by is not None and created_by not in manifest.created_by:
+                continue
+            manifests.append(manifest)
+
+        manifests.sort(key=lambda m: m.created_at, reverse=True)
+        end = None if limit is None else offset + limit
+        return manifests[offset:end]
+
+    def delete(self, manifest_id: str) -> None:
+        manifest = self.get(manifest_id)
+        manifest.content_path.unlink(missing_ok=True)
+        self._meta_path(manifest_id).unlink(missing_ok=True)

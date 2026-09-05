@@ -5,7 +5,7 @@ from fastapi import APIRouter, File, Form, Response, UploadFile
 
 from splat.domain.manifest import ManifestKind
 from splat.handlers.gaussian import GaussianRequest, handle
-from splat.registry.wiring import get_asset_cache, get_reader, get_writer
+from splat.registry.wiring import get_manifest_repository, get_reader, get_writer
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ def gaussian(
     low_memory: bool = Form(False),
     seed: int = Form(0),
 ) -> Response:
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         input_assets = []

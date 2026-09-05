@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.adapters.formats.ply import PlyReader
 from splat.application.pipeline import run_gaussian
 from splat.domain.manifest import ManifestKind
@@ -24,12 +24,12 @@ class FakeReconstructionBackend:
         return (2, None)
 
 
-def _image_asset(cache: FilesystemAssetCache, tmp_path: Path, name: str):
+def _image_asset(cache: FilesystemManifestRepository, tmp_path: Path, name: str):
     return cache.put_external(write_sample_png(tmp_path / name, (2, 2)), kind=ManifestKind.IMAGE)
 
 
 def test_run_gaussian_creates_cached_ply_asset(tmp_path, synthetic_cloud):
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     a = _image_asset(cache, tmp_path, "a.png")
     b = _image_asset(cache, tmp_path, "b.png")
 
@@ -50,7 +50,7 @@ def test_run_gaussian_creates_cached_ply_asset(tmp_path, synthetic_cloud):
 
 
 def test_run_gaussian_reuses_cache_for_same_inputs(tmp_path, synthetic_cloud):
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     a = _image_asset(cache, tmp_path, "a.png")
     b = _image_asset(cache, tmp_path, "b.png")
     backend = FakeReconstructionBackend(synthetic_cloud)
