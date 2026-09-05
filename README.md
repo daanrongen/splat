@@ -6,7 +6,7 @@ The CLI is split by behavior:
 
 - **Model-backed stages** live at the top level: `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
 - **Deterministic tools** live under `splat tools`: `convert`, `compress`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
-- **Inspection, services, and administration** stay separate: `info`, `validate`, `models`, `http`, `mcp`, and `env`.
+- **Inspection, services, and administration** stay separate: `info`, `validate`, `manifest`, `models`, `http`, `mcp`, and `env`.
 
 ## Getting Started
 
@@ -181,11 +181,21 @@ splat info scene.ply
 splat validate scene.ply --strict
 ```
 
+`splat manifest` reads and manages the local manifest cache directly (`~/.cache/splat/assets` by default) — a manifest already lives wherever it was produced, so this always operates on the local cache rather than routing through `SPLAT_URL`.
+
+```sh
+splat manifest list --kind image --created-by diffuse
+splat manifest get <id>
+splat manifest rm <id>
+```
+
 ## Piping And Manifests
 
-Every stage consumes and produces a `Manifest` — the pipeline's universal currency, and its "one canonical shape every stage consumes and produces, so stages chain without knowing about each other." A `Manifest` is a cached, content-addressed record: `id`, `kind`, `content_path`, typed `metadata` (facts about the content itself), `params` (the stage invocation that produced it), `parent_ids`, and `created_by`.
+Every stage consumes and produces a `Manifest` — the pipeline's universal currency, and its "one canonical shape every stage consumes and produces, so stages chain without knowing about each other." A `Manifest` is a cached, content-addressed record: `id`, `kind`, `content_path`, typed `metadata` (facts about the content itself), `params` (the stage invocation that produced it), `parent_ids`, `created_by`, plus cache-wide provenance every kind gets for free — `content_size`, `content_sha256`, and `created_at`.
 
 Pipeline commands accept a file path, `@<manifest-id>`, or `-` for NDJSON records from stdin. Every manifest-producing stage writes to the content-addressed cache and prints NDJSON when stdout is piped.
+
+The cache itself sits behind `ManifestRepository` (`ports/manifest_repository.py`), with `FilesystemManifestRepository` as its one adapter today. Besides the `find`/`get`/`put`/`put_external` every stage uses to read and write manifests, it exposes `list` (filter by `kind` or a `created_by` substring, most recent first) and `delete` — the CRUD surface `splat manifest`/`GET /manifests`/`manifest_list` MCP tool sit on top of, documented under Inspection and HTTP Server below.
 
 ```sh
 splat diffuse "dog" | splat caption - -o dog.txt
@@ -265,6 +275,9 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | `POST /info` | `splat info` | JSON summary |
 | `POST /validate` | `splat validate` | JSON summary |
 | `GET /assets/{id}` | asset fetch | raw asset bytes |
+| `GET /manifests` | `splat manifest list` | list of manifest summaries |
+| `GET /manifests/{id}` | `splat manifest get` | full manifest detail |
+| `DELETE /manifests/{id}` | `splat manifest rm` | JSON |
 | `GET/POST/DELETE /models...` | `splat models list|pull|info|rm` | JSON |
 
 There is no authentication in v1. Bind it only on trusted interfaces or put authentication in front of it.
@@ -285,7 +298,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
 
 ```sh
 splat mcp

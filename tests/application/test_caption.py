@@ -3,7 +3,7 @@ from pathlib import Path
 from splat.application.pipeline import run_caption
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
 
@@ -28,7 +28,7 @@ class CountingCaptionBackend:
 
 
 def _sample_asset(tmp_path: Path):
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     image_path = write_sample_png(tmp_path / "scene.png", (3, 2))
     return cache.put_external(image_path, kind=ManifestKind.IMAGE)
 
@@ -40,7 +40,7 @@ def test_run_caption_creates_text_asset(tmp_path, monkeypatch):
 
     result = run_caption(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name="fake-captioner",
         input_asset=asset,
         params={"prompt": "Describe", "max_tokens": 12, "temperature": 0.0},
@@ -62,14 +62,14 @@ def test_run_caption_reuses_cache_for_same_inputs(tmp_path, monkeypatch):
 
     first = run_caption(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name="fake-captioner",
         input_asset=asset,
         params=params,
     )
     second = run_caption(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name="fake-captioner",
         input_asset=asset,
         params=params,
@@ -86,14 +86,14 @@ def test_run_caption_cache_key_includes_prompt(tmp_path, monkeypatch):
 
     first = run_caption(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name="fake-captioner",
         input_asset=asset,
         params={"prompt": "Describe", "max_tokens": 12, "temperature": 0.0},
     )
     second = run_caption(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name="fake-captioner",
         input_asset=asset,
         params={"prompt": "Summarize", "max_tokens": 12, "temperature": 0.0},

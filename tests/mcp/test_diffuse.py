@@ -4,6 +4,7 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
+from tests.image_helpers import sample_png_bytes
 
 
 class FakeDiffusionBackend:
@@ -13,7 +14,7 @@ class FakeDiffusionBackend:
         self.license = license
 
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
-        output_path.write_bytes(b"fake-png-bytes")
+        output_path.write_bytes(sample_png_bytes())
         return output_path
 
 

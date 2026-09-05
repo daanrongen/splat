@@ -6,7 +6,7 @@ from splat.domain.image_space import Shape3D
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.handlers.mesh import MeshRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
 
@@ -28,7 +28,7 @@ def _sample_image(tmp_path: Path) -> Path:
 def test_handle_predicts_mesh_for_each_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.mesh.get_mesh_backend", return_value=FakeMeshBackend())
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = handle(MeshRequest(inputs=[asset]))

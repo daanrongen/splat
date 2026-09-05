@@ -4,7 +4,7 @@ from splat.domain.manifest import ManifestKind
 from splat.handlers.upscale import UpscaleRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def upscale(
@@ -14,7 +14,7 @@ def upscale(
     tile: int = 0,
 ) -> list[types.ContentBlock]:
     """Upscale an image or sticker asset with a super-resolution backend."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = resolve_input_asset(image, cache, default_kind=ManifestKind.IMAGE)
     result = get_client().upscale(
         UpscaleRequest(inputs=[asset], model=model, factor=factor, tile=tile)

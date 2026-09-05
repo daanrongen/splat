@@ -7,7 +7,7 @@ from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.tools.displace_height import DisplaceHeightRequest, handle
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 
 
 def displace_height(
@@ -21,7 +21,7 @@ def displace_height(
 ) -> None:
     """Displace a depth map's per-pixel height into a triangulated, textured mesh."""
     export_format = to or (output.suffix.lstrip(".") if output else "glb")
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.DEPTH_MAP)
         results = handle(DisplaceHeightRequest(inputs=inputs, export_format=export_format))

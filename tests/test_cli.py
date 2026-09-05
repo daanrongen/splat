@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from splat.adapters.cache.filesystem import FilesystemAssetCache
+from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.adapters.formats.ply import PlyWriter
 from splat.cli._pipeline_io import resolve_inputs
 from splat.cli.main import app
@@ -23,7 +23,7 @@ def test_help() -> None:
 
 def test_piped_asset_resolution_ignores_non_json_chatter(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    cache = FilesystemAssetCache(tmp_path / "cache")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(
         write_sample_png(tmp_path / "scene.png", (2, 2)), kind=ManifestKind.IMAGE
     )

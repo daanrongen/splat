@@ -36,10 +36,10 @@ from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.http._schemas import (
-    AssetSummary,
     DiffuseBody,
     EmbedBody,
     InfoResponse,
+    ManifestDetail,
     ModelInfoResponse,
     UpscaleBody,
     ValidationResponse,
@@ -47,7 +47,7 @@ from splat.http._schemas import (
 from splat.http._schemas import ModelSummary as WireModelSummary
 from splat.image_io import decode_rgb_or_rgba, read_rgb_or_rgba
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
-from splat.registry.wiring import get_asset_cache, get_reader
+from splat.registry.wiring import get_manifest_repository, get_reader
 
 
 def _raise_for_domain_error(response: httpx.Response) -> None:
@@ -79,7 +79,7 @@ class RemoteSplatClient:
         parent_ids: list[str],
         created_by: str,
     ) -> Manifest:
-        cache = get_asset_cache()
+        cache = get_manifest_repository()
         existing = cache.find(asset_id)
         if existing is not None:
             return existing
@@ -105,12 +105,13 @@ class RemoteSplatClient:
         )
         response = self._client.post("/diffuse", json=body.model_dump())
         _raise_for_domain_error(response)
+        image = decode_rgb_or_rgba(response.content)
         asset = self._store_asset(
             response.headers["X-Splat-Asset-Id"],
             kind=ManifestKind.IMAGE,
             content=response.content,
             ext="png",
-            metadata=RasterMetadata(),
+            metadata=RasterMetadata(output_width=image.shape[1], output_height=image.shape[0]),
             params={"prompt": request.prompt},
             parent_ids=[],
             created_by=f"diffuse:{request.model}",
@@ -133,17 +134,17 @@ class RemoteSplatClient:
             response = self._client.post("/segment", files=files, data=form)
             _raise_for_domain_error(response)
             for item in response.json():
-                summary = AssetSummary.model_validate(item)
-                content = self._fetch_asset_bytes(summary.id)
+                detail = ManifestDetail.model_validate(item)
+                content = self._fetch_asset_bytes(detail.id)
                 results.append(
                     self._store_asset(
-                        summary.id,
-                        kind=ManifestKind(summary.kind),
+                        detail.id,
+                        kind=ManifestKind(detail.kind),
                         content=content,
                         ext="png",
-                        metadata=StickerMetadata(**summary.metadata),
-                        parent_ids=summary.parent_ids,
-                        created_by=summary.created_by,
+                        metadata=StickerMetadata(**detail.metadata),
+                        parent_ids=detail.parent_ids,
+                        created_by=detail.created_by,
                     )
                 )
         return results
@@ -175,7 +176,7 @@ class RemoteSplatClient:
                     kind=ManifestKind.CAPTION,
                     content=response.content,
                     ext="txt",
-                    metadata=CaptionMetadata(text_length=len(text)),
+                    metadata=CaptionMetadata(text_length=len(text), model=request.model),
                     params={
                         "prompt": request.prompt,
                         "max_tokens": request.max_tokens,
@@ -196,13 +197,14 @@ class RemoteSplatClient:
             form = {"model": request.model, "device": request.device}
             response = self._client.post("/depth", files=files, data=form)
             _raise_for_domain_error(response)
+            depth = np.load(BytesIO(response.content))
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
                     kind=ManifestKind.DEPTH_MAP,
                     content=response.content,
                     ext="npy",
-                    metadata=DepthMetadata(),
+                    metadata=DepthMetadata(width=depth.shape[1], height=depth.shape[0]),
                     parent_ids=[input_asset.id],
                     created_by=f"depth:{request.model}",
                 )

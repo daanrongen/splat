@@ -6,7 +6,7 @@ from splat.domain.manifest import ManifestKind
 from splat.handlers.gaussian import GaussianRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_asset_cache, get_client, get_reader, get_writer
+from splat.registry.wiring import get_client, get_manifest_repository, get_reader, get_writer
 
 
 def gaussian(
@@ -24,7 +24,7 @@ def gaussian(
     seed: int = 0,
 ) -> list[types.ContentBlock]:
     """Reconstruct a Gaussian splat from image paths or @asset ids."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     inputs = [resolve_input_asset(p, cache, default_kind=ManifestKind.IMAGE) for p in images]
     result = get_client().gaussian(
         GaussianRequest(

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
 from splat.env import resolve as resolve_env
-from splat.ports.asset_cache import AssetCache
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     from splat.ports.client import SplatClient
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.embedding import EmbeddingBackend
+from splat.ports.manifest_repository import ManifestRepository
 from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
@@ -53,10 +53,10 @@ def get_model_source() -> ModelSource:
     return HuggingFaceModelSource()
 
 
-def get_asset_cache() -> AssetCache:
-    from splat.adapters.cache.filesystem import FilesystemAssetCache
+def get_manifest_repository() -> ManifestRepository:
+    from splat.adapters.cache.filesystem import FilesystemManifestRepository
 
-    return FilesystemAssetCache()
+    return FilesystemManifestRepository()
 
 
 def get_client() -> "SplatClient":

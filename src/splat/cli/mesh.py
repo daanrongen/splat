@@ -7,7 +7,7 @@ from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.mesh import MeshRequest
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def mesh(
@@ -19,7 +19,7 @@ def mesh(
     device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
 ) -> None:
     """Predict a 3D mesh from an image using a learned model."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().mesh(MeshRequest(inputs=inputs, model=model, device=device))

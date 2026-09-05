@@ -3,7 +3,11 @@ from dataclasses import dataclass
 from splat.application.pipeline import run_gaussian
 from splat.domain.contracts import Requirement, StageContract, validate_inputs
 from splat.domain.manifest import Manifest, ManifestKind
-from splat.registry.wiring import get_asset_cache, get_model_source, get_reconstruction_backend
+from splat.registry.wiring import (
+    get_manifest_repository,
+    get_model_source,
+    get_reconstruction_backend,
+)
 
 
 @dataclass(frozen=True)
@@ -50,7 +54,7 @@ def handle(request: GaussianRequest) -> list[Manifest]:
     )
     validate_inputs(contract, request.inputs)
 
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     params = {
         "device": request.device,
         "quality": request.quality,

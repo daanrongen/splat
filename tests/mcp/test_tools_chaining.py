@@ -39,9 +39,9 @@ def test_depth_asset_id_chains_into_displace_height(mocker, tmp_path, monkeypatc
 def test_segment_accepts_at_id_reference(mocker, tmp_path, monkeypatch, call_tool):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     from splat.domain.manifest import ManifestKind
-    from splat.registry.wiring import get_asset_cache
+    from splat.registry.wiring import get_manifest_repository
 
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     image_path = tmp_path / "scene.png"
     write_sample_png(image_path, (2, 2))
     asset = cache.put_external(image_path, kind=ManifestKind.IMAGE)

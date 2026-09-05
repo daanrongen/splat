@@ -7,7 +7,7 @@ from splat.cli._pipeline_io import is_piped, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.handlers.gaussian import GaussianRequest
-from splat.registry.wiring import get_asset_cache, get_client, get_reader, get_writer
+from splat.registry.wiring import get_client, get_manifest_repository, get_reader, get_writer
 
 
 def _export_gaussian(asset: Manifest, output: Path) -> list[str]:
@@ -37,7 +37,7 @@ def gaussian(
     seed: int = typer.Option(0, "--seed", help="Random seed; <0 disables seeding."),
 ) -> None:
     """Reconstruct a Gaussian splat from images."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     try:
         assets: list[Manifest] = []
         for input_arg in inputs:

@@ -32,21 +32,38 @@ class EmbedBody(BaseModel):
     device: str = "auto"
 
 
-class AssetSummary(BaseModel):
+class ManifestSummary(BaseModel):
     id: str
     kind: str
-    metadata: dict
-    parent_ids: list[str]
     created_by: str
+    created_at: str
+    content_size: int
+    content_sha256: str
+    parent_ids: list[str]
 
     @classmethod
-    def from_asset(cls, asset: Manifest) -> "AssetSummary":
+    def from_manifest(cls, manifest: Manifest) -> "ManifestSummary":
         return cls(
-            id=asset.id,
-            kind=asset.kind.value,
-            metadata=dataclasses.asdict(asset.metadata),
-            parent_ids=asset.parent_ids,
-            created_by=asset.created_by,
+            id=manifest.id,
+            kind=manifest.kind.value,
+            created_by=manifest.created_by,
+            created_at=manifest.created_at,
+            content_size=manifest.content_size,
+            content_sha256=manifest.content_sha256,
+            parent_ids=manifest.parent_ids,
+        )
+
+
+class ManifestDetail(ManifestSummary):
+    metadata: dict
+    params: dict
+
+    @classmethod
+    def from_manifest(cls, manifest: Manifest) -> "ManifestDetail":
+        return cls(
+            **ManifestSummary.from_manifest(manifest).model_dump(),
+            metadata=dataclasses.asdict(manifest.metadata),
+            params=manifest.params,
         )
 
 

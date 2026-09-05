@@ -49,3 +49,6 @@ class Manifest:
     params: dict = field(default_factory=dict)  # stage-invocation args (prompt, steps, seed, ...)
     parent_ids: list[str] = field(default_factory=list)
     created_by: str = ""  # "<stage>:<model-name>"
+    content_size: int = 0  # bytes, of content_path
+    content_sha256: str = ""
+    created_at: str = ""  # ISO 8601 UTC, set once at first `put`

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from splat.application.pipeline import run_diffuse
 from splat.domain.manifest import Manifest
-from splat.registry.wiring import get_asset_cache, get_diffusion_backend
+from splat.registry.wiring import get_diffusion_backend, get_manifest_repository
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ def handle(request: DiffuseRequest) -> DiffuseResult:
     )
     asset = run_diffuse(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name=request.model,
         prompt=request.prompt,
         params={

@@ -4,7 +4,7 @@ from splat.domain.manifest import ManifestKind
 from splat.handlers.caption import DEFAULT_CAPTION_PROMPT, CaptionRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def caption(
@@ -16,7 +16,7 @@ def caption(
     device: str = "auto",
 ) -> list[types.ContentBlock]:
     """Caption an image (path or @<asset-id>) as a UTF-8 text asset."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     asset = resolve_input_asset(image, cache, default_kind=ManifestKind.IMAGE)
     result = get_client().caption(
         CaptionRequest(

@@ -6,7 +6,7 @@ import numpy as np
 from splat.application.pipeline import run_embed_image, run_embed_text
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
-from splat.registry.wiring import get_asset_cache
+from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
 
@@ -28,7 +28,7 @@ class CountingEmbeddingBackend:
 
 
 def _sample_asset(tmp_path: Path):
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     image_path = write_sample_png(tmp_path / "scene.png", (3, 2))
     return cache.put_external(image_path, kind=ManifestKind.IMAGE)
 
@@ -40,7 +40,7 @@ def test_run_embed_image_creates_embedding_asset(tmp_path, monkeypatch):
 
     result = run_embed_image(
         backend,
-        get_asset_cache(),
+        get_manifest_repository(),
         model_name="fake-embedder",
         input_asset=asset,
         params={"device": "cpu"},
@@ -67,10 +67,18 @@ def test_run_embed_image_reuses_cache_for_same_inputs(tmp_path, monkeypatch):
     params = {"device": "cpu"}
 
     first = run_embed_image(
-        backend, get_asset_cache(), model_name="fake-embedder", input_asset=asset, params=params
+        backend,
+        get_manifest_repository(),
+        model_name="fake-embedder",
+        input_asset=asset,
+        params=params,
     )
     second = run_embed_image(
-        backend, get_asset_cache(), model_name="fake-embedder", input_asset=asset, params=params
+        backend,
+        get_manifest_repository(),
+        model_name="fake-embedder",
+        input_asset=asset,
+        params=params,
     )
 
     assert first.id == second.id
@@ -83,10 +91,18 @@ def test_run_embed_text_hashes_text_and_reuses_cache(tmp_path, monkeypatch):
     params = {"device": "cpu"}
 
     first = run_embed_text(
-        backend, get_asset_cache(), model_name="fake-embedder", text="red chair", params=params
+        backend,
+        get_manifest_repository(),
+        model_name="fake-embedder",
+        text="red chair",
+        params=params,
     )
     second = run_embed_text(
-        backend, get_asset_cache(), model_name="fake-embedder", text="red chair", params=params
+        backend,
+        get_manifest_repository(),
+        model_name="fake-embedder",
+        text="red chair",
+        params=params,
     )
 
     assert first.id == second.id
@@ -102,10 +118,10 @@ def test_run_embed_text_cache_key_includes_text(tmp_path, monkeypatch):
     backend = CountingEmbeddingBackend()
 
     first = run_embed_text(
-        backend, get_asset_cache(), model_name="fake-embedder", text="red chair", params={}
+        backend, get_manifest_repository(), model_name="fake-embedder", text="red chair", params={}
     )
     second = run_embed_text(
-        backend, get_asset_cache(), model_name="fake-embedder", text="blue chair", params={}
+        backend, get_manifest_repository(), model_name="fake-embedder", text="blue chair", params={}
     )
 
     assert first.id != second.id

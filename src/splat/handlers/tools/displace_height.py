@@ -6,8 +6,8 @@ from splat.application.pipeline import run_displace_height
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap
 from splat.domain.manifest import Manifest, ManifestKind
-from splat.ports.asset_cache import AssetCache
-from splat.registry.wiring import get_asset_cache
+from splat.ports.manifest_repository import ManifestRepository
+from splat.registry.wiring import get_manifest_repository
 
 
 @dataclass(frozen=True)
@@ -17,11 +17,13 @@ class DisplaceHeightRequest:
 
 
 def handle(request: DisplaceHeightRequest) -> list[Manifest]:
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     return [_displace_height_one(asset, cache, request.export_format) for asset in request.inputs]
 
 
-def _displace_height_one(asset: Manifest, cache: AssetCache, export_format: str) -> Manifest:
+def _displace_height_one(
+    asset: Manifest, cache: ManifestRepository, export_format: str
+) -> Manifest:
     if asset.kind != ManifestKind.DEPTH_MAP:
         raise SplatDomainError(
             "displace.height requires a depth map - pipe through `splat depth` first, "

@@ -5,7 +5,7 @@ from splat.domain.manifest import ManifestKind
 from splat.handlers.embed import EmbedRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def embed(
@@ -18,7 +18,7 @@ def embed(
     if (image is None) == (text is None):
         raise SplatDomainError("embed requires either image or text, but not both.")
 
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     if text is not None:
         result = get_client().embed(EmbedRequest(text=text, model=model, device=device))[0]
     else:

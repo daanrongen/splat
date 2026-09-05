@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
 from splat.http.app import app
+from tests.image_helpers import sample_png_bytes
 
 client = TestClient(app)
 
@@ -15,7 +16,7 @@ class FakeDiffusionBackend:
         self.license = license
 
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
-        output_path.write_bytes(b"fake-png-bytes")
+        output_path.write_bytes(sample_png_bytes())
         return output_path
 
 
@@ -29,7 +30,7 @@ def test_diffuse_returns_asset_bytes(mocker, tmp_path, monkeypatch):
     response = client.post("/diffuse", json={"prompt": "a fox", "model": "fake-diffuser"})
 
     assert response.status_code == 200, response.text
-    assert response.content == b"fake-png-bytes"
+    assert response.content == sample_png_bytes()
     assert "X-Splat-Asset-Id" in response.headers
     assert "X-Splat-License-Warning" not in response.headers
 

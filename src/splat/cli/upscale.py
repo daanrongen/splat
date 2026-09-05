@@ -7,7 +7,7 @@ from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.upscale import UpscaleRequest
-from splat.registry.wiring import get_asset_cache, get_client
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def upscale(
@@ -20,7 +20,7 @@ def upscale(
     tile: int = typer.Option(0, "--tile", help="Tile size for large images; 0 disables tiling."),
 ) -> None:
     """Upscale image or sticker assets with a model-backed super-resolution backend."""
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().upscale(

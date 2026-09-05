@@ -4,7 +4,7 @@ from splat.application.pipeline import run_segment
 from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
 from splat.registry.segmentation import SEGMENT_CONTRACT
-from splat.registry.wiring import get_asset_cache, get_segmentation_backend
+from splat.registry.wiring import get_manifest_repository, get_segmentation_backend
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class SegmentRequest:
 
 def handle(request: SegmentRequest) -> list[Manifest]:
     validate_inputs(SEGMENT_CONTRACT, request.inputs)
-    cache = get_asset_cache()
+    cache = get_manifest_repository()
     backend = get_segmentation_backend(request.model, device=request.device)
     all_stickers: list[Manifest] = []
     for asset in request.inputs:

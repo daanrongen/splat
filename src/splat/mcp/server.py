@@ -20,6 +20,7 @@ from splat.mcp import depth as depth_tool
 from splat.mcp import diffuse, gaussian
 from splat.mcp import embed as embed_tool
 from splat.mcp import inspect as inspect_tool
+from splat.mcp import manifest as manifest_tool
 from splat.mcp import mesh as mesh_tool
 from splat.mcp import models as models_tool
 from splat.mcp import segment as segment_tool
@@ -62,6 +63,9 @@ server.add_tool(_as_tool_error(models_tool.pull), name="models_pull")
 server.add_tool(_as_tool_error(models_tool.info), name="models_info")
 server.add_tool(_as_tool_error(models_tool.rm), name="models_rm")
 server.add_tool(_as_tool_error(tools_displace_height.displace_height), name="tools_displace_height")
+server.add_tool(_as_tool_error(manifest_tool.list_manifests), name="manifest_list")
+server.add_tool(_as_tool_error(manifest_tool.get), name="manifest_get")
+server.add_tool(_as_tool_error(manifest_tool.delete), name="manifest_delete")
 
 
 def run_stdio() -> None:

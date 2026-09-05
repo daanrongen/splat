@@ -12,6 +12,7 @@ import uvicorn
 
 from splat.domain.value_objects import MIT
 from splat.http.app import app as http_app
+from tests.image_helpers import sample_png_bytes
 
 
 class FakeDiffusionBackend:
@@ -19,7 +20,7 @@ class FakeDiffusionBackend:
     license = MIT
 
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
-        output_path.write_bytes(b"fake-png-bytes")
+        output_path.write_bytes(sample_png_bytes())
         return output_path
 
 
@@ -60,4 +61,4 @@ def test_diffuse_tool_redirects_to_remote_server(
 
     assert result.is_error is False
     image_block = next(block for block in result.content if block.type == "image")
-    assert base64.b64decode(image_block.data) == b"fake-png-bytes"
+    assert base64.b64decode(image_block.data) == sample_png_bytes()

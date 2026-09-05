@@ -16,6 +16,7 @@ from splat.http import (
     embed,
     gaussian,
     info,
+    manifest,
     mesh,
     models,
     segment,
@@ -39,6 +40,7 @@ _ROUTERS = (
     validate,
     models,
     assets,
+    manifest,
 )
 
 
