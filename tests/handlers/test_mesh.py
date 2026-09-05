@@ -2,8 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
-from splat.domain.asset import AssetKind
 from splat.domain.image_space import Shape3D
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.handlers.mesh import MeshRequest, handle
 from splat.registry.wiring import get_asset_cache
@@ -29,10 +29,10 @@ def test_handle_predicts_mesh_for_each_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.mesh.get_mesh_backend", return_value=FakeMeshBackend())
     cache = get_asset_cache()
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     results = handle(MeshRequest(inputs=[asset]))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.SHAPE_3D
+    assert results[0].kind == ManifestKind.SHAPE_3D
     assert results[0].created_by == "mesh:triposr"

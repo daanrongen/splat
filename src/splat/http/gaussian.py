@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.handlers.gaussian import GaussianRequest, handle
 from splat.registry.wiring import get_asset_cache, get_reader, get_writer
 
@@ -32,7 +32,7 @@ def gaussian(
         for i, image in enumerate(images):
             image_path = tmp_path / f"input_{i:03d}{Path(image.filename or '').suffix}"
             image_path.write_bytes(image.file.read())
-            input_assets.append(cache.put_external(image_path, kind=AssetKind.IMAGE))
+            input_assets.append(cache.put_external(image_path, kind=ManifestKind.IMAGE))
         output_path = tmp_path / f"output.{to.lstrip('.')}"
 
         result = handle(
@@ -59,7 +59,7 @@ def gaussian(
     headers = {
         "X-Splat-Asset-Id": result.id,
         "X-Splat-Asset-Kind": result.kind.value,
-        "X-Splat-Point-Count": str(result.metadata.get("point_count", cloud.point_count)),
+        "X-Splat-Point-Count": str(result.metadata.point_count),
     }
     if warnings:
         headers["X-Splat-Warnings"] = "; ".join(warnings)

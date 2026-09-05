@@ -4,13 +4,13 @@ import typer
 
 from splat.cli._console import console, error, warn
 from splat.cli._pipeline_io import is_piped, report, resolve_inputs
-from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import Manifest, ManifestKind
 from splat.handlers.gaussian import GaussianRequest
 from splat.registry.wiring import get_asset_cache, get_client, get_reader, get_writer
 
 
-def _export_gaussian(asset: Asset, output: Path) -> list[str]:
+def _export_gaussian(asset: Manifest, output: Path) -> list[str]:
     cloud = get_reader(asset.content_path.suffix).read(asset.content_path)
     writer = get_writer(output.suffix)
     warnings = writer.supports(cloud)
@@ -39,9 +39,9 @@ def gaussian(
     """Reconstruct a Gaussian splat from images."""
     cache = get_asset_cache()
     try:
-        assets: list[Asset] = []
+        assets: list[Manifest] = []
         for input_arg in inputs:
-            assets.extend(resolve_inputs(input_arg, cache, default_kind=AssetKind.IMAGE))
+            assets.extend(resolve_inputs(input_arg, cache, default_kind=ManifestKind.IMAGE))
         results = get_client().gaussian(
             GaussianRequest(
                 inputs=assets,
@@ -67,13 +67,13 @@ def gaussian(
         if not is_piped():
             console.print(
                 f"[green]wrote[/green] {output} "
-                f"({results[0].metadata.get('point_count', 0):,} points)"
+                f"({results[0].metadata.point_count:,} points)"
             )
 
-    def _human(assets: list[Asset]) -> None:
+    def _human(assets: list[Manifest]) -> None:
         for asset in assets:
             console.print(
-                f"[green]gaussian[/green] {asset.id}  points={asset.metadata.get('point_count')}"
+                f"[green]gaussian[/green] {asset.id}  points={asset.metadata.point_count}"
             )
 
     report(results, _human)

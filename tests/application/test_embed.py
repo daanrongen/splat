@@ -1,9 +1,10 @@
+import dataclasses
 from pathlib import Path
 
 import numpy as np
 
 from splat.application.pipeline import run_embed_image, run_embed_text
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.registry.wiring import get_asset_cache
 from tests.image_helpers import write_sample_png
@@ -29,7 +30,7 @@ class CountingEmbeddingBackend:
 def _sample_asset(tmp_path: Path):
     cache = get_asset_cache()
     image_path = write_sample_png(tmp_path / "scene.png", (3, 2))
-    return cache.put_external(image_path, kind=AssetKind.IMAGE)
+    return cache.put_external(image_path, kind=ManifestKind.IMAGE)
 
 
 def test_run_embed_image_creates_embedding_asset(tmp_path, monkeypatch):
@@ -46,15 +47,15 @@ def test_run_embed_image_creates_embedding_asset(tmp_path, monkeypatch):
     )
 
     vector = np.load(result.content_path)
-    assert result.kind == AssetKind.EMBEDDING
+    assert result.kind == ManifestKind.EMBEDDING
     assert result.content_path.suffix == ".npy"
     assert vector.dtype == np.float32
     assert vector.shape == (3,)
-    assert result.metadata["input_type"] == "image"
-    assert result.metadata["dtype"] == "float32"
-    assert result.metadata["shape"] == [3]
-    assert result.metadata["dimension"] == 3
-    assert result.metadata["normalized"] is True
+    assert result.metadata.input_type == "image"
+    assert result.metadata.dtype == "float32"
+    assert result.metadata.shape == [3]
+    assert result.metadata.dimension == 3
+    assert result.metadata.normalized is True
     assert result.parent_ids == [asset.id]
     assert result.created_by == "embed:fake-embedder"
 
@@ -90,9 +91,9 @@ def test_run_embed_text_hashes_text_and_reuses_cache(tmp_path, monkeypatch):
 
     assert first.id == second.id
     assert backend.text_calls == 1
-    assert first.metadata["input_type"] == "text"
-    assert first.metadata["text_length"] == len("red chair")
-    assert "red chair" not in first.metadata.values()
+    assert first.metadata.input_type == "text"
+    assert first.metadata.text_length == len("red chair")
+    assert "red chair" not in dataclasses.asdict(first.metadata).values()
     assert first.parent_ids == []
 
 

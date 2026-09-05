@@ -4,9 +4,11 @@ these are the one place "what a request/response looks like on the wire"
 is defined, reused by RemoteSplatClient (SPLAT_URL) later.
 """
 
+import dataclasses
+
 from pydantic import BaseModel
 
-from splat.domain.asset import Asset
+from splat.domain.manifest import Manifest
 
 
 class DiffuseBody(BaseModel):
@@ -38,11 +40,11 @@ class AssetSummary(BaseModel):
     created_by: str
 
     @classmethod
-    def from_asset(cls, asset: Asset) -> "AssetSummary":
+    def from_asset(cls, asset: Manifest) -> "AssetSummary":
         return cls(
             id=asset.id,
             kind=asset.kind.value,
-            metadata=asset.metadata,
+            metadata=dataclasses.asdict(asset.metadata),
             parent_ids=asset.parent_ids,
             created_by=asset.created_by,
         )

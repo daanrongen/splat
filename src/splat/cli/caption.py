@@ -4,8 +4,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.caption import DEFAULT_CAPTION_PROMPT, CaptionRequest
 from splat.registry.wiring import get_asset_cache, get_client
 
@@ -24,7 +24,7 @@ def caption(
     """Caption image(s) as UTF-8 text assets."""
     cache = get_asset_cache()
     try:
-        inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+        inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().caption(
             CaptionRequest(
                 inputs=inputs,

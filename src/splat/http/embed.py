@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.handlers.embed import EmbedRequest, handle
 from splat.http._files import saved_upload
 from splat.registry.wiring import get_asset_cache
@@ -19,7 +19,7 @@ def embed(
     inputs = None
     if image is not None:
         with saved_upload(image) as path:
-            asset = cache.put_external(path, kind=AssetKind.IMAGE)
+            asset = cache.put_external(path, kind=ManifestKind.IMAGE)
         inputs = [asset]
 
     request = EmbedRequest(inputs=inputs, text=text, model=model, device=device)

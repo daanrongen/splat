@@ -1,26 +1,26 @@
 from dataclasses import dataclass
 
 from splat.application.pipeline import run_upscale
-from splat.domain.asset import Asset, AssetKind
-from splat.domain.errors import SplatDomainError
+from splat.domain.contracts import validate_inputs
+from splat.domain.manifest import Manifest
+from splat.registry.upscale import UPSCALE_CONTRACT
 from splat.registry.wiring import get_asset_cache, get_upscale_backend
 
 
 @dataclass(frozen=True)
 class UpscaleRequest:
-    inputs: list[Asset]
+    inputs: list[Manifest]
     model: str = "realesrgan-mlx"
     factor: int = 4
     tile: int = 0
 
 
-def handle(request: UpscaleRequest) -> list[Asset]:
+def handle(request: UpscaleRequest) -> list[Manifest]:
+    validate_inputs(UPSCALE_CONTRACT, request.inputs)
     cache = get_asset_cache()
     backend = get_upscale_backend(request.model)
     results = []
     for asset in request.inputs:
-        if asset.kind not in (AssetKind.IMAGE, AssetKind.STICKER):
-            raise SplatDomainError("upscale requires an image or sticker asset.")
         results.append(
             run_upscale(
                 backend,

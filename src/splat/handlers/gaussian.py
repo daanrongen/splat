@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
 from splat.application.pipeline import run_gaussian
-from splat.domain.asset import Asset, AssetKind
-from splat.domain.errors import SplatDomainError
+from splat.domain.contracts import Requirement, StageContract, validate_inputs
+from splat.domain.manifest import Manifest, ManifestKind
 from splat.registry.wiring import get_asset_cache, get_model_source, get_reconstruction_backend
 
 
 @dataclass(frozen=True)
 class GaussianRequest:
-    inputs: list[Asset]
+    inputs: list[Manifest]
     model: str = "mlx3d-capture"
     device: str = "auto"
     quality: str = "fast"
@@ -21,27 +21,34 @@ class GaussianRequest:
     seed: int = 0
 
 
-def handle(request: GaussianRequest) -> list[Asset]:
+def handle(request: GaussianRequest) -> list[Manifest]:
     model_source = get_model_source()
     backend = get_reconstruction_backend(
         request.model, model_source=model_source, device=request.device
     )
 
-    for asset in request.inputs:
-        if asset.kind not in (AssetKind.IMAGE, AssetKind.STICKER):
-            raise SplatDomainError(
-                f"Gaussian reconstruction requires image/sticker assets, got {asset.kind.value}."
-            )
-
+    # Counts are model-specific (backend.required_image_count()), so this
+    # contract is built per-request instead of living as a static registry
+    # constant like every other stage's.
     min_images, max_images = backend.required_image_count()
-    if len(request.inputs) < min_images or (
-        max_images is not None and len(request.inputs) > max_images
-    ):
-        upper = max_images if max_images is not None else "∞"
-        raise SplatDomainError(
-            f"Model {request.model!r} requires between {min_images} and {upper} images, "
-            f"got {len(request.inputs)}."
-        )
+    contract = StageContract(
+        stage=f"gaussian ({request.model})",
+        inputs=(
+            Requirement(
+                name="images",
+                any_of_tags=frozenset({"colorlike"}),
+                min_count=min_images,
+                max_count=max_images,
+                hint=(
+                    "gaussian has no text-to-3D or depth-only reconstruction path — pipe "
+                    "image/sticker assets in instead, e.g. "
+                    "`splat diffuse ... | splat segment - | splat gaussian -`."
+                ),
+            ),
+        ),
+        produces=ManifestKind.GAUSSIAN_CLOUD,
+    )
+    validate_inputs(contract, request.inputs)
 
     cache = get_asset_cache()
     params = {

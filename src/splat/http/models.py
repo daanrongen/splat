@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from splat.application.models_admin import model_source_label
+from splat.application.models_admin import image_count_range, model_source_label
 from splat.handlers import models as models_handler
 from splat.http._schemas import ModelInfoResponse, ModelSummary
 
@@ -30,13 +30,14 @@ def pull(name: str) -> dict:
 @router.get("/models/{name}")
 def info(name: str) -> ModelInfoResponse:
     descriptor = models_handler.info(name)
+    min_images, max_images = image_count_range(descriptor)
     return ModelInfoResponse(
         name=descriptor.name,
         runtime=getattr(descriptor, "runtime", "-"),
         source=model_source_label(descriptor),
         license=str(descriptor.license),
-        min_images=getattr(descriptor, "min_images", None),
-        max_images=getattr(descriptor, "max_images", None),
+        min_images=min_images,
+        max_images=max_images,
         dimension=getattr(descriptor, "dimension", None),
         normalized=getattr(descriptor, "normalized", None),
         notes=getattr(descriptor, "notes", ""),

@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemAssetCache
 from splat.cli.main import app
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.image_io import read_rgb_or_rgba
 from tests.image_helpers import write_sample_png
@@ -99,7 +99,7 @@ def test_upscale_asset_id_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemAssetCache(tmp_path / "cache")
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = runner.invoke(app, ["upscale", f"@{asset.id}", "--model", "fake-upscaler"])
 
@@ -112,7 +112,7 @@ def test_upscale_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemAssetCache(tmp_path / "cache")
-    asset = cache.put_external(_sample_image(tmp_path), kind=AssetKind.IMAGE)
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
     result = runner.invoke(
         app,

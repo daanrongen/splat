@@ -13,9 +13,18 @@ import httpx
 import numpy as np
 
 from splat.application.tools.convert import ConvertResult
-from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
+from splat.domain.manifest import Manifest, ManifestKind
+from splat.domain.manifest_metadata import (
+    CaptionMetadata,
+    DepthMetadata,
+    EmbeddingMetadata,
+    ManifestMetadata,
+    MeshMetadata,
+    RasterMetadata,
+    StickerMetadata,
+)
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
@@ -62,13 +71,14 @@ class RemoteSplatClient:
         self,
         asset_id: str,
         *,
-        kind: AssetKind,
+        kind: ManifestKind,
         content: bytes,
         ext: str,
-        metadata: dict,
+        metadata: ManifestMetadata,
+        params: dict | None = None,
         parent_ids: list[str],
         created_by: str,
-    ) -> Asset:
+    ) -> Manifest:
         cache = get_asset_cache()
         existing = cache.find(asset_id)
         if existing is not None:
@@ -79,6 +89,7 @@ class RemoteSplatClient:
             content_bytes=content,
             ext=ext,
             metadata=metadata,
+            params=params,
             parent_ids=parent_ids,
             created_by=created_by,
         )
@@ -96,10 +107,11 @@ class RemoteSplatClient:
         _raise_for_domain_error(response)
         asset = self._store_asset(
             response.headers["X-Splat-Asset-Id"],
-            kind=AssetKind.IMAGE,
+            kind=ManifestKind.IMAGE,
             content=response.content,
             ext="png",
-            metadata={"prompt": request.prompt},
+            metadata=RasterMetadata(),
+            params={"prompt": request.prompt},
             parent_ids=[],
             created_by=f"diffuse:{request.model}",
         )
@@ -107,8 +119,8 @@ class RemoteSplatClient:
             asset=asset, license_warning=response.headers.get("X-Splat-License-Warning")
         )
 
-    def segment(self, request: SegmentRequest) -> list[Asset]:
-        results: list[Asset] = []
+    def segment(self, request: SegmentRequest) -> list[Manifest]:
+        results: list[Manifest] = []
         for input_asset in request.inputs:
             files = {
                 "image": (input_asset.content_path.name, input_asset.content_path.read_bytes())
@@ -126,10 +138,10 @@ class RemoteSplatClient:
                 results.append(
                     self._store_asset(
                         summary.id,
-                        kind=AssetKind(summary.kind),
+                        kind=ManifestKind(summary.kind),
                         content=content,
                         ext="png",
-                        metadata=summary.metadata,
+                        metadata=StickerMetadata(**summary.metadata),
                         parent_ids=summary.parent_ids,
                         created_by=summary.created_by,
                     )
@@ -141,7 +153,7 @@ class RemoteSplatClient:
         _raise_for_domain_error(response)
         return response.content
 
-    def caption(self, request: CaptionRequest) -> list[Asset]:
+    def caption(self, request: CaptionRequest) -> list[Manifest]:
         results = []
         for input_asset in request.inputs:
             files = {
@@ -160,14 +172,14 @@ class RemoteSplatClient:
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
-                    kind=AssetKind.CAPTION,
+                    kind=ManifestKind.CAPTION,
                     content=response.content,
                     ext="txt",
-                    metadata={
+                    metadata=CaptionMetadata(text_length=len(text)),
+                    params={
                         "prompt": request.prompt,
                         "max_tokens": request.max_tokens,
                         "temperature": request.temperature,
-                        "text_length": len(text),
                     },
                     parent_ids=[input_asset.id],
                     created_by=f"caption:{request.model}",
@@ -175,7 +187,7 @@ class RemoteSplatClient:
             )
         return results
 
-    def depth(self, request: DepthRequest) -> list[Asset]:
+    def depth(self, request: DepthRequest) -> list[Manifest]:
         results = []
         for input_asset in request.inputs:
             files = {
@@ -187,17 +199,17 @@ class RemoteSplatClient:
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
-                    kind=AssetKind.DEPTH_MAP,
+                    kind=ManifestKind.DEPTH_MAP,
                     content=response.content,
                     ext="npy",
-                    metadata={},
+                    metadata=DepthMetadata(),
                     parent_ids=[input_asset.id],
                     created_by=f"depth:{request.model}",
                 )
             )
         return results
 
-    def upscale(self, request: UpscaleRequest) -> list[Asset]:
+    def upscale(self, request: UpscaleRequest) -> list[Manifest]:
         results = []
         body = UpscaleBody(model=request.model, factor=request.factor, tile=request.tile)
         for input_asset in request.inputs:
@@ -211,25 +223,23 @@ class RemoteSplatClient:
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
-                    kind=AssetKind.IMAGE,
+                    kind=ManifestKind.IMAGE,
                     content=response.content,
                     ext="png",
-                    metadata={
-                        "model": request.model,
-                        "factor": request.factor,
-                        "tile": request.tile,
-                        "source_width": source_image.shape[1],
-                        "source_height": source_image.shape[0],
-                        "output_width": output_image.shape[1],
-                        "output_height": output_image.shape[0],
-                    },
+                    metadata=RasterMetadata(
+                        source_width=source_image.shape[1],
+                        source_height=source_image.shape[0],
+                        output_width=output_image.shape[1],
+                        output_height=output_image.shape[0],
+                    ),
+                    params={"model": request.model, "factor": request.factor, "tile": request.tile},
                     parent_ids=[input_asset.id],
                     created_by=f"upscale:{request.model}",
                 )
             )
         return results
 
-    def embed(self, request: EmbedRequest) -> list[Asset]:
+    def embed(self, request: EmbedRequest) -> list[Manifest]:
         results = []
         if request.text is not None:
             body = EmbedBody(text=request.text, model=request.model, device=request.device)
@@ -239,20 +249,20 @@ class RemoteSplatClient:
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
-                    kind=AssetKind.EMBEDDING,
+                    kind=ManifestKind.EMBEDDING,
                     content=response.content,
                     ext="npy",
-                    metadata={
-                        "input_type": "text",
-                        "device": request.device,
-                        "text_sha256": hashlib.sha256(request.text.encode("utf-8")).hexdigest(),
-                        "text_length": len(request.text),
-                        "dtype": str(vector.dtype),
-                        "shape": list(vector.shape),
-                        "dimension": int(vector.shape[0]),
-                        "normalized": True,
-                        "model": request.model,
-                    },
+                    metadata=EmbeddingMetadata(
+                        input_type="text",
+                        dtype=str(vector.dtype),
+                        shape=list(vector.shape),
+                        dimension=int(vector.shape[0]),
+                        normalized=True,
+                        model=request.model,
+                        text_sha256=hashlib.sha256(request.text.encode("utf-8")).hexdigest(),
+                        text_length=len(request.text),
+                    ),
+                    params={"device": request.device},
                     parent_ids=[],
                     created_by=f"embed:{request.model}",
                 )
@@ -272,25 +282,25 @@ class RemoteSplatClient:
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
-                    kind=AssetKind.EMBEDDING,
+                    kind=ManifestKind.EMBEDDING,
                     content=response.content,
                     ext="npy",
-                    metadata={
-                        "input_type": "image",
-                        "device": request.device,
-                        "dtype": str(vector.dtype),
-                        "shape": list(vector.shape),
-                        "dimension": int(vector.shape[0]),
-                        "normalized": True,
-                        "model": request.model,
-                    },
+                    metadata=EmbeddingMetadata(
+                        input_type="image",
+                        dtype=str(vector.dtype),
+                        shape=list(vector.shape),
+                        dimension=int(vector.shape[0]),
+                        normalized=True,
+                        model=request.model,
+                    ),
+                    params={"device": request.device},
                     parent_ids=[input_asset.id],
                     created_by=f"embed:{request.model}",
                 )
             )
         return results
 
-    def mesh(self, request: MeshRequest) -> list[Asset]:
+    def mesh(self, request: MeshRequest) -> list[Manifest]:
         results = []
         for input_asset in request.inputs:
             files = {
@@ -302,17 +312,17 @@ class RemoteSplatClient:
             results.append(
                 self._store_asset(
                     response.headers["X-Splat-Asset-Id"],
-                    kind=AssetKind.SHAPE_3D,
+                    kind=ManifestKind.SHAPE_3D,
                     content=response.content,
                     ext="glb",
-                    metadata={},
+                    metadata=MeshMetadata(),
                     parent_ids=[input_asset.id],
                     created_by=f"mesh:{request.model}",
                 )
             )
         return results
 
-    def gaussian(self, request: GaussianRequest) -> list[Asset]:
+    def gaussian(self, request: GaussianRequest) -> list[Manifest]:
         files = [
             ("images", (asset.content_path.name, asset.content_path.read_bytes()))
             for asset in request.inputs
@@ -339,13 +349,15 @@ class RemoteSplatClient:
             path = Path(tmp_dir) / "gaussian.ply"
             path.write_bytes(response.content)
             cloud = get_reader(".ply").read(path)
+        cloud.metadata.source_model = request.model
         return [
             self._store_asset(
                 response.headers["X-Splat-Asset-Id"],
-                kind=AssetKind.GAUSSIAN_CLOUD,
+                kind=ManifestKind.GAUSSIAN_CLOUD,
                 content=response.content,
                 ext="ply",
-                metadata={
+                metadata=cloud.metadata,
+                params={
                     "model": request.model,
                     "device": request.device,
                     "quality": request.quality,
@@ -353,12 +365,6 @@ class RemoteSplatClient:
                     "refine_poses": request.refine_poses,
                     "low_memory": request.low_memory,
                     "seed": request.seed,
-                    "source_model": request.model,
-                    "source_format": "ply",
-                    "point_count": cloud.point_count,
-                    "sh_degree": cloud.sh_degree,
-                    "scale_activation": cloud.scale_activation,
-                    "opacity_activation": cloud.opacity_activation,
                 },
                 parent_ids=[asset.id for asset in request.inputs],
                 created_by=f"gaussian:{request.model}",

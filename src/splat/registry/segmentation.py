@@ -1,10 +1,18 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from splat.domain.contracts import Requirement, StageContract
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import ModelLicense
 from splat.ports.segmentation import SegmentationBackend
 
 Runtime = Literal["mlx", "coreml", "torch"]
+
+SEGMENT_CONTRACT = StageContract(
+    stage="segment",
+    inputs=(Requirement(name="image", any_of_tags=frozenset({"colorlike"}), max_count=None),),
+    produces=ManifestKind.STICKER,
+)
 
 
 @dataclass(frozen=True)

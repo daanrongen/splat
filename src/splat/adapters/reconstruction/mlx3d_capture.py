@@ -75,5 +75,6 @@ class MLX3DCaptureBackend:
             cloud.metadata.source_model = self.name
             return cloud
 
-    def required_image_count(self) -> tuple[int, int | None]:
+    @classmethod
+    def required_image_count(cls) -> tuple[int, int | None]:
         return (3, None)

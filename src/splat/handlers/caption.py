@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
 from splat.application.pipeline import run_caption
-from splat.domain.asset import Asset
+from splat.domain.contracts import validate_inputs
+from splat.domain.manifest import Manifest
+from splat.registry.caption import CAPTION_CONTRACT
 from splat.registry.wiring import get_asset_cache, get_caption_backend
 
 DEFAULT_CAPTION_PROMPT = "Describe this image in one concise sentence."
@@ -9,7 +11,7 @@ DEFAULT_CAPTION_PROMPT = "Describe this image in one concise sentence."
 
 @dataclass(frozen=True)
 class CaptionRequest:
-    inputs: list[Asset]
+    inputs: list[Manifest]
     model: str = "fastvlm-0.5b"
     prompt: str = DEFAULT_CAPTION_PROMPT
     max_tokens: int = 80
@@ -17,7 +19,8 @@ class CaptionRequest:
     device: str = "auto"
 
 
-def handle(request: CaptionRequest) -> list[Asset]:
+def handle(request: CaptionRequest) -> list[Manifest]:
+    validate_inputs(CAPTION_CONTRACT, request.inputs)
     cache = get_asset_cache()
     backend = get_caption_backend(request.model, device=request.device)
     params = {

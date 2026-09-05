@@ -3,26 +3,26 @@ from dataclasses import dataclass
 import numpy as np
 
 from splat.application.pipeline import run_displace_height
-from splat.domain.asset import Asset, AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap
+from splat.domain.manifest import Manifest, ManifestKind
 from splat.ports.asset_cache import AssetCache
 from splat.registry.wiring import get_asset_cache
 
 
 @dataclass(frozen=True)
 class DisplaceHeightRequest:
-    inputs: list[Asset]
+    inputs: list[Manifest]
     export_format: str = "glb"
 
 
-def handle(request: DisplaceHeightRequest) -> list[Asset]:
+def handle(request: DisplaceHeightRequest) -> list[Manifest]:
     cache = get_asset_cache()
     return [_displace_height_one(asset, cache, request.export_format) for asset in request.inputs]
 
 
-def _displace_height_one(asset: Asset, cache: AssetCache, export_format: str) -> Asset:
-    if asset.kind != AssetKind.DEPTH_MAP:
+def _displace_height_one(asset: Manifest, cache: AssetCache, export_format: str) -> Manifest:
+    if asset.kind != ManifestKind.DEPTH_MAP:
         raise SplatDomainError(
             "displace.height requires a depth map - pipe through `splat depth` first, "
             "e.g. `splat depth image.png | splat tools displace.height -o out.glb`."
@@ -34,9 +34,9 @@ def _displace_height_one(asset: Asset, cache: AssetCache, export_format: str) ->
     image_asset = cache.get(asset.parent_ids[0])
     depth_map = DepthMap(
         depth=np.load(asset.content_path),
-        focal_length_px=asset.metadata.get("focal_length_px"),
-        field_of_view_deg=asset.metadata.get("field_of_view_deg"),
-        metadata=asset.metadata,
+        focal_length_px=asset.metadata.focal_length_px,
+        field_of_view_deg=asset.metadata.field_of_view_deg,
+        metadata=asset.metadata.extra,
     )
     return run_displace_height(
         cache,

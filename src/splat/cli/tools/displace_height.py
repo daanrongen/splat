@@ -4,8 +4,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.tools.displace_height import DisplaceHeightRequest, handle
 from splat.registry.wiring import get_asset_cache
 
@@ -23,7 +23,7 @@ def displace_height(
     export_format = to or (output.suffix.lstrip(".") if output else "glb")
     cache = get_asset_cache()
     try:
-        inputs = resolve_inputs(input, cache, default_kind=AssetKind.DEPTH_MAP)
+        inputs = resolve_inputs(input, cache, default_kind=ManifestKind.DEPTH_MAP)
         results = handle(DisplaceHeightRequest(inputs=inputs, export_format=export_format))
     except SplatDomainError as exc:
         error(str(exc))
@@ -34,7 +34,7 @@ def displace_height(
 
     def _human(assets: list) -> None:
         for asset in assets:
-            faces = asset.metadata.get("face_count")
+            faces = asset.metadata.extra.get("face_count")
             console.print(f"[green]displace.height[/green] {asset.id}  faces={faces}")
 
     report(results, _human)

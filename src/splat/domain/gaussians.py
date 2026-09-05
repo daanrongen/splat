@@ -33,11 +33,10 @@ class GaussianCloudMetadata:
     license: ModelLicense | None = None
     up_axis: Literal["y", "z"] = "y"
     coordinate_convention: str = "opengl"
-
-    @property
-    def point_count(self) -> int:
-        # Filled in by GaussianCloud.__post_init__; default until then.
-        return getattr(self, "_point_count", 0)
+    point_count: int = 0
+    sh_degree: int = 0
+    scale_activation: ScaleActivation = "log"
+    opacity_activation: OpacityActivation = "logit"
 
 
 @dataclass
@@ -98,7 +97,10 @@ class GaussianCloud:
         if not np.all(np.isfinite(self.opacities)):
             raise InvalidGaussianCloud("opacities contains NaN/Inf")
 
-        self.metadata._point_count = n
+        self.metadata.point_count = n
+        self.metadata.sh_degree = self.sh_degree
+        self.metadata.scale_activation = self.scale_activation
+        self.metadata.opacity_activation = self.opacity_activation
 
     @property
     def point_count(self) -> int:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.handlers.upscale import UpscaleRequest, handle
 from splat.http._files import saved_upload
 from splat.registry.wiring import get_asset_cache
@@ -17,7 +17,7 @@ def upscale(
 ) -> Response:
     cache = get_asset_cache()
     with saved_upload(image) as path:
-        asset = cache.put_external(path, kind=AssetKind.IMAGE)
+        asset = cache.put_external(path, kind=ManifestKind.IMAGE)
     result = handle(UpscaleRequest(inputs=[asset], model=model, factor=factor, tile=tile))[0]
     return Response(
         content=result.content_path.read_bytes(),

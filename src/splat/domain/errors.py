@@ -16,3 +16,11 @@ class UnsupportedFormat(SplatDomainError):
 
 class NonCommercialModelError(SplatDomainError):
     """A model licensed for non-commercial use only was invoked without acknowledgement."""
+
+
+class WrongManifestKind(SplatDomainError):
+    """A stage received manifest(s) whose kind doesn't satisfy its contract."""
+
+
+class WrongManifestCount(SplatDomainError):
+    """A stage received a number of manifests outside its contract's min/max."""

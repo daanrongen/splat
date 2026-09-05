@@ -4,8 +4,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.embed import EmbedRequest
 from splat.registry.wiring import get_asset_cache, get_client
 
@@ -29,7 +29,7 @@ def embed(
                 raise SplatDomainError("Use either image input or --text, not both.")
             results = get_client().embed(EmbedRequest(text=text, model=model, device=device))
         else:
-            inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+            inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
             results = get_client().embed(EmbedRequest(inputs=inputs, model=model, device=device))
     except SplatDomainError as exc:
         error(str(exc))
@@ -42,9 +42,9 @@ def embed(
         for asset in assets:
             console.print(
                 f"[green]embedded[/green] {asset.id}  "
-                f"{asset.metadata.get('input_type')} "
-                f"{asset.metadata.get('dimension')}d "
-                f"{asset.metadata.get('dtype')}"
+                f"{asset.metadata.input_type} "
+                f"{asset.metadata.dimension}d "
+                f"{asset.metadata.dtype}"
             )
 
     report(results, _human)

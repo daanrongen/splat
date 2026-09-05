@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from splat.application.models_admin import model_source_label
+from splat.application.models_admin import image_count_range, model_source_label
 from splat.application.tools.convert import ConvertResult
-from splat.domain.asset import Asset
 from splat.domain.gaussians import GaussianCloud
+from splat.domain.manifest import Manifest
 from splat.handlers import models as models_handler
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.caption import handle as handle_caption
@@ -37,25 +37,25 @@ class LocalSplatClient:
     def diffuse(self, request: DiffuseRequest) -> DiffuseResult:
         return handle_diffuse(request)
 
-    def segment(self, request: SegmentRequest) -> list[Asset]:
+    def segment(self, request: SegmentRequest) -> list[Manifest]:
         return handle_segment(request)
 
-    def caption(self, request: CaptionRequest) -> list[Asset]:
+    def caption(self, request: CaptionRequest) -> list[Manifest]:
         return handle_caption(request)
 
-    def depth(self, request: DepthRequest) -> list[Asset]:
+    def depth(self, request: DepthRequest) -> list[Manifest]:
         return handle_depth(request)
 
-    def upscale(self, request: UpscaleRequest) -> list[Asset]:
+    def upscale(self, request: UpscaleRequest) -> list[Manifest]:
         return handle_upscale(request)
 
-    def embed(self, request: EmbedRequest) -> list[Asset]:
+    def embed(self, request: EmbedRequest) -> list[Manifest]:
         return handle_embed(request)
 
-    def mesh(self, request: MeshRequest) -> list[Asset]:
+    def mesh(self, request: MeshRequest) -> list[Manifest]:
         return handle_mesh(request)
 
-    def gaussian(self, request: GaussianRequest) -> list[Asset]:
+    def gaussian(self, request: GaussianRequest) -> list[Manifest]:
         return handle_gaussian(request)
 
     def tools_convert(self, request: ConvertRequest) -> ConvertResult:
@@ -96,13 +96,14 @@ class LocalSplatClient:
 
     def models_info(self, name: str) -> ModelInfo:
         descriptor = models_handler.info(name)
+        min_images, max_images = image_count_range(descriptor)
         return ModelInfo(
             name=descriptor.name,
             runtime=getattr(descriptor, "runtime", "-"),
             source=model_source_label(descriptor),
             license=str(descriptor.license),
-            min_images=getattr(descriptor, "min_images", None),
-            max_images=getattr(descriptor, "max_images", None),
+            min_images=min_images,
+            max_images=max_images,
             dimension=getattr(descriptor, "dimension", None),
             normalized=getattr(descriptor, "normalized", None),
             notes=getattr(descriptor, "notes", ""),

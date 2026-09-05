@@ -181,16 +181,65 @@ splat info scene.ply
 splat validate scene.ply --strict
 ```
 
-## Piping And Assets
+## Piping And Manifests
 
-Pipeline commands accept a file path, `@<asset-id>`, or `-` for NDJSON records from stdin when the command works with assets. Every asset-producing stage writes to the content-addressed cache and prints NDJSON when stdout is piped.
+Every stage consumes and produces a `Manifest` — the pipeline's universal currency, and its "one canonical shape every stage consumes and produces, so stages chain without knowing about each other." A `Manifest` is a cached, content-addressed record: `id`, `kind`, `content_path`, typed `metadata` (facts about the content itself), `params` (the stage invocation that produced it), `parent_ids`, and `created_by`.
+
+Pipeline commands accept a file path, `@<manifest-id>`, or `-` for NDJSON records from stdin. Every manifest-producing stage writes to the content-addressed cache and prints NDJSON when stdout is piped.
 
 ```sh
 splat diffuse "dog" | splat caption - -o dog.txt
 splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth - | splat tools displace.height - -o test.obj
 ```
 
-`-o/--output` writes a convenient copy to the path you choose; it does not replace the cache entry. Cached assets keep provenance so downstream tools can retrieve parents, such as `displace.height` loading the image that produced a depth map.
+`-o/--output` writes a convenient copy to the path you choose; it does not replace the cache entry. Cached manifests keep provenance so downstream tools can retrieve parents, such as `displace.height` loading the image that produced a depth map.
+
+### Kind taxonomy
+
+`ManifestKind` stays a flat set — no class hierarchy — but each kind carries composable capability tags (`domain/manifest.py::KIND_TAGS`), so a stage declares "accepts any color image" once instead of repeating `(image, sticker)` tuples across handlers:
+
+| Kind | Tags | Produced by | On-disk format |
+|---|---|---|---|
+| `image` | `raster`, `rgb`, `colorlike` | diffuse, upscale | `.png` |
+| `sticker` | `raster`, `rgba`, `colorlike` | segment | `.png` |
+| `caption` | `text` | caption | `.txt` |
+| `embedding` | `vector` | embed | `.npy` |
+| `depth_map` | `raster`, `single_channel`, `metric` | depth | `.npy` |
+| `shape_3d` | `mesh_3d` | mesh, tools displace.height | `.glb` / `.obj` |
+| `gaussian_cloud` | `splat_3d` | gaussian | `.ply` |
+
+Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (mlx3d-capture needs 3+); piping the wrong kind in fails with a message naming both sides:
+
+```
+$ splat depth photo.png | splat gaussian -
+error: gaussian (mlx3d-capture) requires at least 3 image or sticker, got 1 depth_map. gaussian has no
+text-to-3D or depth-only reconstruction path — pipe image/sticker assets in instead, e.g.
+`splat diffuse ... | splat segment - | splat gaussian -`.
+```
+
+### Stage flow
+
+Every stage that accepts a "colorlike" manifest (`image` or `sticker`) can consume the output of every stage that produces one — that fan-out/fan-in is what the tag system buys, instead of thirteen separately-remembered producer/consumer pairs:
+
+```mermaid
+flowchart LR
+    diffuse([diffuse]) -->|image| colorlike{{image / sticker}}
+    segment([segment]) -->|sticker xN| colorlike
+    upscale([upscale]) -->|image| colorlike
+    colorlike -->|colorlike| segment
+    colorlike -->|colorlike| upscale
+    colorlike -->|colorlike| depth([depth])
+    colorlike -->|colorlike| caption([caption])
+    colorlike -->|colorlike| embed([embed])
+    colorlike -->|colorlike| mesh([mesh])
+    colorlike -->|colorlike xN| gaussian([gaussian])
+    caption -->|caption text| embed
+    depth -->|depth_map| displace([tools displace.height])
+    gaussian -->|gaussian_cloud .ply| convert([tools convert])
+    gaussian -->|gaussian_cloud .ply| compress([tools compress])
+```
+
+`tools convert`/`tools compress`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages.
 
 ## HTTP Server
 
@@ -206,7 +255,7 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | `POST /diffuse` | `splat diffuse` | image bytes |
 | `POST /caption` | `splat caption` | text bytes |
 | `POST /embed` | `splat embed` | embedding `.npy` bytes |
-| `POST /segment` | `splat segment` | sticker asset manifest |
+| `POST /segment` | `splat segment` | list of sticker manifest summaries |
 | `POST /depth` | `splat depth` | depth `.npy` bytes |
 | `POST /upscale` | `splat upscale` | image bytes |
 | `POST /mesh` | `splat mesh` | mesh bytes |
@@ -279,7 +328,7 @@ The implementation follows a ports-and-adapters layout with a small transport-ne
 
 | Layer | Role |
 |---|---|
-| `domain/` | Core value objects such as `GaussianCloud`, `Asset`, `DepthMap`, and errors |
+| `domain/` | Core value objects such as `GaussianCloud`, `Manifest`, `DepthMap`, contracts, and errors |
 | `ports/` | Protocols for model backends, file IO, compression, cache, and client dispatch |
 | `application/` | Model-backed use cases and cache-aware orchestration |
 | `application/tools/` | Deterministic tool use cases |

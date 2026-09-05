@@ -4,8 +4,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.upscale import UpscaleRequest
 from splat.registry.wiring import get_asset_cache, get_client
 
@@ -22,7 +22,7 @@ def upscale(
     """Upscale image or sticker assets with a model-backed super-resolution backend."""
     cache = get_asset_cache()
     try:
-        inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+        inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().upscale(
             UpscaleRequest(inputs=inputs, model=model, factor=factor, tile=tile)
         )
@@ -37,8 +37,8 @@ def upscale(
         for asset in assets:
             console.print(
                 f"[green]upscaled[/green] {asset.id}  "
-                f"{asset.metadata.get('source_width')}x{asset.metadata.get('source_height')} -> "
-                f"{asset.metadata.get('output_width')}x{asset.metadata.get('output_height')}"
+                f"{asset.metadata.source_width}x{asset.metadata.source_height} -> "
+                f"{asset.metadata.output_width}x{asset.metadata.output_height}"
             )
 
     report(results, _human)

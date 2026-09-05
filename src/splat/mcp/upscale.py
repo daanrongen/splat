@@ -1,6 +1,6 @@
 import mcp.types as types
 
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.handlers.upscale import UpscaleRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
@@ -15,7 +15,7 @@ def upscale(
 ) -> list[types.ContentBlock]:
     """Upscale an image or sticker asset with a super-resolution backend."""
     cache = get_asset_cache()
-    asset = resolve_input_asset(image, cache, default_kind=AssetKind.IMAGE)
+    asset = resolve_input_asset(image, cache, default_kind=ManifestKind.IMAGE)
     result = get_client().upscale(
         UpscaleRequest(inputs=[asset], model=model, factor=factor, tile=tile)
     )[0]

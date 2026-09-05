@@ -2,7 +2,7 @@ from pathlib import Path
 
 from splat.adapters.client.local import LocalSplatClient
 from splat.adapters.formats.ply import PlyWriter
-from splat.domain.asset import AssetKind
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.diffuse import DiffuseRequest
@@ -64,7 +64,7 @@ def test_caption_delegates_to_handler(mocker, tmp_path, monkeypatch):
     from splat.registry.wiring import get_asset_cache
 
     asset = get_asset_cache().put_external(
-        write_sample_png(tmp_path / "image.png", (2, 2)), kind=AssetKind.IMAGE
+        write_sample_png(tmp_path / "image.png", (2, 2)), kind=ManifestKind.IMAGE
     )
     client = LocalSplatClient()
 
@@ -82,7 +82,7 @@ def test_embed_delegates_to_handler(mocker, tmp_path, monkeypatch):
     results = client.embed(EmbedRequest(text="red chair", model="fake-embedder"))
 
     assert len(results) == 1
-    assert results[0].kind == AssetKind.EMBEDDING
+    assert results[0].kind == ManifestKind.EMBEDDING
 
 
 def test_info_returns_summary(tmp_path, synthetic_cloud):
@@ -150,7 +150,7 @@ def test_upscale_delegates_to_handler(mocker, tmp_path, monkeypatch):
     from splat.registry.wiring import get_asset_cache
 
     asset = get_asset_cache().put_external(
-        write_sample_png(tmp_path / "image.png", (2, 2)), kind=AssetKind.IMAGE
+        write_sample_png(tmp_path / "image.png", (2, 2)), kind=ManifestKind.IMAGE
     )
     client = LocalSplatClient()
 

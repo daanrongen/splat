@@ -5,8 +5,8 @@ import typer
 
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
-from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
+from splat.domain.manifest import ManifestKind
 from splat.handlers.depth import DepthRequest
 from splat.image_io import write_png
 from splat.registry.wiring import get_asset_cache, get_client
@@ -25,7 +25,7 @@ def depth(
     """Estimate per-pixel metric depth for image(s) (cached losslessly as .npy)."""
     cache = get_asset_cache()
     try:
-        inputs = resolve_inputs(input, cache, default_kind=AssetKind.IMAGE)
+        inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().depth(DepthRequest(inputs=inputs, model=model, device=device))
     except SplatDomainError as exc:
         error(str(exc))
@@ -41,7 +41,7 @@ def depth(
         for asset in assets:
             console.print(
                 f"[green]depth[/green] {asset.id}  "
-                f"focal_length={asset.metadata.get('focal_length_px')}"
+                f"focal_length={asset.metadata.focal_length_px}"
             )
 
     report(results, _human)
