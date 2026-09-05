@@ -2,26 +2,58 @@ from pathlib import Path
 
 import mcp.types as types
 
+from splat.domain.asset import AssetKind
 from splat.handlers.gaussian import GaussianRequest
-from splat.mcp._content import text_content
-from splat.registry.wiring import get_client
+from splat.mcp._content import resource_content, text_content
+from splat.mcp._inputs import resolve_input_asset
+from splat.registry.wiring import get_asset_cache, get_client, get_reader, get_writer
 
 
 def gaussian(
     images: list[str],
-    output_path: str,
-    model: str = "mvsplat",
+    output_path: str | None = None,
+    model: str = "mlx3d-capture",
     device: str = "auto",
+    quality: str = "fast",
+    iters: int | None = None,
+    max_dim: int | None = None,
+    sh_degree: int | None = None,
+    poses: str = "auto",
+    refine_poses: str = "auto",
+    low_memory: bool = False,
+    seed: int = 0,
 ) -> list[types.ContentBlock]:
-    """Reconstruct a Gaussian splat from 2+ image paths, written to output_path."""
+    """Reconstruct a Gaussian splat from image paths or @asset ids."""
+    cache = get_asset_cache()
+    inputs = [resolve_input_asset(p, cache, default_kind=AssetKind.IMAGE) for p in images]
     result = get_client().gaussian(
         GaussianRequest(
-            inputs=[Path(p) for p in images],
-            output_path=Path(output_path),
+            inputs=inputs,
             model=model,
             device=device,
+            quality=quality,
+            iters=iters,
+            max_dim=max_dim,
+            sh_degree=sh_degree,
+            poses=poses,
+            refine_poses=refine_poses,
+            low_memory=low_memory,
+            seed=seed,
         )
-    )
-    content = [text_content(f"wrote {output_path} ({result.cloud.point_count:,} points)")]
-    content.extend(text_content(f"warning: {w}") for w in result.warnings)
+    )[0]
+    content: list[types.ContentBlock] = [
+        text_content(f"asset id: {result.id}"),
+        resource_content(result),
+    ]
+    if output_path is not None:
+        output = Path(output_path)
+        cloud = get_reader(result.content_path.suffix).read(result.content_path)
+        writer = get_writer(output.suffix)
+        warnings = writer.supports(cloud)
+        writer.write(cloud, output)
+        content.insert(
+            0,
+            text_content(f"wrote {output_path} ({result.metadata.get('point_count', 0):,} points)"),
+        )
+        content.extend(text_content(f"warning: {w}") for w in warnings)
     return content

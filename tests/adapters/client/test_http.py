@@ -215,22 +215,27 @@ def test_segment_fetches_each_sticker(mocker, tmp_path, monkeypatch, remote_clie
     assert len(results[0].content_path.read_bytes()) > 0
 
 
-def test_gaussian_writes_local_output(mocker, tmp_path, synthetic_cloud, remote_client):
+def test_gaussian_stores_remote_asset(
+    mocker, tmp_path, monkeypatch, synthetic_cloud, remote_client
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
         return_value=FakeReconstructionBackend(synthetic_cloud),
     )
-    output_path = tmp_path / "out.ply"
     image_a, image_b = _sample_image(tmp_path), tmp_path / "b.png"
     write_sample_png(image_b, (2, 2))
+    cache = get_asset_cache()
+    asset_a = cache.put_external(image_a, kind=AssetKind.IMAGE)
+    asset_b = cache.put_external(image_b, kind=AssetKind.IMAGE)
 
-    result = remote_client.gaussian(
-        GaussianRequest(inputs=[image_a, image_b], output_path=output_path)
-    )
+    results = remote_client.gaussian(GaussianRequest(inputs=[asset_a, asset_b]))
 
-    assert output_path.exists()
-    assert result.cloud.point_count == synthetic_cloud.point_count
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.GAUSSIAN_CLOUD
+    assert results[0].metadata["point_count"] == synthetic_cloud.point_count
+    assert results[0].parent_ids == [asset_a.id, asset_b.id]
 
 
 def test_tools_convert_writes_local_output(tmp_path, synthetic_cloud, remote_client):

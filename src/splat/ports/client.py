@@ -4,9 +4,8 @@ LocalSplatClient calls handlers in-process. RemoteSplatClient calls a remote
 `splat http` server. CLI commands use registry.wiring.get_client(), so
 SPLAT_URL redirects remote-capable execution without changing command code.
 
-Asset-producing methods return real domain objects (Asset, GaussianCloud)
-because their file bytes are transmitted and either land in the local asset
-cache or get written to a caller-supplied local path and re-read. Read-only
+Asset-producing methods return real Asset objects because their file bytes are
+transmitted and land in the local asset cache. Read-only
 methods return summaries because the HTTP wire schema intentionally exposes
 presentation data, not every internal domain detail.
 
@@ -27,7 +26,7 @@ from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
-from splat.handlers.gaussian import GaussianRequest, GaussianResult
+from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
@@ -87,7 +86,7 @@ class SplatClient(Protocol):
 
     def mesh(self, request: MeshRequest) -> list[Asset]: ...
 
-    def gaussian(self, request: GaussianRequest) -> GaussianResult: ...
+    def gaussian(self, request: GaussianRequest) -> list[Asset]: ...
 
     def tools_convert(self, request: ConvertRequest) -> ConvertResult: ...
 

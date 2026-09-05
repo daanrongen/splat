@@ -15,8 +15,8 @@ class AssetKind(StrEnum):
     CAPTION = "caption"  # UTF-8 image-to-text output (.txt)
     EMBEDDING = "embedding"  # normalized image/text vector (.npy)
     DEPTH_MAP = "depth_map"  # per-pixel metric depth, cached losslessly (.npy)
-    SHAPE_3D = "shape_3d"  # mesh or point cloud, not yet Gaussians (future)
-    GAUSSIAN_CLOUD = "gaussian_cloud"  # future: wraps domain.gaussians.GaussianCloud
+    SHAPE_3D = "shape_3d"  # mesh or point cloud
+    GAUSSIAN_CLOUD = "gaussian_cloud"  # canonical GaussianCloud cached as lossless .ply
 
 
 @dataclass

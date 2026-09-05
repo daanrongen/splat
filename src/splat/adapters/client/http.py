@@ -5,6 +5,7 @@ shape, shared with the server that produces/consumes it.
 """
 
 import hashlib
+import tempfile
 from io import BytesIO
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
-from splat.handlers.gaussian import GaussianRequest, GaussianResult
+from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
@@ -311,19 +312,58 @@ class RemoteSplatClient:
             )
         return results
 
-    def gaussian(self, request: GaussianRequest) -> GaussianResult:
-        files = [("images", (p.name, p.read_bytes())) for p in request.inputs]
+    def gaussian(self, request: GaussianRequest) -> list[Asset]:
+        files = [
+            ("images", (asset.content_path.name, asset.content_path.read_bytes()))
+            for asset in request.inputs
+        ]
         form = {
             "model": request.model,
             "device": request.device,
-            "to": request.output_path.suffix.lstrip("."),
+            "to": "ply",
+            "quality": request.quality,
+            "poses": request.poses,
+            "refine_poses": request.refine_poses,
+            "low_memory": request.low_memory,
+            "seed": request.seed,
         }
+        if request.iters is not None:
+            form["iters"] = request.iters
+        if request.max_dim is not None:
+            form["max_dim"] = request.max_dim
+        if request.sh_degree is not None:
+            form["sh_degree"] = request.sh_degree
         response = self._client.post("/gaussian", files=files, data=form)
         _raise_for_domain_error(response)
-        request.output_path.write_bytes(response.content)
-        cloud = get_reader(request.output_path.suffix).read(request.output_path)
-        warnings = response.headers.get("X-Splat-Warnings", "")
-        return GaussianResult(cloud=cloud, warnings=warnings.split("; ") if warnings else [])
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "gaussian.ply"
+            path.write_bytes(response.content)
+            cloud = get_reader(".ply").read(path)
+        return [
+            self._store_asset(
+                response.headers["X-Splat-Asset-Id"],
+                kind=AssetKind.GAUSSIAN_CLOUD,
+                content=response.content,
+                ext="ply",
+                metadata={
+                    "model": request.model,
+                    "device": request.device,
+                    "quality": request.quality,
+                    "poses": request.poses,
+                    "refine_poses": request.refine_poses,
+                    "low_memory": request.low_memory,
+                    "seed": request.seed,
+                    "source_model": request.model,
+                    "source_format": "ply",
+                    "point_count": cloud.point_count,
+                    "sh_degree": cloud.sh_degree,
+                    "scale_activation": cloud.scale_activation,
+                    "opacity_activation": cloud.opacity_activation,
+                },
+                parent_ids=[asset.id for asset in request.inputs],
+                created_by=f"gaussian:{request.model}",
+            )
+        ]
 
     def tools_convert(self, request: ConvertRequest) -> ConvertResult:
         files = {"input": (request.input_path.name, request.input_path.read_bytes())}

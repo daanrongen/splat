@@ -24,7 +24,8 @@ def _sample_png_bytes() -> bytes:
     return sample_png_bytes((2, 2))
 
 
-def test_gaussian_returns_output_bytes(mocker, synthetic_cloud):
+def test_gaussian_returns_output_bytes(mocker, tmp_path, synthetic_cloud):
+    mocker.patch.dict("os.environ", {"SPLAT_ASSET_CACHE_DIR": str(tmp_path / "cache")})
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
@@ -42,6 +43,7 @@ def test_gaussian_returns_output_bytes(mocker, synthetic_cloud):
 
     assert response.status_code == 200, response.text
     assert len(response.content) > 0
+    assert response.headers["X-Splat-Asset-Kind"] == "gaussian_cloud"
     assert response.headers["X-Splat-Point-Count"] == str(synthetic_cloud.point_count)
 
 

@@ -1,4 +1,5 @@
 from splat.adapters.formats.ply import PlyWriter
+from tests.image_helpers import write_sample_png
 
 
 class FakeReconstructionBackend:
@@ -15,17 +16,21 @@ class FakeReconstructionBackend:
 
 
 def test_gaussian_writes_output_file(mocker, tmp_path, synthetic_cloud, call_tool):
+    mocker.patch.dict("os.environ", {"SPLAT_ASSET_CACHE_DIR": str(tmp_path / "cache")})
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
         return_value=FakeReconstructionBackend(synthetic_cloud),
     )
     output_path = tmp_path / "out.ply"
+    a = write_sample_png(tmp_path / "a.png", (2, 2))
+    b = write_sample_png(tmp_path / "b.png", (2, 2))
 
     result = call_tool(
         "gaussian",
-        images=[str(tmp_path / "a.png"), str(tmp_path / "b.png")],
+        images=[str(a), str(b)],
         output_path=str(output_path),
+        model="fake-recon",
     )
 
     assert result.is_error is False

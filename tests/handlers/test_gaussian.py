@@ -1,7 +1,10 @@
 import pytest
 
+from splat.domain.asset import AssetKind
 from splat.domain.errors import SplatDomainError
 from splat.handlers.gaussian import GaussianRequest, handle
+from splat.registry.wiring import get_asset_cache
+from tests.image_helpers import write_sample_png
 
 
 class FakeReconstructionBackend:
@@ -17,30 +20,37 @@ class FakeReconstructionBackend:
         return (2, None)
 
 
-def test_handle_writes_output_and_returns_cloud(mocker, tmp_path, synthetic_cloud):
+def test_handle_creates_gaussian_asset(mocker, tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
         return_value=FakeReconstructionBackend(synthetic_cloud),
     )
-    output_path = tmp_path / "out.ply"
-    request = GaussianRequest(
-        inputs=[tmp_path / "a.png", tmp_path / "b.png"], output_path=output_path
-    )
+    cache = get_asset_cache()
+    a = cache.put_external(write_sample_png(tmp_path / "a.png", (2, 2)), kind=AssetKind.IMAGE)
+    b = cache.put_external(write_sample_png(tmp_path / "b.png", (2, 2)), kind=AssetKind.IMAGE)
+    request = GaussianRequest(inputs=[a, b], model="fake-recon")
 
-    result = handle(request)
+    results = handle(request)
 
-    assert output_path.exists()
-    assert result.cloud.point_count == synthetic_cloud.point_count
+    assert len(results) == 1
+    assert results[0].kind == AssetKind.GAUSSIAN_CLOUD
+    assert results[0].metadata["point_count"] == synthetic_cloud.point_count
+    assert results[0].parent_ids == [a.id, b.id]
+    assert results[0].created_by == "gaussian:fake-recon"
 
 
-def test_handle_rejects_too_few_images(mocker, tmp_path, synthetic_cloud):
+def test_handle_rejects_too_few_images(mocker, tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
         return_value=FakeReconstructionBackend(synthetic_cloud),
     )
-    request = GaussianRequest(inputs=[tmp_path / "a.png"], output_path=tmp_path / "out.ply")
+    cache = get_asset_cache()
+    asset = cache.put_external(write_sample_png(tmp_path / "a.png", (2, 2)), kind=AssetKind.IMAGE)
+    request = GaussianRequest(inputs=[asset], model="fake-recon")
 
     with pytest.raises(SplatDomainError, match="requires between"):
         handle(request)
