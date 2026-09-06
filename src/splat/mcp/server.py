@@ -1,10 +1,10 @@
 """Assembles the `splat mcp` server, mirroring the CLI command taxonomy.
-Stochastic backend calls are top-level MCP tools, while deterministic
-transforms use the `tools_*` prefix. Every remote-capable tool goes through
-registry.wiring.get_client(), same as cli/*.py, so SPLAT_URL transparently
-redirects tool calls to a remote `splat http` server exactly like the CLI.
-`splat mcp` itself is still always a local stdio process; only where its
-tools execute can be remote.
+Backends with a swappable model catalog are top-level MCP tools, while
+single fixed-algorithm operations with no catalog use the `tools_*` prefix.
+Every remote-capable tool goes through registry.wiring.get_client(), same as
+cli/*.py, so SPLAT_URL transparently redirects tool calls to a remote
+`splat http` server exactly like the CLI. `splat mcp` itself is still always
+a local stdio process; only where its tools execute can be remote.
 """
 
 import functools
@@ -21,7 +21,6 @@ from splat.mcp import diffuse, gaussian
 from splat.mcp import embed as embed_tool
 from splat.mcp import inspect as inspect_tool
 from splat.mcp import manifest as manifest_tool
-from splat.mcp import mesh as mesh_tool
 from splat.mcp import models as models_tool
 from splat.mcp import segment as segment_tool
 from splat.mcp import upscale as upscale_tool
@@ -52,7 +51,6 @@ server.add_tool(_as_tool_error(embed_tool.embed), name="embed")
 server.add_tool(_as_tool_error(segment_tool.segment), name="segment")
 server.add_tool(_as_tool_error(depth_tool.depth), name="depth")
 server.add_tool(_as_tool_error(upscale_tool.upscale), name="upscale")
-server.add_tool(_as_tool_error(mesh_tool.mesh), name="mesh")
 server.add_tool(_as_tool_error(gaussian.gaussian), name="gaussian")
 server.add_tool(_as_tool_error(tools_convert.convert), name="tools_convert")
 server.add_tool(_as_tool_error(tools_compress.compress), name="tools_compress")

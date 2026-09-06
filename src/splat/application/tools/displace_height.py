@@ -5,7 +5,7 @@ into the background.
 
 Pure geometry, deterministic given its inputs — no model weights, no
 runtime to select, nothing to swap. That's why this is a `splat tools`
-operator rather than a port-backed `splat mesh` adapter.
+operator rather than a port-backed, catalog-swappable top-level backend.
 """
 
 from pathlib import Path

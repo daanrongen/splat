@@ -17,8 +17,6 @@ from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.gaussian import handle as handle_gaussian
 from splat.handlers.inspect import info as handle_info
 from splat.handlers.inspect import validate as handle_validate
-from splat.handlers.mesh import MeshRequest
-from splat.handlers.mesh import handle as handle_mesh
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.segment import handle as handle_segment
 from splat.handlers.tools.compress import CompressRequest
@@ -51,9 +49,6 @@ class LocalSplatClient:
 
     def embed(self, request: EmbedRequest) -> list[Manifest]:
         return handle_embed(request)
-
-    def mesh(self, request: MeshRequest) -> list[Manifest]:
-        return handle_mesh(request)
 
     def gaussian(self, request: GaussianRequest) -> list[Manifest]:
         return handle_gaussian(request)

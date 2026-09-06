@@ -21,7 +21,6 @@ def _settings() -> list[_Setting]:
     from splat.registry.depth import DEPTH_CATALOG
     from splat.registry.diffuse import DIFFUSION_CATALOG
     from splat.registry.gaussian import GAUSSIAN_CATALOG
-    from splat.registry.mesh import MESH_PREDICTION_CATALOG
     from splat.registry.segment import SEGMENTATION_CATALOG
     from splat.registry.upscale import UPSCALE_CATALOG
 
@@ -41,8 +40,6 @@ def _settings() -> list[_Setting]:
         _Setting("upscale", "--tile", "SPLAT_UPSCALE_TILE", "0"),
         _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mvsplat", GAUSSIAN_CATALOG),
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
-        _Setting("mesh", "--model", "SPLAT_MESH_MODEL", "triposr", MESH_PREDICTION_CATALOG),
-        _Setting("mesh", "--device", "SPLAT_MESH_DEVICE", "auto"),
         _Setting("http", "--host", "SPLAT_HOST", "127.0.0.1:8000"),
         _Setting("tools compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
         _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),

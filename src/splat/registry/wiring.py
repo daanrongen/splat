@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.embedding import EmbeddingBackend
 from splat.ports.manifest_repository import ManifestRepository
-from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.render import RenderBackend
@@ -134,20 +133,6 @@ def get_render_backend(name: str = "blender") -> RenderBackend:
     from splat.adapters.render.blender import BlenderBackend
 
     return BlenderBackend()
-
-
-def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBackend:
-    from splat.registry.mesh import MESH_PREDICTION_CATALOG
-
-    try:
-        descriptor = MESH_PREDICTION_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(MESH_PREDICTION_CATALOG))
-        raise UnsupportedFormat(f"Unknown mesh model {name!r}. Available: {available}") from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
-    )
 
 
 def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:

@@ -1,6 +1,6 @@
 import numpy as np
 
-from splat.domain.image_space import DepthMap, Shape3D, Sticker
+from splat.domain.image_space import DepthMap, Sticker
 from splat.domain.value_objects import APPLE_ASCL, MIT
 from tests.image_helpers import write_sample_png
 
@@ -44,16 +44,6 @@ class FakeEmbeddingBackend:
 
     def embed_text(self, text: str, **params) -> np.ndarray:
         return np.array([0.0, 1.0], dtype=np.float32)
-
-
-class FakeMeshBackend:
-    name = "triposr"
-    license = MIT
-
-    def predict(self, image_path, **params) -> Shape3D:
-        vertices = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]], dtype=np.float32)
-        faces = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.int64)
-        return Shape3D(vertices=vertices, faces=faces, metadata={"face_count": 2})
 
 
 class FakeUpscaleBackend:
@@ -124,16 +114,6 @@ def test_upscale_returns_resource_content(mocker, tmp_path, monkeypatch, call_to
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
 
     result = call_tool("upscale", image=_sample_image(tmp_path), model="fake-upscaler", factor=2)
-
-    assert result.is_error is False
-    assert any(block.type == "resource" for block in result.content)
-
-
-def test_mesh_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
-    mocker.patch("splat.handlers.mesh.get_mesh_backend", return_value=FakeMeshBackend())
-
-    result = call_tool("mesh", image=_sample_image(tmp_path))
 
     assert result.is_error is False
     assert any(block.type == "resource" for block in result.content)

@@ -20,7 +20,6 @@ from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
 from splat.application.embed import EmbedUseCase
-from splat.application.mesh import PredictMeshUseCase
 from splat.application.reconstruct import ReconstructUseCase
 from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
@@ -44,7 +43,6 @@ from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.embedding import EmbeddingBackend
 from splat.ports.manifest_repository import ManifestRepository
-from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.render import RenderBackend
 from splat.ports.segmentation import SegmentationBackend
@@ -359,34 +357,6 @@ def _shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     except Exception as exc:
         raise SplatDomainError(f"Could not export mesh as {export_format!r}: {exc}") from exc
     return buf.getvalue()
-
-
-def run_mesh(
-    backend: MeshPredictionBackend,
-    cache: ManifestRepository,
-    *,
-    model_name: str,
-    input_asset: Manifest,
-    params: dict,
-) -> Manifest:
-    cache_key = compute_cache_key(
-        stage="mesh", model=model_name, params=params, parent_ids=(input_asset.id,)
-    )
-    if (hit := cache.find(cache_key)) is not None:
-        return hit
-
-    shape = PredictMeshUseCase(backend).execute(input_asset.content_path, **params)
-
-    return cache.put(
-        cache_key,
-        kind=ManifestKind.SHAPE_3D,
-        content_bytes=_shape_to_mesh_bytes(shape, "glb"),
-        ext="glb",
-        metadata=MeshMetadata(extra=shape.metadata),
-        params=params,
-        parent_ids=[input_asset.id],
-        created_by=f"mesh:{model_name}",
-    )
 
 
 def _gaussian_to_ply_bytes(cloud: GaussianCloud) -> bytes:

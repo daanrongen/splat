@@ -22,7 +22,6 @@ from splat.domain.manifest_metadata import (
     DepthMetadata,
     EmbeddingMetadata,
     ManifestMetadata,
-    MeshMetadata,
     RasterMetadata,
     StickerMetadata,
 )
@@ -31,7 +30,6 @@ from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
-from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
@@ -298,28 +296,6 @@ class RemoteSplatClient:
                     params={"device": request.device},
                     parent_ids=[input_asset.id],
                     created_by=f"embed:{request.model}",
-                )
-            )
-        return results
-
-    def mesh(self, request: MeshRequest) -> list[Manifest]:
-        results = []
-        for input_asset in request.inputs:
-            files = {
-                "image": (input_asset.content_path.name, input_asset.content_path.read_bytes())
-            }
-            form = {"model": request.model, "device": request.device}
-            response = self._client.post("/mesh", files=files, data=form)
-            _raise_for_domain_error(response)
-            results.append(
-                self._store_asset(
-                    response.headers["X-Splat-Asset-Id"],
-                    kind=ManifestKind.SHAPE_3D,
-                    content=response.content,
-                    ext="glb",
-                    metadata=MeshMetadata(),
-                    parent_ids=[input_asset.id],
-                    created_by=f"mesh:{request.model}",
                 )
             )
         return results

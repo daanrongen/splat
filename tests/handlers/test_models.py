@@ -42,7 +42,7 @@ def test_pull_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    models_handler.pull("triposr")
+    models_handler.pull("mvsplat")
 
     assert len(fake.pulled) == 1
 
@@ -71,7 +71,7 @@ def test_rm_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    models_handler.rm("triposr")
+    models_handler.rm("mvsplat")
 
     assert len(fake.removed) == 1
 

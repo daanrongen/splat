@@ -4,7 +4,6 @@ from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.domain.errors import UnsupportedFormat
 from splat.registry.wiring import (
     get_embedding_backend,
-    get_mesh_backend,
     get_reader,
     get_reconstruction_backend,
     get_render_backend,
@@ -64,16 +63,6 @@ def test_get_render_backend_unknown_model_raises():
 def test_get_render_backend_wires_known_model():
     backend = get_render_backend("blender")
     assert backend.name == "blender"
-
-
-def test_get_mesh_backend_unknown_model_raises():
-    with pytest.raises(UnsupportedFormat, match="Unknown mesh model"):
-        get_mesh_backend("not-a-real-model")
-
-
-def test_get_mesh_backend_wires_known_model():
-    backend = get_mesh_backend("triposr", device="cpu")
-    assert backend.name == "triposr"
 
 
 def test_get_embedding_backend_unknown_model_raises():

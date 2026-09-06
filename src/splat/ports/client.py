@@ -30,7 +30,6 @@ from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
-from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
@@ -86,8 +85,6 @@ class SplatClient(Protocol):
     def upscale(self, request: UpscaleRequest) -> list[Manifest]: ...
 
     def embed(self, request: EmbedRequest) -> list[Manifest]: ...
-
-    def mesh(self, request: MeshRequest) -> list[Manifest]: ...
 
     def gaussian(self, request: GaussianRequest) -> list[Manifest]: ...
 
