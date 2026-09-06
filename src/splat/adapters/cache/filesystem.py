@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from splat.adapters.formats.image import decode_rgb_or_rgba
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
@@ -17,7 +18,6 @@ from splat.domain.manifest_metadata import (
     metadata_from_dict,
     metadata_to_dict,
 )
-from splat.image_io import decode_rgb_or_rgba
 from splat.paths import asset_cache_dir
 
 _RASTER_KINDS = (ManifestKind.IMAGE, ManifestKind.STICKER)

@@ -19,7 +19,3 @@ mise.local.toml
 
 # Claude Code local bookkeeping
 .claude/
-
-# Blender MCP add-on + server (mise run blender-mcp)
-.blender-mcp/
-.mcp.json

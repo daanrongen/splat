@@ -12,9 +12,9 @@ from pathlib import Path
 
 import numpy as np
 
+from splat.adapters.formats.image import read_rgb, resize
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Shape3D
-from splat.image_io import read_rgb, resize
 
 
 def execute(image_path: Path, depth_map: DepthMap, *, max_depth_jump: float = 0.05) -> Shape3D:

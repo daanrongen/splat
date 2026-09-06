@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 import trimesh
 
+from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png
 from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
@@ -38,7 +39,6 @@ from splat.domain.manifest_metadata import (
     SegmentManifestMetadata,
     StickerMetadata,
 )
-from splat.image_io import decode_rgb_or_rgba, encode_png
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
@@ -439,15 +439,16 @@ def run_gaussian(
     )
 
 
-def run_blender(
+def run_render(
     backend: RenderBackend,
     cache: ManifestRepository,
     *,
+    model_name: str,
     input_asset: Manifest,
     params: dict,
 ) -> Manifest:
     cache_key = compute_cache_key(
-        stage="blender", model=backend.name, params=params, parent_ids=(input_asset.id,)
+        stage="render", model=model_name, params=params, parent_ids=(input_asset.id,)
     )
     if (hit := cache.find(cache_key)) is not None:
         return hit
@@ -467,7 +468,7 @@ def run_blender(
         metadata=RasterMetadata(output_width=output.shape[1], output_height=output.shape[0]),
         params=params,
         parent_ids=[input_asset.id],
-        created_by=f"blender:{backend.name}",
+        created_by=f"render:{model_name}",
     )
 
 

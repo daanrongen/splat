@@ -94,7 +94,7 @@ def model_license(name: str) -> ModelLicense:
 
 
 def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBackend:
-    from splat.registry.diffusion import DIFFUSION_CATALOG
+    from splat.registry.diffuse import DIFFUSION_CATALOG
 
     try:
         descriptor = DIFFUSION_CATALOG[name]
@@ -113,7 +113,7 @@ def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBacken
 
 
 def get_segmentation_backend(name: str, *, device: str = "auto") -> SegmentationBackend:
-    from splat.registry.segmentation import SEGMENTATION_CATALOG
+    from splat.registry.segment import SEGMENTATION_CATALOG
 
     try:
         descriptor = SEGMENTATION_CATALOG[name]
@@ -128,6 +128,14 @@ def get_segmentation_backend(name: str, *, device: str = "auto") -> Segmentation
     )
 
 
+def get_render_backend(name: str = "blender") -> RenderBackend:
+    if name != "blender":
+        raise UnsupportedFormat(f"Unknown render backend {name!r}. Available: blender")
+    from splat.adapters.render.blender import BlenderBackend
+
+    return BlenderBackend()
+
+
 def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBackend:
     from splat.registry.mesh import MESH_PREDICTION_CATALOG
 
@@ -140,14 +148,6 @@ def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBacken
     return descriptor.backend_cls(
         hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
     )
-
-
-def get_render_backend(name: str = "blender") -> RenderBackend:
-    if name != "blender":
-        raise UnsupportedFormat(f"Unknown render backend {name!r}. Available: blender")
-    from splat.adapters.render.blender import BlenderRenderBackend
-
-    return BlenderRenderBackend()
 
 
 def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:
@@ -179,7 +179,7 @@ def get_caption_backend(name: str, *, device: str = "auto") -> CaptioningBackend
 
 
 def get_embedding_backend(name: str, *, device: str = "auto") -> EmbeddingBackend:
-    from splat.registry.embedding import EMBEDDING_CATALOG
+    from splat.registry.embed import EMBEDDING_CATALOG
 
     try:
         descriptor = EMBEDDING_CATALOG[name]

@@ -2,12 +2,12 @@ import numpy as np
 import pytest
 
 from splat.adapters.cache.filesystem import FilesystemManifestRepository
+from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.application.pipeline import run_upscale
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
-from splat.image_io import read_rgb_or_rgba
 from tests.image_helpers import sample_rgba, write_sample_png
 
 
@@ -29,7 +29,7 @@ class FakeUpscaleBackend:
 
 def test_upscale_use_case_preserves_alpha(tmp_path):
     path = tmp_path / "sticker.png"
-    from splat.image_io import write_png
+    from splat.adapters.formats.image import write_png
 
     write_png(path, sample_rgba((2, 2), color=(10, 20, 30, 128)))
 

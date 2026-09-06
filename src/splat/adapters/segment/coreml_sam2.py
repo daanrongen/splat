@@ -17,9 +17,9 @@ import coremltools as ct
 import numpy as np
 from huggingface_hub import snapshot_download
 
+from splat.adapters.formats.image import read_rgb, resize
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
-from splat.image_io import read_rgb, resize
 from splat.paths import model_cache_dir
 
 _INPUT_SIZE = (1024, 1024)  # (W, H), fixed by Apple's conversion

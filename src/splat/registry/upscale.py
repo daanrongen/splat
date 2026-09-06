@@ -30,7 +30,7 @@ class UpscaleModelDescriptor:
 
 
 def _build_catalog() -> dict[str, UpscaleModelDescriptor]:
-    from splat.adapters.upscaling.realesrgan_mlx import RealESRGANMLXBackend
+    from splat.adapters.upscale.realesrgan_mlx import RealESRGANMLXBackend
 
     return {
         "realesrgan-mlx": UpscaleModelDescriptor(

@@ -19,10 +19,10 @@ class _Setting:
 
 def _settings() -> list[_Setting]:
     from splat.registry.depth import DEPTH_CATALOG
-    from splat.registry.diffusion import DIFFUSION_CATALOG
+    from splat.registry.diffuse import DIFFUSION_CATALOG
     from splat.registry.gaussian import GAUSSIAN_CATALOG
     from splat.registry.mesh import MESH_PREDICTION_CATALOG
-    from splat.registry.segmentation import SEGMENTATION_CATALOG
+    from splat.registry.segment import SEGMENTATION_CATALOG
     from splat.registry.upscale import UPSCALE_CATALOG
 
     return [

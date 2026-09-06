@@ -6,10 +6,10 @@ import numpy as np
 from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemManifestRepository
+from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.cli.main import app
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
-from splat.image_io import read_rgb_or_rgba
 from tests.image_helpers import write_sample_png
 
 runner = CliRunner()

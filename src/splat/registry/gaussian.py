@@ -21,8 +21,8 @@ def _build_catalog() -> dict[str, GaussianModelDescriptor]:
     # Imported lazily so a missing/optional adapter dependency can't break
     # every other command — only `splat models pull/gaussian --model ...`
     # needs the reconstruction adapters to actually import cleanly.
-    from splat.adapters.reconstruction.mlx3d_capture import MLX3DCaptureBackend
-    from splat.adapters.reconstruction.mvsplat import MVSplatBackend
+    from splat.adapters.gaussian.mlx3d_capture import MLX3DCaptureBackend
+    from splat.adapters.gaussian.mvsplat import MVSplatBackend
     from splat.domain.value_objects import MIT
 
     return {

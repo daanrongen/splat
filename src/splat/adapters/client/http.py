@@ -12,6 +12,7 @@ from pathlib import Path
 import httpx
 import numpy as np
 
+from splat.adapters.formats.image import decode_rgb_or_rgba, read_rgb_or_rgba
 from splat.application.tools.convert import ConvertResult
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
@@ -45,7 +46,6 @@ from splat.http._schemas import (
     ValidationResponse,
 )
 from splat.http._schemas import ModelSummary as WireModelSummary
-from splat.image_io import decode_rgb_or_rgba, read_rgb_or_rgba
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 from splat.registry.wiring import get_manifest_repository, get_reader
 

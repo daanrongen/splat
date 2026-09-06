@@ -25,7 +25,3 @@ run = [
     "uv run ruff format --check .",
     "uv run pytest",
 ]
-
-[tasks."blender-mcp"]
-description = "Download the official Blender MCP add-on + server into .blender-mcp/ (gitignored)"
-run = "bash scripts/blender_mcp_prepare.sh"

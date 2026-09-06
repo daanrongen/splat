@@ -1,6 +1,6 @@
 import numpy as np
 
-from splat.adapters.upscaling.realesrgan_mlx import RealESRGANMLXBackend
+from splat.adapters.upscale.realesrgan_mlx import RealESRGANMLXBackend
 from splat.domain.value_objects import BSD_3_CLAUSE
 
 

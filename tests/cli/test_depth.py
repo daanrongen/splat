@@ -6,11 +6,11 @@ import numpy as np
 from typer.testing import CliRunner
 
 from splat.adapters.cache.filesystem import FilesystemManifestRepository
+from splat.adapters.formats.image import read_rgb
 from splat.cli.main import app
 from splat.domain.image_space import DepthMap
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import APPLE_ASCL
-from splat.image_io import read_rgb
 from tests.image_helpers import write_sample_png
 
 runner = CliRunner()

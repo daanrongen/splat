@@ -11,7 +11,6 @@ os.environ.setdefault("SPLAT_ASSET_CACHE_DIR", str(asset_cache_dir()))
 
 import typer
 
-from splat.cli.blender import blender
 from splat.cli.caption import caption
 from splat.cli.depth import depth
 from splat.cli.diffuse import diffuse
@@ -24,6 +23,7 @@ from splat.cli.manifest import manifest_app
 from splat.cli.mcp import mcp
 from splat.cli.mesh import mesh
 from splat.cli.models import models_app
+from splat.cli.render import render
 from splat.cli.segment import segment
 from splat.cli.tools import tools_app
 from splat.cli.train import train
@@ -46,7 +46,7 @@ app.command("depth")(depth)
 app.command("upscale")(upscale)
 app.command("gaussian")(gaussian)
 app.command("mesh")(mesh)
-app.command("blender")(blender)
+app.command("render")(render)
 app.command("train")(train)
 app.add_typer(tools_app, name="tools")
 app.command("info")(info)

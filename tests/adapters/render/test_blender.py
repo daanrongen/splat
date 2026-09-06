@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from splat.adapters.render.blender import BlenderRenderBackend, _resolve_blender_bin
+from splat.adapters.render.blender import BlenderBackend, _resolve_blender_bin
 from splat.domain.errors import RenderBackendError
 
 
@@ -39,7 +39,7 @@ def test_render_invokes_blender_with_expected_command(monkeypatch, tmp_path, syn
     monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
 
     output = tmp_path / "render.png"
-    BlenderRenderBackend().render(synthetic_cloud, output, width=640, height=360, samples=8)
+    BlenderBackend().render(synthetic_cloud, output, width=640, height=360, samples=8)
 
     assert output.read_bytes() == b"fake png"
     command = captured["command"]
@@ -58,4 +58,4 @@ def test_render_raises_on_nonzero_exit(monkeypatch, tmp_path, synthetic_cloud):
     monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
 
     with pytest.raises(RenderBackendError, match="boom"):
-        BlenderRenderBackend().render(synthetic_cloud, tmp_path / "render.png")
+        BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")

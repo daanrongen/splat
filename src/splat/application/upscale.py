@@ -3,8 +3,8 @@ from pathlib import Path
 
 import numpy as np
 
+from splat.adapters.formats.image import read_rgb_or_rgba, resize
 from splat.domain.errors import SplatDomainError
-from splat.image_io import read_rgb_or_rgba, resize
 from splat.ports.upscaling import UpscalingBackend
 
 

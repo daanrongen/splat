@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import DepthMap, Sticker
@@ -17,7 +18,6 @@ from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.upscale import UpscaleRequest
-from splat.image_io import read_rgb_or_rgba
 from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import sample_png_bytes, write_sample_png
 

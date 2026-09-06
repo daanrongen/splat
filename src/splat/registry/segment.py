@@ -25,8 +25,8 @@ class SegmentationModelDescriptor:
 
 
 def _build_catalog() -> dict[str, SegmentationModelDescriptor]:
-    from splat.adapters.segmentation.coreml_sam2 import CoreMLSam2Backend
-    from splat.adapters.segmentation.mlx_sam import MLXSamBackend
+    from splat.adapters.segment.coreml_sam2 import CoreMLSam2Backend
+    from splat.adapters.segment.mlx_sam import MLXSamBackend
     from splat.domain.value_objects import APACHE_2_0
 
     return {
