@@ -377,32 +377,34 @@ Every function takes a file path, `@<asset-id>`, or a `Manifest` object (or a li
 
 ## Environment
 
-Cache roots default under `$XDG_CACHE_HOME/splat` or `~/.cache/splat`:
+Raw model downloads go to `HF_HOME` (`$XDG_CACHE_HOME/huggingface` by default, shared with every other Hugging Face tool on the machine). Splat-specific caches default under `$XDG_CACHE_HOME/splat` or `~/.cache/splat`:
 
 ```text
 $XDG_CACHE_HOME/splat/
-|-- huggingface/
-|-- models/
-`-- assets/
+|-- models/     # converted or compiled model artifacts (CoreML, MLX)
+`-- assets/     # pipeline asset cache, one file per manifest
 ```
 
-Important settings:
+Every command option that can be defaulted from the environment declares it as `SPLAT_<COMMAND>_<PARAM>`, so `splat <command> --help` names the variable next to the option and `splat env` lists all of them with their resolved value and source:
+
+```sh
+splat env
+export SPLAT_DIFFUSE_MODEL=sd21-coreml   # applies to every later `splat diffuse`
+```
+
+Precedence for command defaults is CLI flag, then `os.environ`, then mise's `[env]` block, then the built-in default. `splat env`'s table is read off the Typer commands themselves, so it cannot list a variable the CLI does not honor.
+
+Settings that are not command options:
 
 | Env var | Purpose |
 |---|---|
-| `SPLAT_CACHE_ROOT` | Base cache directory |
 | `SPLAT_MODEL_CACHE_DIR` | Converted or compiled model cache |
 | `SPLAT_ASSET_CACHE_DIR` | Pipeline asset cache |
 | `SPLAT_URL` | Remote `splat http` base URL for client commands |
-| `SPLAT_HOST` | Bind host and port for `splat http` |
-| `SPLAT_UPSCALE_MODEL` | Default model for `splat upscale` |
-| `SPLAT_UPSCALE_FACTOR` | Default factor for `splat upscale` |
-| `SPLAT_UPSCALE_TILE` | Default tile size for `splat upscale` |
-| `SPLAT_<COMMAND>_<PARAM>` | Default value for supported command options |
+| `SPLAT_BLENDER_BIN` | Blender executable for `splat render` |
+| `SPLAT_RENDER_TIMEOUT` | Seconds before a Blender render is killed (`0` disables) |
 
-Run `splat env` to inspect every resolved setting, its source, and whether `SPLAT_URL` is reachable.
-
-Precedence for command defaults is CLI flag, `os.environ`, `mise env --json`, then built-in default.
+`SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
 
 ## Architecture
 

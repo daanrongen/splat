@@ -12,9 +12,17 @@ def extract_surface(
     input: Path = typer.Argument(...),
     output: Path = typer.Argument(...),
     to: str = typer.Option(None, "-t", "--to", help="obj | glb | gltf"),
-    depth: int = typer.Option(9, "--depth", help="Poisson reconstruction octree depth."),
+    depth: int = typer.Option(
+        9,
+        "--depth",
+        help="Poisson reconstruction octree depth.",
+        envvar="SPLAT_EXTRACT_SURFACE_DEPTH",
+    ),
     opacity_threshold: float = typer.Option(
-        0.1, "--opacity-threshold", help="Drop Gaussians below this opacity before reconstruction."
+        0.1,
+        "--opacity-threshold",
+        help="Drop Gaussians below this opacity before reconstruction.",
+        envvar="SPLAT_EXTRACT_SURFACE_OPACITY_THRESHOLD",
     ),
 ) -> None:
     """Extract a textured surface mesh from a Gaussian splat (Poisson reconstruction)."""

@@ -16,7 +16,11 @@ def displace_height(
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Write the mesh file here."),
     to: str | None = typer.Option(
-        None, "-t", "--to", help="Mesh format: glb | obj | ply (inferred from -o by default)."
+        None,
+        "-t",
+        "--to",
+        help="Mesh format: glb | obj | ply (inferred from -o by default).",
+        envvar="SPLAT_DISPLACE_HEIGHT_TO",
     ),
 ) -> None:
     """Displace a depth map's per-pixel height into a triangulated, textured mesh."""
