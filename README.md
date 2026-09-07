@@ -134,24 +134,28 @@ splat tools --help
 
 ### tools convert
 
-`splat tools convert` rewrites Gaussian splat files between registered file formats.
+`splat tools convert` rewrites Gaussian splat files between registered file formats: `.ply` (lossless), `.splat` (antimatter15's 32-byte-per-point web-viewer format), and `.sog` (a spatially-sorted, image-codec-compressed bundle - see below).
 
 ```sh
 splat tools convert scene.ply scene.splat
 splat tools convert scene.ply -o scene.splat
+splat tools convert scene.ply scene.sog
 ```
 
 Key options: `-f/--from`, `-t/--to`, `-o/--output`.
 
 ### tools compress
 
-`splat tools compress` prunes and quantizes a Gaussian splat for a named delivery profile.
+`splat tools compress` prunes and quantizes a Gaussian splat for a named delivery profile. Since the output format is inferred from the output path (any registered format), writing to `.sog` combines pruning with the much higher compression ratio described below.
 
 ```sh
 splat tools compress scene.ply scene.web.ply --profile web-delivery
+splat tools compress scene.ply scene.web.sog --profile web-delivery
 ```
 
 Key options: `--profile web-delivery|archival`.
+
+`.sog` (SOG-inspired, #65) is a spatially-sorted, image-codec-compressed bundle: points are reordered along a 3D Morton (Z-order) curve so spatially nearby Gaussians land near each other in raster order, each attribute (position, scale, rotation, SH-degree-0 color/opacity) is packed into an 8/16-bit-per-channel grid, and each grid is PNG-encoded - the sort is what lets PNG's DEFLATE compress far better than on unsorted data. This is a simplified, license-clean take on Self-Organizing Gaussians (SOG, ECCV'24) and PlayCanvas's real `.sog` format: Morton order stands in for PLAS's differentiable grid optimization, and plain PNG stands in for WebP plus per-attribute codebooks - not bit-compatible with either, but on a real 38k-point capture it took a 9.5MB `.ply` down to 535KB (~18x), beating `.splat`'s already-lossy 1.2MB. Higher-order SH is always dropped, like `web-delivery`.
 
 ### tools declutter
 
