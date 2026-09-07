@@ -186,11 +186,14 @@ Key options: `-t/--to glb|obj|ply`, `-o/--output`.
 
 ### tools extract.surface
 
-`splat tools extract.surface` is reserved for deterministic Gaussian-splat-to-surface extraction and is currently a stub.
+`splat tools extract.surface` extracts a textured triangle mesh from a `GaussianCloud` via screened Poisson surface reconstruction (Kazhdan & Hoppe) over Open3D - Gaussians below `--opacity-threshold` are dropped first (they're usually background/floaters, not surface), remaining means become an oriented point cloud, and low-density Poisson vertices are trimmed to cut the characteristic "bubble" artifact. Output format is inferred from the output path's extension (`.obj`, `.glb`, `.gltf`); `.usdz` isn't supported yet.
 
 ```sh
-splat tools extract.surface scene.ply scene.obj
+splat tools extract.surface scene.ply scene.glb
+splat tools extract.surface scene.ply scene.obj --depth 10 --opacity-threshold 0.2
 ```
+
+Key options: `-t/--to obj|glb|gltf`, `--depth` (Poisson octree depth, default 9), `--opacity-threshold` (default 0.1).
 
 ## Inspection
 
@@ -270,9 +273,10 @@ flowchart LR
     gaussian -->|gaussian_cloud .ply| convert([tools convert])
     gaussian -->|gaussian_cloud .ply| compress([tools compress])
     gaussian -->|gaussian_cloud .ply| declutter([tools declutter])
+    gaussian -->|gaussian_cloud .ply| extract([tools extract.surface])
 ```
 
-`tools convert`/`tools compress`/`tools declutter`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages. `tools normalize.color` and `tools displace.height` are still cached pipeline stages like any model-backed command — "tools" means "no swappable model catalog," not "no `Manifest`."
+`tools convert`/`tools compress`/`tools declutter`/`tools extract.surface`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages. `tools normalize.color` and `tools displace.height` are still cached pipeline stages like any model-backed command — "tools" means "no swappable model catalog," not "no `Manifest`."
 
 ## HTTP Server
 
@@ -296,6 +300,7 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | `POST /convert` | `splat tools convert` | converted file bytes |
 | `POST /compress` | `splat tools compress` | compressed file bytes |
 | `POST /declutter` | `splat tools declutter` | decluttered file bytes |
+| `POST /extract-surface` | `splat tools extract.surface` | mesh file bytes |
 | `POST /info` | `splat info` | JSON summary |
 | `POST /validate` | `splat validate` | JSON summary |
 | `GET /assets/{id}` | asset fetch | raw asset bytes |
@@ -322,7 +327,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, `tools_normalize_color`, and `tools_displace_height`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, `tools_normalize_color`, `tools_displace_height`, and `tools_extract_surface`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
 
 ```sh
 splat mcp

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from splat.application.models_admin import image_count_range, model_source_label
 from splat.application.tools.convert import ConvertResult
+from splat.application.tools.extract_surface import ExtractSurfaceResult
 from splat.domain.gaussians import GaussianCloud
 from splat.domain.manifest import Manifest
 from splat.handlers import models as models_handler
@@ -25,6 +26,8 @@ from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.tools.convert import handle as handle_convert
 from splat.handlers.tools.declutter import DeclutterRequest
 from splat.handlers.tools.declutter import handle as handle_declutter
+from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
+from splat.handlers.tools.extract_surface import handle as handle_extract_surface
 from splat.handlers.upscale import UpscaleRequest
 from splat.handlers.upscale import handle as handle_upscale
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
@@ -63,6 +66,9 @@ class LocalSplatClient:
 
     def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud:
         return handle_declutter(request)
+
+    def tools_extract_surface(self, request: ExtractSurfaceRequest) -> ExtractSurfaceResult:
+        return handle_extract_surface(request)
 
     def info(self, path: Path) -> InfoSummary:
         cloud = handle_info(path)
