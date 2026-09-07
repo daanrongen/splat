@@ -41,7 +41,7 @@ def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
     np.savez(path, means=cloud.means.astype(np.float32), colors=colors)
 
 
-class BlenderRenderBackend:
+class BlenderBackend:
     name = "blender"
 
     def render(

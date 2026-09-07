@@ -1,5 +1,5 @@
 """The universal currency that flows through the generative pipeline
-(diffuse -> segment -> depth -> mesh -> gaussian), the same role
+(diffuse -> segment -> depth -> gaussian -> render), the same role
 GaussianCloud plays for format conversion: one canonical shape every stage
 consumes and produces, so stages chain without knowing about each other.
 

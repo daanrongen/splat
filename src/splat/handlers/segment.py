@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from splat.application.pipeline import run_segment
 from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
-from splat.registry.segmentation import SEGMENT_CONTRACT
+from splat.registry.segment import SEGMENT_CONTRACT
 from splat.registry.wiring import get_manifest_repository, get_segmentation_backend
 
 

@@ -18,9 +18,9 @@ import coremltools as ct
 import numpy as np
 from huggingface_hub import snapshot_download
 
-from splat.adapters.diffusion._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
+from splat.adapters.diffuse._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
+from splat.adapters.formats.image import write_png
 from splat.domain.value_objects import ModelLicense
-from splat.image_io import write_png
 from splat.paths import model_cache_dir
 
 _PACKAGE_PREFIX = "Stable_Diffusion_version_stabilityai_stable-diffusion-2-1-base"

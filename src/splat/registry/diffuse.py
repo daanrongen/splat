@@ -18,8 +18,8 @@ class DiffusionModelDescriptor:
 
 
 def _build_catalog() -> dict[str, DiffusionModelDescriptor]:
-    from splat.adapters.diffusion.coreml_stable_diffusion import CoreMLStableDiffusionBackend
-    from splat.adapters.diffusion.mlx_stable_diffusion import MLXStableDiffusionBackend
+    from splat.adapters.diffuse.coreml_stable_diffusion import CoreMLStableDiffusionBackend
+    from splat.adapters.diffuse.mlx_stable_diffusion import MLXStableDiffusionBackend
     from splat.domain.value_objects import OPENRAIL_M, SAI_NC_COMMUNITY
 
     return {

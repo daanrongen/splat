@@ -32,7 +32,7 @@ class EmbeddingModelDescriptor:
 
 
 def _build_catalog() -> dict[str, EmbeddingModelDescriptor]:
-    from splat.adapters.embedding.mobileclip import MobileCLIPOpenCLIPBackend
+    from splat.adapters.embed.mobileclip import MobileCLIPOpenCLIPBackend
     from splat.domain.value_objects import APPLE_AMLR
 
     return {

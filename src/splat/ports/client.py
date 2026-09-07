@@ -12,10 +12,10 @@ presentation data, not every internal domain detail.
 `splat tools displace.height` isn't part of this contract: `splat http`
 doesn't expose a route for it (out of #13's scope), so it stays wired
 directly to handlers.tools.displace_height, unaffected by SPLAT_URL, until
-a future PR adds that route. `splat blender` follows the same pattern (see
-#50): it needs a Blender install on whichever machine actually renders, so
-it stays wired directly to handlers.blender for now rather than assuming
-SPLAT_URL's remote-execution model fits it unexamined.
+a future PR adds that route. `splat render` follows the same pattern (see
+#50): its `blender` model needs a Blender install on whichever machine
+actually renders, so it stays wired directly to handlers.render for now
+rather than assuming SPLAT_URL's remote-execution model fits it unexamined.
 """
 
 from dataclasses import dataclass
@@ -30,7 +30,6 @@ from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
-from splat.handlers.mesh import MeshRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
@@ -86,8 +85,6 @@ class SplatClient(Protocol):
     def upscale(self, request: UpscaleRequest) -> list[Manifest]: ...
 
     def embed(self, request: EmbedRequest) -> list[Manifest]: ...
-
-    def mesh(self, request: MeshRequest) -> list[Manifest]: ...
 
     def gaussian(self, request: GaussianRequest) -> list[Manifest]: ...
 

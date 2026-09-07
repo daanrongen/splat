@@ -1,9 +1,9 @@
 import numpy as np
 from fastapi.testclient import TestClient
 
+from splat.adapters.formats.image import decode_rgb_or_rgba
 from splat.domain.value_objects import MIT
 from splat.http.app import app
-from splat.image_io import decode_rgb_or_rgba
 from tests.image_helpers import sample_png_bytes
 
 client = TestClient(app)

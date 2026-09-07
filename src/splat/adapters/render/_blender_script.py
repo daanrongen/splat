@@ -2,7 +2,7 @@
 # <this file> -- --input ... --output ...`), not splat's venv - only
 # bpy/numpy/stdlib are available here, no `splat` imports.
 #
-# Reads the .npz dump written by BlenderRenderBackend (means/colors/radius)
+# Reads the .npz dump written by BlenderBackend (means/colors/radius)
 # and renders it as a native Blender point cloud colored by the flattened SH
 # DC term, framed by a robust (median) center/radius - the same technique
 # validated interactively over blender-mcp before this was wired up as a

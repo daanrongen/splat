@@ -12,9 +12,9 @@ import numpy as np
 import torch
 from transformers import DepthProForDepthEstimation, DepthProImageProcessor
 
+from splat.adapters.formats.image import read_rgb
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import ModelLicense
-from splat.image_io import read_rgb
 
 
 def _resolve_device(device: str) -> str:

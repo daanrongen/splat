@@ -11,10 +11,10 @@ import pytest
 import uvicorn
 from typer.testing import CliRunner
 
+from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.cli.main import app
 from splat.domain.value_objects import MIT
 from splat.http.app import app as http_app
-from splat.image_io import read_rgb_or_rgba
 from tests.image_helpers import sample_png_bytes, write_sample_png
 
 runner = CliRunner()

@@ -1,7 +1,7 @@
 import mlx.core as mx
 import numpy as np
 
-from splat.image_io import resize
+from splat.adapters.formats.image import resize
 
 
 class ResizeLongestSide:

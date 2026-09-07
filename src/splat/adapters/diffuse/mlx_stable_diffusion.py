@@ -8,12 +8,12 @@ from pathlib import Path
 import mlx.core as mx
 import numpy as np
 
-from splat.adapters.diffusion._vendor.mlx_stable_diffusion import (
+from splat.adapters.diffuse._vendor.mlx_stable_diffusion import (
     StableDiffusion,
     StableDiffusionXL,
 )
+from splat.adapters.formats.image import write_png
 from splat.domain.value_objects import ModelLicense
-from splat.image_io import write_png
 
 # The vendored loader only recognizes repo ids it has an explicit path-map
 # entry for (see _vendor/mlx_stable_diffusion/model_io.py's `_MODELS`) —

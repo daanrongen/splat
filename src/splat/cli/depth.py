@@ -3,12 +3,12 @@ from pathlib import Path
 import numpy as np
 import typer
 
+from splat.adapters.formats.image import write_png
 from splat.cli._console import console, error
 from splat.cli._pipeline_io import report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.depth import DepthRequest
-from splat.image_io import write_png
 from splat.registry.wiring import get_client, get_manifest_repository
 
 

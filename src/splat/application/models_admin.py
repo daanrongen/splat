@@ -4,11 +4,10 @@ from splat.domain.errors import UnsupportedFormat
 from splat.ports.model_source import ModelSource
 from splat.registry.caption import CAPTION_CATALOG
 from splat.registry.depth import DEPTH_CATALOG
-from splat.registry.diffusion import DIFFUSION_CATALOG
-from splat.registry.embedding import EMBEDDING_CATALOG
+from splat.registry.diffuse import DIFFUSION_CATALOG
+from splat.registry.embed import EMBEDDING_CATALOG
 from splat.registry.gaussian import GAUSSIAN_CATALOG
-from splat.registry.mesh import MESH_PREDICTION_CATALOG
-from splat.registry.segmentation import SEGMENTATION_CATALOG
+from splat.registry.segment import SEGMENTATION_CATALOG
 from splat.registry.upscale import UPSCALE_CATALOG
 
 
@@ -21,7 +20,6 @@ def _all_catalogs() -> dict[str, Any]:
         EMBEDDING_CATALOG,
         SEGMENTATION_CATALOG,
         DEPTH_CATALOG,
-        MESH_PREDICTION_CATALOG,
         UPSCALE_CATALOG,
     ):
         merged.update(catalog)

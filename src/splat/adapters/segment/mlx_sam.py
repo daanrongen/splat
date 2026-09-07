@@ -15,10 +15,10 @@ import mlx.core as mx
 import numpy as np
 from huggingface_hub import snapshot_download
 
-from splat.adapters.segmentation._vendor.mlx_sam import SamAutomaticMaskGenerator, sam
+from splat.adapters.formats.image import read_rgb
+from splat.adapters.segment._vendor.mlx_sam import SamAutomaticMaskGenerator, sam
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
-from splat.image_io import read_rgb
 from splat.paths import model_cache_dir
 
 _TRANSPOSE_TO_NHWC = {

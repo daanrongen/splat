@@ -4,7 +4,7 @@ from splat.application.pipeline import run_embed_image, run_embed_text
 from splat.domain.contracts import validate_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
-from splat.registry.embedding import EMBED_IMAGE_CONTRACT
+from splat.registry.embed import EMBED_IMAGE_CONTRACT
 from splat.registry.wiring import get_embedding_backend, get_manifest_repository
 
 

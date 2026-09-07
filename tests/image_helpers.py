@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from splat.image_io import encode_png, write_png
+from splat.adapters.formats.image import encode_png, write_png
 
 
 def sample_rgb(

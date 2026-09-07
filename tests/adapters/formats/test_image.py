@@ -1,4 +1,4 @@
-from splat.image_io import (
+from splat.adapters.formats.image import (
     decode_rgb_or_rgba,
     encode_png,
     read_rgb,

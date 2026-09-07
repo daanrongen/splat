@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 from splat.ports.diffusion import DiffusionBackend
 from splat.ports.embedding import EmbeddingBackend
 from splat.ports.manifest_repository import ManifestRepository
-from splat.ports.mesh import MeshPredictionBackend
 from splat.ports.model_source import ModelSource
 from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.render import RenderBackend
@@ -94,7 +93,7 @@ def model_license(name: str) -> ModelLicense:
 
 
 def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBackend:
-    from splat.registry.diffusion import DIFFUSION_CATALOG
+    from splat.registry.diffuse import DIFFUSION_CATALOG
 
     try:
         descriptor = DIFFUSION_CATALOG[name]
@@ -113,7 +112,7 @@ def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBacken
 
 
 def get_segmentation_backend(name: str, *, device: str = "auto") -> SegmentationBackend:
-    from splat.registry.segmentation import SEGMENTATION_CATALOG
+    from splat.registry.segment import SEGMENTATION_CATALOG
 
     try:
         descriptor = SEGMENTATION_CATALOG[name]
@@ -128,26 +127,12 @@ def get_segmentation_backend(name: str, *, device: str = "auto") -> Segmentation
     )
 
 
-def get_mesh_backend(name: str, *, device: str = "auto") -> MeshPredictionBackend:
-    from splat.registry.mesh import MESH_PREDICTION_CATALOG
-
-    try:
-        descriptor = MESH_PREDICTION_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(MESH_PREDICTION_CATALOG))
-        raise UnsupportedFormat(f"Unknown mesh model {name!r}. Available: {available}") from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
-    )
-
-
 def get_render_backend(name: str = "blender") -> RenderBackend:
     if name != "blender":
         raise UnsupportedFormat(f"Unknown render backend {name!r}. Available: blender")
-    from splat.adapters.render.blender import BlenderRenderBackend
+    from splat.adapters.render.blender import BlenderBackend
 
-    return BlenderRenderBackend()
+    return BlenderBackend()
 
 
 def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:
@@ -179,7 +164,7 @@ def get_caption_backend(name: str, *, device: str = "auto") -> CaptioningBackend
 
 
 def get_embedding_backend(name: str, *, device: str = "auto") -> EmbeddingBackend:
-    from splat.registry.embedding import EMBEDDING_CATALOG
+    from splat.registry.embed import EMBEDDING_CATALOG
 
     try:
         descriptor = EMBEDDING_CATALOG[name]
