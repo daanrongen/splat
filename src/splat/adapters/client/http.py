@@ -430,7 +430,14 @@ class RemoteSplatClient:
         _raise_for_domain_error(response)
         rows = [WireModelSummary.model_validate(item) for item in response.json()]
         return [
-            ModelSummary(name=r.name, runtime=r.runtime, license=r.license, cached=r.cached)
+            ModelSummary(
+                name=r.name,
+                stage=r.stage,
+                runtime=r.runtime,
+                license=r.license,
+                commercial=r.commercial,
+                cached=r.cached,
+            )
             for r in rows
         ]
 

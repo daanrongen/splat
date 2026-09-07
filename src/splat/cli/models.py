@@ -1,5 +1,6 @@
 import typer
 
+from splat.cli import _table as table
 from splat.cli._console import console, error, warn
 from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_client
@@ -9,11 +10,25 @@ models_app = typer.Typer(help="Manage locally cached model weights.", no_args_is
 
 @models_app.command("list")
 def list_models() -> None:
-    """List catalog models and whether their weights are cached locally."""
+    """List catalog models, the stage each serves, and whether they're cached."""
     rows = get_client().models_list()
-    for row in rows:
-        status = "cached" if row.cached else "not pulled"
-        console.print(f"{row.name:20} {row.runtime:8} {row.license:24} {status}")
+    # license last: it is the widest and least scanned column, so it wraps at
+    # the right edge instead of pushing the names around.
+    table.render(
+        ("model", "for", "runtime", "on disk", "license"),
+        (
+            (
+                row.name,
+                row.stage,
+                row.runtime,
+                "[green]yes[/green]" if row.cached else "[dim]no[/dim]",
+                row.license if row.commercial else f"[red]{row.license}[/red]",
+            )
+            for row in rows
+        ),
+        flex=4,
+        caption="red license = non-commercial / research use only",
+    )
 
 
 @models_app.command("pull")

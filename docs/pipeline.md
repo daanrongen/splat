@@ -337,7 +337,7 @@ upscale, validate
 
 No `render`, no `mesh`.
 
-`splat env` reports **`gaussian --model` default = `mvsplat`**. The actual CLI default is `mlx3d-capture`. `cli/env.py` keeps its own hardcoded default table separate from `cli/gaussian.py`'s. It also omits `render` entirely, omits `caption`/`embed`, and omits seven of `gaussian`'s nine flags.
+`splat env` reports **`gaussian --model` default = `mvsplat`**. The actual CLI default is `mlx3d-capture`. `cli/env.py` keeps its own hardcoded default table separate from `cli/gaussian.py`'s. It also omits `render` entirely, omits `caption`/`embed`, and omits seven of `gaussian`'s nine flags. (Since fixed, along with the larger problem the audit missed: almost none of the variables it listed were read by anything. See [gaps.md](gaps.md) G21.)
 
 ## 11. Cache and provenance, observed
 

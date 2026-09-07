@@ -395,26 +395,24 @@ $XDG_CACHE_HOME/splat/
 `-- assets/     # pipeline asset cache, one file per manifest
 ```
 
-Every command option that can be defaulted from the environment declares it as `SPLAT_<COMMAND>_<PARAM>`, so `splat <command> --help` names the variable next to the option and `splat env` lists all of them with their resolved value and source:
+Every command option that can be defaulted from the environment declares it as `SPLAT_<COMMAND>_<PARAM>`, so `splat <command> --help` names the variable next to its own option:
 
 ```sh
-splat env
+splat env                    # every setting, its current value, and where it came from
+splat env --export           # the same list as a .env template
+```
+
+**[`.env.example`](.env.example) is the full reference** and is generated, not hand-written: `splat env --export` walks the Typer commands, so it cannot list a variable the CLI does not honor or omit one it does. Regenerate it with `mise run env-example`; `mise run check` fails if it has drifted.
+
+Copy it to `.env` and uncomment what you want to change. `mise.toml` loads `.env` via `_.file`, so an uncommented line applies to every `splat` run in an activated shell. Outside mise, export the variables yourself or use `uv run --env-file .env splat ...`.
+
+```sh
 export SPLAT_DIFFUSE_MODEL=sd21-coreml   # applies to every later `splat diffuse`
 ```
 
-Precedence for command defaults is CLI flag, then `os.environ`, then mise's `[env]` block, then the built-in default. `splat env`'s table is read off the Typer commands themselves, so it cannot list a variable the CLI does not honor.
+Precedence is CLI flag, then the environment, then the built-in default. Resolution is Click's own `envvar=` handling against `os.environ`; getting values into `os.environ` is mise's or uv's job, and `splat` does not duplicate it.
 
-Settings that are not command options:
-
-| Env var | Purpose |
-|---|---|
-| `SPLAT_MODEL_CACHE_DIR` | Converted or compiled model cache |
-| `SPLAT_ASSET_CACHE_DIR` | Pipeline asset cache |
-| `SPLAT_URL` | Remote `splat http` base URL for client commands |
-| `SPLAT_BLENDER_BIN` | Blender executable for `splat render` |
-| `SPLAT_RENDER_TIMEOUT` | Seconds before a Blender render is killed (`0` disables) |
-
-`SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
+Five settings are not command options: `SPLAT_MODEL_CACHE_DIR` and `SPLAT_ASSET_CACHE_DIR` (cache roots), `SPLAT_URL` (remote `splat http` base URL), and `SPLAT_BLENDER_BIN` / `SPLAT_RENDER_TIMEOUT` (read directly by the Blender adapter). `SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
 
 ## Architecture
 

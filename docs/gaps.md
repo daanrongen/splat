@@ -136,9 +136,22 @@ Twelve orbit views in, `capture_camera_count: 3` out. SfM dropped 9 views and tr
 
 PR #57 removed `splat mesh`. The README still has a `### mesh` section with usage, lists `mesh` among top-level stages, includes it in the stage-flow mermaid diagram, credits it in the kind-taxonomy table, lists `POST /mesh` in the HTTP route table, and names `mesh` as an MCP tool. None of those exist. Meanwhile `splat render` has **no README section at all**, is absent from the intro list, and is missing from the HTTP table.
 
-### G21. `splat env` prints a wrong default
+### G21. `splat env` prints a wrong default ~~(closed)~~
 
-`gaussian --model` is reported as `mvsplat`; the actual CLI default is `mlx3d-capture`. `cli/env.py` maintains a hand-written default table separate from the Typer signatures. It also omits `render` (all four options), `caption`, `embed`, `tools convert`/`declutter`/`normalize.color`/`extract.surface`, and seven of `gaussian`'s nine flags. The env table should be derived from the Typer commands, not duplicated.
+> **Closed.** `splat env` now walks the Typer commands, so the table it prints cannot claim a setting the CLI does not honor. It also turned out the wrong default was the smaller half of the problem, see below.
+
+`gaussian --model` was reported as `mvsplat`; the actual CLI default is `mlx3d-capture`. `cli/env.py` maintained a hand-written default table separate from the Typer signatures. It also omitted `render` (all four options), `caption`, `embed`, `tools convert`/`declutter`/`normalize.color`/`extract.surface`, and seven of `gaussian`'s nine flags.
+
+The larger finding, missed by this audit and caught while fixing it: **fourteen of the sixteen variables the table listed did nothing at all.** No `typer.Option` in the codebase declared `envvar=`, so nothing ever read them:
+
+```
+$ SPLAT_DIFFUSE_MODEL=sd21-coreml splat diffuse --help
+--model  <str>  [default: sdxl-turbo-mlx]        # unchanged
+```
+
+Only `SPLAT_HOST`, `SPLAT_URL` and the two cache dirs worked. 43 command options now declare `envvar=`, each named in its own `--help`, and `splat env --export` generates the committed `.env.example` from the same walk. `splat/env.py`'s parallel `mise env --json` resolution was deleted rather than extended: Click reads `os.environ`, and putting values there is mise's job or uv's.
+
+`.env.example` and `mise.local.toml.example` were both stale hand-written subsets of this, the latter still listing `SPLAT_MESH_*` and `SPLAT_TRAIN_*` for commands that do not exist. One generated file replaces both.
 
 ### G22. The four transports expose four different surfaces
 

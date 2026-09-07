@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from splat.application.models_admin import image_count_range, model_source_label
+from splat.application.models_admin import image_count_range, model_source_label, model_stage
 from splat.application.tools.convert import ConvertResult
 from splat.application.tools.extract_surface import ExtractSurfaceResult
 from splat.domain.gaussians import GaussianCloud
@@ -90,8 +90,10 @@ class LocalSplatClient:
         return [
             ModelSummary(
                 name=descriptor.name,
+                stage=model_stage(descriptor.name),
                 runtime=getattr(descriptor, "runtime", "-"),
-                license=str(descriptor.license),
+                license=descriptor.license.spdx_id,
+                commercial=descriptor.license.is_commercial,
                 cached=cached,
             )
             for descriptor, cached in models_handler.list_models()

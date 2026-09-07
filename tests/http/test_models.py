@@ -37,7 +37,7 @@ def test_list_models_returns_json_array(mocker):
     assert response.status_code == 200
     rows = response.json()
     assert len(rows) > 0
-    assert {"name", "runtime", "license", "cached"} <= rows[0].keys()
+    assert {"name", "stage", "runtime", "license", "commercial", "cached"} <= rows[0].keys()
 
 
 def test_pull_unknown_model_returns_422(mocker):

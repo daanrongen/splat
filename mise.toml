@@ -25,3 +25,7 @@ run = [
     "uv run ruff format --check .",
     "uv run pytest",
 ]
+
+[tasks.env-example]
+description = "Regenerate .env.example from the CLI's own option definitions"
+run = "uv run splat env --export > .env.example"

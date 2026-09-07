@@ -11,20 +11,27 @@ from splat.registry.gaussian import GAUSSIAN_CATALOG
 from splat.registry.segment import SEGMENTATION_CATALOG
 from splat.registry.upscale import UPSCALE_CATALOG
 
+# The stage each catalog serves, i.e. the command whose `--model` accepts these
+# names. One tuple rather than a merge plus a parallel lookup table, so a new
+# catalog cannot be registered without declaring what it is for.
+_CATALOGS: tuple[tuple[str, dict[str, Any]], ...] = (
+    ("gaussian", GAUSSIAN_CATALOG),
+    ("caption", CAPTION_CATALOG),
+    ("diffuse", DIFFUSION_CATALOG),
+    ("embed", EMBEDDING_CATALOG),
+    ("segment", SEGMENTATION_CATALOG),
+    ("depth", DEPTH_CATALOG),
+    ("upscale", UPSCALE_CATALOG),
+)
+
 
 def _all_catalogs() -> dict[str, Any]:
-    merged: dict[str, Any] = {}
-    for catalog in (
-        GAUSSIAN_CATALOG,
-        CAPTION_CATALOG,
-        DIFFUSION_CATALOG,
-        EMBEDDING_CATALOG,
-        SEGMENTATION_CATALOG,
-        DEPTH_CATALOG,
-        UPSCALE_CATALOG,
-    ):
-        merged.update(catalog)
-    return merged
+    return {name: descriptor for _, catalog in _CATALOGS for name, descriptor in catalog.items()}
+
+
+def model_stage(name: str) -> str:
+    """The `splat` command this model can be passed to as `--model`."""
+    return next((stage for stage, catalog in _CATALOGS if name in catalog), "-")
 
 
 def model_sources(descriptor: Any) -> list[str]:

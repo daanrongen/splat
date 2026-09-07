@@ -64,8 +64,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
 known-first-party = ["splat"]
 
 [tool.ruff.lint.per-file-ignores]
-# Bootstraps HF_HOME, the cache dirs and mise's env before the transitive
-# huggingface_hub import, so its imports genuinely cannot come first.
+# Bootstraps HF_HOME and the cache dirs before the transitive huggingface_hub
+# import (it reads HF_HOME at import time), so its imports cannot come first.
 "src/splat/cli/main.py" = ["E402"]
 
 [tool.ruff.lint.flake8-bugbear]

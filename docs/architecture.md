@@ -263,7 +263,7 @@ Every transport calls the same handler layer, but nothing enforces that they exp
 
 `SPLAT_URL` on the client redirects remote-capable commands to a `splat http` server, with results mirrored into the local manifest cache under the same id. `SPLAT_HOST` controls where the server binds. The two are deliberately separate settings, which is correct.
 
-Defaults resolve CLI flag, then `os.environ`, then `mise env --json`, then a built-in default. `splat env` prints every setting with its source. The mechanism is good, the table it prints is a hand-maintained duplicate of the CLI signatures and has already drifted, see [gaps.md](gaps.md).
+Defaults resolve CLI flag, then `os.environ`, then a built-in default, via Click's own `envvar=` handling. `splat env` walks the Typer commands and prints every setting with its origin, and `splat env --export` writes the same list as the committed `.env.example`. Getting values into `os.environ` is mise's job (`_.file = [".env"]`) or uv's (`--env-file`); `splat` no longer duplicates that resolution. At the time of the audit the table was a hand-maintained duplicate that had drifted, and the variables themselves were inert, see [gaps.md](gaps.md).
 
 ## Test suite shape
 
