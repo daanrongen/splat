@@ -2,6 +2,7 @@ import pytest
 
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
+from splat.domain.value_objects import MIT
 from splat.handlers.gaussian import GaussianRequest, handle
 from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
@@ -9,6 +10,8 @@ from tests.image_helpers import write_sample_png
 
 class FakeReconstructionBackend:
     name = "fake-recon"
+    license = MIT
+    provides_metric_scale = False
 
     def __init__(self, cloud) -> None:
         self._cloud = cloud

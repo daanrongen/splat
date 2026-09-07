@@ -11,9 +11,11 @@ A live audit of `splat` as it exists at commit `78a6c98` (2026-09-07), written b
 
 ## The one-paragraph summary
 
-`splat`'s skeleton is genuinely good. Ports-and-adapters is real, not decorative: a `GaussianCloud` aggregate sits at the centre of all format and compression work, a `Manifest` DAG carries provenance between stages, and one transport-neutral handler layer feeds a CLI, an HTTP server, an MCP server, and a Python SDK. The deterministic half of the toolkit works and is measurably good, `.ply` to `.sog` really is 18x. The model-backed half is where the promises outrun the implementation, and the `gaussian` -> `render` axis is the worst of it: the only working reconstruction backend needs 3+ genuinely multi-view-consistent photographs, which no other `splat` command can produce, and the renderer draws Gaussians using a surface shading model that a splat is not. The chain the tool advertises, image to Gaussian splat to a presentable render, cannot currently be completed, and the missing piece is a single-image feed-forward reconstruction backend.
+`splat`'s skeleton is genuinely good. Ports-and-adapters is real, not decorative: a `GaussianCloud` aggregate sits at the centre of all format and compression work, a `Manifest` DAG carries provenance between stages, and one transport-neutral handler layer feeds a CLI, an HTTP server, an MCP server, and a Python SDK. The deterministic half of the toolkit works and is measurably good, `.ply` to `.sog` really is 18x. The model-backed half is where the promises outrun the implementation, and at the time of the audit the `gaussian` -> `render` axis was the worst of it: the only working reconstruction backend needed 3+ genuinely multi-view-consistent photographs, which no other `splat` command could produce, and the renderer draws Gaussians using a surface shading model that a splat is not. The chain the tool advertises, image to Gaussian splat to a presentable render, could not be completed at all.
 
-## The chain the user wants, and where it breaks
+**Since the audit,** the single-image backend it identified as the missing piece has landed (`--model sharp`), so the chain now completes in about 28 seconds. The renderer's image-formation model is still wrong, which is what stands between "completes" and "presentable".
+
+## The chain, and where it stands
 
 ```mermaid
 flowchart LR
@@ -26,17 +28,17 @@ flowchart LR
         I --> E([embed])
         DE --> DH([tools displace.height]) --> M[mesh .glb]
     end
-    subgraph broken["the missing link"]
-        I -.->|"no path"| GAP{{"1 image -> N consistent views<br/>OR 1 image -> Gaussians"}}
+    subgraph bridged["the link, now built"]
+        I --> SH([gaussian<br/>sharp, 1 image]) --> GC[gaussian_cloud .ply]
     end
-    subgraph partial["works, but only from real photos"]
-        GAP -.-> G([gaussian<br/>mlx3d-capture]) --> GC[gaussian_cloud .ply]
+    subgraph photos["also works, from real captures"]
+        P[3+ real photos] --> G([gaussian<br/>mlx3d-capture]) --> GC
         GC --> T([tools convert / compress<br/>declutter / extract.surface])
         GC --> R([render blender])
     end
 
-    style GAP fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff
-    style broken fill:none,stroke:#ef4444,stroke-dasharray: 5 5
+    style SH fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#fff
+    style bridged fill:none,stroke:#22c55e
 ```
 
-`GAP` is the whole story. Everything left of it works. Everything right of it works if you hand it a real capture. Nothing in `splat` bridges the two.
+The gap this audit was written around is closed: `--model sharp` reconstructs from one image, so `diffuse -> gaussian -> render` now completes. What remains is the *quality* of the last step - `render` still draws Gaussians with a surface shading model rather than emissive alpha compositing, which is [gaps.md](gaps.md) G2.

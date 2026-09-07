@@ -62,8 +62,10 @@ class ValidationSummary:
 @dataclass(frozen=True)
 class ModelSummary:
     name: str
+    stage: str
     runtime: str
-    license: str
+    license: str  # SPDX id only; see `commercial` for the use restriction
+    commercial: bool = True
     cached: bool | None = None
 
 

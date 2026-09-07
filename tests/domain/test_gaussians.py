@@ -2,7 +2,12 @@ import numpy as np
 import pytest
 
 from splat.domain.errors import InvalidGaussianCloud, UnsupportedSHDegree
-from splat.domain.gaussians import GaussianCloud, normalize_gaussian_cloud, sh_rest_count
+from splat.domain.gaussians import (
+    GaussianCloud,
+    normalize_gaussian_cloud,
+    sh_rest_count,
+    to_convention,
+)
 
 
 def make_cloud(n: int = 4, sh_degree: int = 0, **overrides) -> GaussianCloud:
@@ -139,3 +144,61 @@ def test_normalize_degenerate_zero_radius_is_a_no_op_scale():
     normalized = normalize_gaussian_cloud(cloud)
     np.testing.assert_allclose(normalized.means, np.zeros((4, 3)), atol=1e-6)
     np.testing.assert_allclose(normalized.to_linear_scales(), cloud.to_linear_scales())
+
+
+def test_to_convention_is_a_noop_for_the_same_convention(synthetic_cloud):
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+
+    assert to_convention(synthetic_cloud, "colmap") is synthetic_cloud
+
+
+def test_to_convention_flips_positions_and_marks_y_up(synthetic_cloud):
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+    before = synthetic_cloud.means.copy()
+
+    converted = to_convention(synthetic_cloud, "opengl")
+
+    np.testing.assert_allclose(converted.means, before * [1.0, -1.0, -1.0])
+    assert converted.metadata.coordinate_convention == "opengl"
+    assert converted.metadata.up_axis == "y"
+
+
+def test_to_convention_round_trips(synthetic_cloud):
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+
+    back = to_convention(to_convention(synthetic_cloud, "opengl"), "colmap")
+
+    np.testing.assert_allclose(back.means, synthetic_cloud.means)
+    np.testing.assert_allclose(back.rotations, synthetic_cloud.rotations)
+    assert back.metadata.coordinate_convention == "colmap"
+
+
+def test_to_convention_quaternion_flip_matches_a_matrix_round_trip(synthetic_cloud):
+    """The quaternion shortcut (negate the flipped axes' components) has to
+    agree with conjugating the rotation matrix, or per-Gaussian orientation
+    silently diverges from position."""
+    from scipy.spatial.transform import Rotation
+
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+    flip = np.diag([1.0, -1.0, -1.0])
+
+    converted = to_convention(synthetic_cloud, "opengl")
+
+    for original, flipped in zip(synthetic_cloud.rotations, converted.rotations, strict=True):
+        # GaussianCloud stores (w, x, y, z); scipy wants (x, y, z, w).
+        expected = flip @ Rotation.from_quat(np.roll(original, -1)).as_matrix() @ flip
+        actual = Rotation.from_quat(np.roll(flipped, -1)).as_matrix()
+        np.testing.assert_allclose(actual, expected, atol=1e-5)
+
+
+def test_to_convention_moves_the_camera_pose_with_the_cloud(synthetic_cloud):
+    """A pose left in the old frame is exactly how the camera ends up aimed
+    away from the scene."""
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+    synthetic_cloud.metadata.capture_camera_position = [1.0, 2.0, 3.0]
+    synthetic_cloud.metadata.capture_camera_rotation = np.eye(3).tolist()
+
+    converted = to_convention(synthetic_cloud, "opengl")
+
+    assert converted.metadata.capture_camera_position == [1.0, -2.0, -3.0]
+    np.testing.assert_allclose(converted.metadata.capture_camera_rotation, np.eye(3))

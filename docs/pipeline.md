@@ -170,7 +170,7 @@ RuntimeError: No image pairs with enough matches. The images likely do not overl
 
 Two problems in one line. The reconstruction is impossible, which is the real gap. And a third-party `RuntimeError` escapes as a raw Rich traceback instead of a `SplatDomainError`, because the handler layer only catches `SplatDomainError` and no adapter translates its backend's exceptions.
 
-`mvsplat`, the model the README's `gaussian` example actually names, raises `NotImplementedError` by design.
+`mvsplat`, the model the README's `gaussian` example named at the time, raised `NotImplementedError` by design; it has since been removed from the catalog and `--model sharp` fills the single-image slot.
 
 ### What working input looks like
 
@@ -337,7 +337,7 @@ upscale, validate
 
 No `render`, no `mesh`.
 
-`splat env` reports **`gaussian --model` default = `mvsplat`**. The actual CLI default is `mlx3d-capture`. `cli/env.py` keeps its own hardcoded default table separate from `cli/gaussian.py`'s. It also omits `render` entirely, omits `caption`/`embed`, and omits seven of `gaussian`'s nine flags.
+`splat env` reports **`gaussian --model` default = `mvsplat`**. The actual CLI default is `mlx3d-capture`. `cli/env.py` keeps its own hardcoded default table separate from `cli/gaussian.py`'s. It also omits `render` entirely, omits `caption`/`embed`, and omits seven of `gaussian`'s nine flags. (Since fixed, along with the larger problem the audit missed: almost none of the variables it listed were read by anything. See [gaps.md](gaps.md) G21.)
 
 ## 11. Cache and provenance, observed
 

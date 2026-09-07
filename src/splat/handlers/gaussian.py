@@ -23,6 +23,7 @@ class GaussianRequest:
     refine_poses: str = "auto"
     low_memory: bool = False
     seed: int = 0
+    focal_35mm: float = 30.0
 
 
 def handle(request: GaussianRequest) -> list[Manifest]:
@@ -62,6 +63,7 @@ def handle(request: GaussianRequest) -> list[Manifest]:
         "refine_poses": request.refine_poses,
         "low_memory": request.low_memory,
         "seed": request.seed,
+        "focal_35mm": request.focal_35mm,
     }
     if request.iters is not None:
         params["iters"] = request.iters

@@ -204,7 +204,7 @@ Red is broken for the advertised use case, amber is working but producing the wr
 
 ## Contracts
 
-`domain/contracts.py` is small and does real work. Each stage declares a `StageContract` with named `Requirement` slots (accepted kinds OR tags, min/max count, plus a "do this instead" hint), and one shared `validate_inputs` checks them. `gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` classmethod, so `mlx3d-capture` advertises `(3, None)` and `mvsplat` advertises `(2, None)` without instantiating anything or pulling weights.
+`domain/contracts.py` is small and does real work. Each stage declares a `StageContract` with named `Requirement` slots (accepted kinds OR tags, min/max count, plus a "do this instead" hint), and one shared `validate_inputs` checks them. `gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` classmethod, so `mlx3d-capture` advertises `(3, None)` and `sharp` advertises `(1, 1)` without instantiating anything or pulling weights.
 
 The documented limitation is real and self-admitted: every contract has exactly one slot, so there is no way to express "a `gaussian_cloud` **and** a camera pose" or "a `gaussian_cloud` **and** a `sticker` mask". Issue #55 tracks it, and every interesting next feature needs it.
 
@@ -224,7 +224,7 @@ Each `registry/<stage>.py` holds a frozen-dataclass descriptor catalog. Catalogs
 | `mobileclip2-s0` | torch | Apple-ML-Research (NC) | works, 512-d normalized |
 | `realesrgan-mlx` | mlx | BSD-3-Clause | works, 2x and 4x |
 | `mlx3d-capture` | mlx | MIT | works from real photos only |
-| `mvsplat` | torch | MIT | **stub**, `NotImplementedError` |
+| `sharp` | torch | Apple-ML-Research (NC) | **works**, 1 image -> metric 3DGS, ~13s on MPS |
 
 `ModelLicense` is a genuine strength. It carries `spdx_id` + `is_commercial` + `notes`, is printed as a loud warning at invocation time, and given the Gaussian-splat ecosystem's license minefield (see issue #70) it is the right thing to have built early.
 
@@ -263,7 +263,7 @@ Every transport calls the same handler layer, but nothing enforces that they exp
 
 `SPLAT_URL` on the client redirects remote-capable commands to a `splat http` server, with results mirrored into the local manifest cache under the same id. `SPLAT_HOST` controls where the server binds. The two are deliberately separate settings, which is correct.
 
-Defaults resolve CLI flag, then `os.environ`, then `mise env --json`, then a built-in default. `splat env` prints every setting with its source. The mechanism is good, the table it prints is a hand-maintained duplicate of the CLI signatures and has already drifted, see [gaps.md](gaps.md).
+Defaults resolve CLI flag, then `os.environ`, then a built-in default, via Click's own `envvar=` handling. `splat env` walks the Typer commands and prints every setting with its origin, and `splat env --export` writes the same list as the committed `.env.example`. Getting values into `os.environ` is mise's job (`_.file = [".env"]`) or uv's (`--env-file`); `splat` no longer duplicates that resolution. At the time of the audit the table was a hand-maintained duplicate that had drifted, and the variables themselves were inert, see [gaps.md](gaps.md).
 
 ## Test suite shape
 

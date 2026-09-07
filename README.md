@@ -99,9 +99,17 @@ Key options: `--model realesrgan-mlx`, `--factor 2|4`, `--tile`, `-o/--output`.
 
 ### gaussian
 
-`splat gaussian` reconstructs a Gaussian splat from input images. The only backend today is `mlx3d-capture`, which is **optimization-based, not feed-forward**: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene on Apple Silicon through MLX/Metal.
+`splat gaussian` reconstructs a Gaussian splat from input images. Two backends, and which one you want depends entirely on how many images you have.
 
-That means it needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register. There is no single-image path yet (tracked in #81).
+**`sharp` (1 image)** is Apple's SHARP: a single feed-forward pass that regresses a metric 3D Gaussian representation from one photograph. This is the backend that makes the headline chain possible, since `diffuse` produces exactly one image.
+
+```sh
+splat diffuse "a small red toy robot, studio lighting" | splat gaussian - --model sharp -o robot.ply
+```
+
+About 13 seconds on an M1 Pro for ~1.18M Gaussians. Output is **metric, with absolute scale**, so `gaussian` skips the normalization it applies to every other backend. Because it reconstructs from one viewpoint it recovers the *visible* surface, background plate included, not a full 360-degree object. Weights are `apple/Sharp`, licensed for **research use only**.
+
+**`mlx3d-capture` (3+ images)** is optimization-based rather than feed-forward: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene through MLX/Metal. It needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register.
 
 ```sh
 splat gaussian frame-*.png --quality balanced -o scene.ply
@@ -111,7 +119,7 @@ Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 m
 
 | Option | Default | Purpose |
 |---|---|---|
-| `--model` | `mlx3d-capture` | Reconstruction backend |
+| `--model` | `mlx3d-capture` | `sharp` (1 image) or `mlx3d-capture` (3+ images) |
 | `--device` | `auto` | `auto` \| `cpu` \| `mps` |
 | `--quality` | `fast` | mlx3d preset; `balanced` and up train longer |
 | `--iters` | preset | Override training iterations |
@@ -122,9 +130,21 @@ Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 m
 | `--low-mem` | off | mlx3d low-memory mode |
 | `--seed` | `0` | Random seed; `<0` disables seeding |
 
+`--quality` through `--seed` apply to `mlx3d-capture` only. `sharp` takes `--focal-35mm` (default `30.0`), the 35mm-equivalent focal length assumed for images without EXIF, which sets the absolute scale.
+
 ### render
 
 `splat render` rasterizes a `GaussianCloud` to a PNG through Blender, shelling out to `blender --background`. Cycles runs on the Metal GPU; `--engine eevee` is the faster, approximate preview.
+
+Progress is reported live, including the device it picked and Cycles' first-run kernel compilation, which can take minutes on its own:
+
+```text
+render device: Apple M1 Pro (GPU - 16 cores) [METAL]
+⠋ Mem: 1M | Loading render kernels (may take a few minutes the first time)
+⠹ Remaining: 00:14.54 | Mem: 3143M | Sample 12/64
+```
+
+A 1.18M-Gaussian frame at 1920x1080 with 64 samples takes roughly 100 seconds. If Cycles cannot find a GPU it warns rather than silently falling back to the CPU.
 
 ```sh
 splat render scene.ply -o scene.png --width 1920 --height 1080 --samples 64
@@ -261,9 +281,11 @@ splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth
 | `embedding` | `vector` | embed | `.npy` |
 | `depth_map` | `raster`, `single_channel`, `metric` | depth | `.npy` |
 | `shape_3d` | `mesh_3d` | tools displace.height, tools extract.surface | `.glb` / `.obj` |
-| `gaussian_cloud` | `splat_3d` | gaussian | `.ply` |
+| `gaussian_cloud` | `splat_3d` | gaussian, render (input) | `.ply` |
 
-Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (mlx3d-capture needs 3+); piping the wrong kind in fails with a message naming both sides:
+Every `gaussian_cloud` splat writes is stored in one canonical convention: **OpenGL-style, +Y up and -Z forward**, recorded in the `.ply` as `coordinate_convention opengl` / `up_axis y`. Reconstruction backends work in OpenCV/COLMAP (+Y down, +Z forward) and declare that, and `run_gaussian` converts on the way in. Storing COLMAP verbatim left every cloud upside down with the camera aimed away from the scene in any Y-up consumer, and `up_axis` could not describe it: COLMAP's up is -Y, which that field's type does not admit.
+
+Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (`sharp` accepts exactly 1, `mlx3d-capture` needs 3+); piping the wrong kind in fails with a message naming both sides:
 
 ```
 $ splat depth photo.png | splat gaussian -
@@ -385,26 +407,24 @@ $XDG_CACHE_HOME/splat/
 `-- assets/     # pipeline asset cache, one file per manifest
 ```
 
-Every command option that can be defaulted from the environment declares it as `SPLAT_<COMMAND>_<PARAM>`, so `splat <command> --help` names the variable next to the option and `splat env` lists all of them with their resolved value and source:
+Every command option that can be defaulted from the environment declares it as `SPLAT_<COMMAND>_<PARAM>`, so `splat <command> --help` names the variable next to its own option:
 
 ```sh
-splat env
+splat env                    # every setting, its current value, and where it came from
+splat env --export           # the same list as a .env template
+```
+
+**[`.env.example`](.env.example) is the full reference** and is generated, not hand-written: `splat env --export` walks the Typer commands, so it cannot list a variable the CLI does not honor or omit one it does. Regenerate it with `mise run env-example`; `mise run check` fails if it has drifted.
+
+Copy it to `.env` and uncomment what you want to change. `mise.toml` loads `.env` via `_.file`, so an uncommented line applies to every `splat` run in an activated shell. Outside mise, export the variables yourself or use `uv run --env-file .env splat ...`.
+
+```sh
 export SPLAT_DIFFUSE_MODEL=sd21-coreml   # applies to every later `splat diffuse`
 ```
 
-Precedence for command defaults is CLI flag, then `os.environ`, then mise's `[env]` block, then the built-in default. `splat env`'s table is read off the Typer commands themselves, so it cannot list a variable the CLI does not honor.
+Precedence is CLI flag, then the environment, then the built-in default. Resolution is Click's own `envvar=` handling against `os.environ`; getting values into `os.environ` is mise's or uv's job, and `splat` does not duplicate it.
 
-Settings that are not command options:
-
-| Env var | Purpose |
-|---|---|
-| `SPLAT_MODEL_CACHE_DIR` | Converted or compiled model cache |
-| `SPLAT_ASSET_CACHE_DIR` | Pipeline asset cache |
-| `SPLAT_URL` | Remote `splat http` base URL for client commands |
-| `SPLAT_BLENDER_BIN` | Blender executable for `splat render` |
-| `SPLAT_RENDER_TIMEOUT` | Seconds before a Blender render is killed (`0` disables) |
-
-`SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
+Five settings are not command options: `SPLAT_MODEL_CACHE_DIR` and `SPLAT_ASSET_CACHE_DIR` (cache roots), `SPLAT_URL` (remote `splat http` base URL), and `SPLAT_BLENDER_BIN` / `SPLAT_RENDER_TIMEOUT` (read directly by the Blender adapter). `SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
 
 ## Architecture
 

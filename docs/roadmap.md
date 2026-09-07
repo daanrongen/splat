@@ -53,58 +53,56 @@ One important consequence, and it needs a decision rather than a default: **SHAR
 
 Fits the existing pattern with no new architectural concepts:
 
+> **Shipped.** `--model sharp` exists; the measurements below are from the merged implementation, not a proposal. What follows records the decisions taken.
+
 ```
-ports/reconstruction.py          # unchanged, add optional `provides_metric_scale: bool` to the Protocol
-registry/gaussian.py             # + catalog entry
-adapters/gaussian/sharp.py       # + new adapter
-application/pipeline.py          # respect provides_metric_scale in run_gaussian
-```
-
-```python
-# registry/gaussian.py
-"sharp": GaussianModelDescriptor(
-    name="sharp",
-    backend_cls=SharpBackend,
-    hf_repo_id="apple/Sharp",
-    license=APPLE_AMLR,              # already defined, currently unused
-    runtime="torch",
-    notes=(
-        "Apple SHARP: single-image feed-forward 3DGS, metric absolute scale, "
-        "OpenCV/COLMAP convention. Sub-second on MPS. Research/non-commercial."
-    ),
-),
-```
-
-```python
-# adapters/gaussian/sharp.py
-class SharpBackend:
-    name = "sharp"
-    provides_metric_scale = True     # run_gaussian must NOT normalize this
-
-    @classmethod
-    def required_image_count(cls) -> tuple[int, int | None]:
-        return (1, 1)                 # the whole point
-
-    def reconstruct(self, images, *, device="auto", **params) -> GaussianCloud:
-        ...
+ports/reconstruction.py                  # + provides_metric_scale on the Protocol
+registry/gaussian.py                     # + catalog entry
+adapters/gaussian/sharp.py               # + adapter
+adapters/gaussian/_vendor/sharp/         # + Apple's inference subset (36 files, 228K)
+application/pipeline.py                  # respects provides_metric_scale, carries license
+domain/gaussians.py                      # + metadata.metric_scale
 ```
 
 `required_image_count() == (1, 1)` flows automatically into `gaussian`'s per-request `StageContract`, so `splat diffuse "..." | splat gaussian - --model sharp` type-checks with no contract changes. That is the ports-and-adapters design paying off.
 
-Two integration choices to make deliberately:
+### The decisions, and what settled them
 
-1. **In-process torch versus subprocess.** The reference distribution is a `sharp` CLI (`sharp predict -i <dir> -o <dir>`) built for Python 3.13 + conda + its own `requirements.txt`; `splat` is on Python 3.12 with pinned `transformers` and `coremltools`. If the dependency set conflicts, wrap the CLI as an external-process adapter, the same shape `adapters/render/blender.py` already uses (`_resolve_blender_bin` + `subprocess.run`, and give this one a `timeout`). If the model can be loaded directly from the checkpoint, in-process MPS is better: no temp directories, no CLI contract to track.
-2. **The `--render` flag is CUDA-only** in the reference repo and is irrelevant here; `splat` renders through its own `render` command.
+**In-process torch, with the model code vendored.** The published checkpoint is a bare 1038-tensor `state_dict` with no config and no model class, so the architecture cannot be recovered from the weights alone; it has to come from Apple's own code. The reference `sharp predict` CLI is not importable here either, because `sharp/cli/predict.py` imports `sharp.cli.render` at module load, which imports **gsplat** for a video renderer the model card itself says is CUDA-only.
 
-### What this unlocks immediately
+The prediction path, though, is a narrow slice: `sharp.models` plus six modules under `sharp.utils`. Its third-party imports are `torch`, `numpy`, `PIL`, `plyfile`, `scipy` and `timm` - every one of which `splat` already depends on. Vendoring that slice adds **zero new dependencies** and follows the existing `_vendor` pattern (`mlx_stable_diffusion`, `mlx_sam`). No subprocess, no temp directories, no second Python environment, no CLI contract to track. Apple's code `LICENSE` ships alongside it.
+
+**Metric scale is preserved, not normalized away.** `run_gaussian` called `normalize_gaussian_cloud` unconditionally, which is correct for SfM (structure is recovered only up to a similarity transform) and would destroy the one thing SHARP uniquely provides. `provides_metric_scale` is now a declared attribute on the `ReconstructionBackend` Protocol rather than a `getattr` guess, and the result is recorded in `metadata.metric_scale` so a consumer can tell a metric cloud from a normalized one. Measured bounding box on a real run: z from **0.52 m to 2.54 m**.
+
+**The capture pose is recorded, and for SHARP it is real.** SHARP predicts in the input camera's own frame, so the origin looking down +z *is* the capture pose. That is the opposite of `mlx3d-capture`, where `colmap.cameras[0]` is the world origin and the same values are structurally meaningless (see [gaps.md](gaps.md)). Recording it lets `splat render` frame the cloud from the viewpoint it was seen from, which is what makes the output recognizable rather than an oblique slab.
+
+**One defect had to be worked around.** Apple's `save_ply` stores opacity as `log(p / (1 - p))`, and SHARP saturates: **11,856 of 1,179,648** Gaussians came back at exactly `p = 1.0`, so the exported PLY carried `+inf` logits. `GaussianCloud.__post_init__` rejected the file outright - the domain invariants caught a real bug in the reference exporter. The adapter clamps opacity into the open interval before export, which is lossless at float32.
+
+### What it actually does
 
 ```sh
-splat diffuse "a small red toy robot, studio lighting" | splat gaussian - --model sharp -o robot.ply
-splat tools declutter robot.ply robot.clean.ply
-splat render robot.clean.ply -o robot.png
+splat diffuse "a small red toy robot, studio lighting" --seed 21 \
+  | splat gaussian - --model sharp -o robot.ply
 ```
 
-That is the chain, end to end, in three commands and a few seconds instead of ten minutes and a failure.
+| | `mlx3d-capture` (12 real orbit frames) | `sharp` (1 diffused image) |
+|---|---|---|
+| Wall clock | 9m 43s | **27.9s** end to end, 12.6s of it the forward pass |
+| Views used | 3 of 12 registered | 1 of 1 |
+| Points | 37,284 | 1,179,648 |
+| Scale | normalized, median radius 1.0 | **metric**, z 0.52-2.54 m |
+| From diffuse output | impossible | works |
+
+The remaining rough edges are the renderer's, not the reconstruction's: colours come back washed out because `render` draws lit opaque IcoSpheres rather than emissive alpha-composited Gaussians, and the background plate SHARP reconstructs behind the subject reads as white speckle. Both are the image-formation issue, tracked separately. The reconstruction itself is recognizably the input image seen in 3D.
+
+Two adjacent findings surfaced while testing the chain:
+
+- `tools compress` drops all four `capture_camera_*` fields when it rebuilds `GaussianCloudMetadata`, so a compressed cloud silently loses the pose and `render` falls back to its auto-fit heuristic. Reproduced directly by diffing the PLY comment blocks before and after.
+- Changing the adapter did not invalidate the cache, because `compute_cache_key` hashes the invocation rather than the content. A rerun of an identical command returned the pre-change asset.
+
+### Follow-up
+
+`agg23/Sharp-mlx-f16` publishes an MLX fp16 conversion (1.4 GB against 2.8 GB). Worth cataloging as a second variant once the torch/MPS path has some mileage, and it is the obvious path to a native MLX implementation.
 
 ---
 

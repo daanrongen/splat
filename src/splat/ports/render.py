@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -18,4 +19,14 @@ class RenderBackend(Protocol):
 
     name: str
 
-    def render(self, cloud: GaussianCloud, output_path: Path, **params) -> None: ...
+    # `on_progress` is threaded separately from `params` on purpose: `params`
+    # is hashed into the cache key, and a callable in there would change the
+    # key on every run.
+    def render(
+        self,
+        cloud: GaussianCloud,
+        output_path: Path,
+        *,
+        on_progress: Callable[[str], None] | None = None,
+        **params,
+    ) -> None: ...

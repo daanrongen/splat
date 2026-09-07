@@ -59,6 +59,12 @@ def gaussian(
     seed: int = typer.Option(
         0, "--seed", help="Random seed; <0 disables seeding.", envvar="SPLAT_GAUSSIAN_SEED"
     ),
+    focal_35mm: float = typer.Option(
+        30.0,
+        "--focal-35mm",
+        help="sharp: 35mm-equivalent focal length assumed for images without EXIF.",
+        envvar="SPLAT_GAUSSIAN_FOCAL_35MM",
+    ),
 ) -> None:
     """Reconstruct a Gaussian splat from images."""
     cache = get_manifest_repository()
@@ -79,6 +85,7 @@ def gaussian(
                 refine_poses=refine_poses,
                 low_memory=low_memory,
                 seed=seed,
+                focal_35mm=focal_35mm,
             )
         )
     except SplatDomainError as exc:

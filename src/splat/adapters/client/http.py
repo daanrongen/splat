@@ -313,6 +313,7 @@ class RemoteSplatClient:
             "device": request.device,
             "to": "ply",
             "quality": request.quality,
+            "focal_35mm": request.focal_35mm,
             "poses": request.poses,
             "refine_poses": request.refine_poses,
             "low_memory": request.low_memory,
@@ -342,6 +343,7 @@ class RemoteSplatClient:
                     "model": request.model,
                     "device": request.device,
                     "quality": request.quality,
+                    "focal_35mm": request.focal_35mm,
                     "poses": request.poses,
                     "refine_poses": request.refine_poses,
                     "low_memory": request.low_memory,
@@ -428,7 +430,14 @@ class RemoteSplatClient:
         _raise_for_domain_error(response)
         rows = [WireModelSummary.model_validate(item) for item in response.json()]
         return [
-            ModelSummary(name=r.name, runtime=r.runtime, license=r.license, cached=r.cached)
+            ModelSummary(
+                name=r.name,
+                stage=r.stage,
+                runtime=r.runtime,
+                license=r.license,
+                commercial=r.commercial,
+                cached=r.cached,
+            )
             for r in rows
         ]
 

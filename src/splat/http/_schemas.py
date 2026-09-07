@@ -69,8 +69,10 @@ class ManifestDetail(ManifestSummary):
 
 class ModelSummary(BaseModel):
     name: str
+    stage: str
     runtime: str
     license: str
+    commercial: bool = True
     cached: bool | None = None
 
 

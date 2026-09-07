@@ -12,8 +12,43 @@ from splat.adapters.render.blender import (
     _convert_gaussian_rotations,
     _convert_positions,
     _resolve_blender_bin,
+    _resolve_timeout,
 )
 from splat.domain.errors import RenderBackendError
+
+
+class FakePopen:
+    """Minimal Popen stand-in: the adapter iterates stdout, then waits."""
+
+    def __init__(self, lines: list[str], returncode: int = 0, wait_raises=None) -> None:
+        self.stdout = iter(f"{line}\n" for line in lines)
+        self._returncode = returncode
+        self._wait_raises = wait_raises
+        self.killed = False
+
+    def wait(self, timeout=None):
+        if self._wait_raises is not None:
+            raise self._wait_raises
+        return self._returncode
+
+    def kill(self):
+        # A real process stops timing out once killed; the adapter waits again
+        # after killing, and this fake has to stop raising or that wait escapes.
+        self.killed = True
+        self._wait_raises = None
+
+
+def _patch_popen(monkeypatch, captured, *, lines=(), returncode=0, wait_raises=None):
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        output = Path(command[command.index("--output") + 1])
+        if returncode == 0 and wait_raises is None:
+            output.write_bytes(b"fake png")
+        return FakePopen(list(lines), returncode, wait_raises)
+
+    monkeypatch.setattr("subprocess.Popen", fake_popen)
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
 
 
 def test_resolve_blender_bin_raises_when_not_found(monkeypatch):
@@ -38,14 +73,7 @@ def test_resolve_blender_bin_falls_back_to_env_then_path(monkeypatch):
 def test_render_invokes_blender_with_expected_command(monkeypatch, tmp_path, synthetic_cloud):
     captured = {}
 
-    def fake_run(command, **kwargs):
-        captured["command"] = command
-        output_path = Path(command[command.index("--output") + 1])
-        output_path.write_bytes(b"fake png")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+    _patch_popen(monkeypatch, captured)
 
     output = tmp_path / "render.png"
     BlenderBackend().render(synthetic_cloud, output, width=640, height=360, samples=8)
@@ -62,13 +90,7 @@ def test_render_invokes_blender_with_expected_command(monkeypatch, tmp_path, syn
 def test_render_command_includes_engine_default_cycles(monkeypatch, tmp_path, synthetic_cloud):
     captured = {}
 
-    def fake_run(command, **kwargs):
-        captured["command"] = command
-        Path(command[command.index("--output") + 1]).write_bytes(b"fake png")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+    _patch_popen(monkeypatch, captured)
 
     BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
     command = captured["command"]
@@ -78,13 +100,7 @@ def test_render_command_includes_engine_default_cycles(monkeypatch, tmp_path, sy
 def test_render_command_passes_through_custom_engine(monkeypatch, tmp_path, synthetic_cloud):
     captured = {}
 
-    def fake_run(command, **kwargs):
-        captured["command"] = command
-        Path(command[command.index("--output") + 1]).write_bytes(b"fake png")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+    _patch_popen(monkeypatch, captured)
 
     BlenderBackend().render(synthetic_cloud, tmp_path / "render.png", engine="eevee")
     command = captured["command"]
@@ -147,57 +163,62 @@ def test_cloud_to_npz_skips_axis_conversion_for_non_colmap_convention(tmp_path, 
 
 
 def test_render_raises_on_nonzero_exit(monkeypatch, tmp_path, synthetic_cloud):
-    def fake_run(command, **kwargs):
-        return subprocess.CompletedProcess(command, 1, stdout="", stderr="boom")
-
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+    _patch_popen(monkeypatch, {}, lines=["Error: boom"], returncode=1)
 
     with pytest.raises(RenderBackendError, match="boom"):
         BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
 
 
-def test_render_passes_default_timeout_to_subprocess(monkeypatch, tmp_path, synthetic_cloud):
-    captured = {}
-
-    def fake_run(command, **kwargs):
-        captured["timeout"] = kwargs.get("timeout")
-        Path(command[command.index("--output") + 1]).write_bytes(b"fake png")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
+def test_resolve_timeout_defaults_to_thirty_minutes(monkeypatch):
     monkeypatch.delenv("SPLAT_RENDER_TIMEOUT", raising=False)
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
-
-    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
-
-    assert captured["timeout"] == 1800.0
+    assert _resolve_timeout() == 1800.0
 
 
-def test_render_timeout_env_zero_disables_timeout(monkeypatch, tmp_path, synthetic_cloud):
-    captured = {}
-
-    def fake_run(command, **kwargs):
-        captured["timeout"] = kwargs.get("timeout")
-        Path(command[command.index("--output") + 1]).write_bytes(b"fake png")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
+def test_resolve_timeout_env_zero_disables_it(monkeypatch):
     monkeypatch.setenv("SPLAT_RENDER_TIMEOUT", "0")
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
-
-    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
-
-    assert captured["timeout"] is None
+    assert _resolve_timeout() is None
 
 
 def test_render_translates_timeout_to_domain_error(monkeypatch, tmp_path, synthetic_cloud):
-    def fake_run(command, **kwargs):
-        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
-
     monkeypatch.setenv("SPLAT_RENDER_TIMEOUT", "5")
-    monkeypatch.setattr("subprocess.run", fake_run)
-    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+    _patch_popen(
+        monkeypatch,
+        {},
+        wait_raises=subprocess.TimeoutExpired(cmd="blender", timeout=5),
+    )
 
     with pytest.raises(RenderBackendError, match="exceeded 5s"):
         BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
+
+
+def test_render_forwards_reported_progress_and_not_blenders_noise(
+    monkeypatch, tmp_path, synthetic_cloud
+):
+    """The whole point of streaming: Blender is silent in background mode, so
+    only the lines `_blender_script.py` reports are useful to a caller."""
+    _patch_popen(
+        monkeypatch,
+        {},
+        lines=[
+            "Blender 5.2.1 LTS",
+            "splat| device Apple M1 Pro (GPU - 16 cores) [METAL]",
+            "splat| Mem: 3143M | Sample 12/64",
+            "Saved: '/tmp/x.png'",
+        ],
+    )
+    seen: list[str] = []
+
+    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png", on_progress=seen.append)
+
+    assert seen == [
+        "device Apple M1 Pro (GPU - 16 cores) [METAL]",
+        "Mem: 3143M | Sample 12/64",
+    ]
+
+
+def test_render_works_without_a_progress_callback(monkeypatch, tmp_path, synthetic_cloud):
+    _patch_popen(monkeypatch, {}, lines=["splat| Sample 1/8"])
+
+    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
+
+    assert (tmp_path / "render.png").read_bytes() == b"fake png"

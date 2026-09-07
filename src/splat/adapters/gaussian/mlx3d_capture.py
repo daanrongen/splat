@@ -18,6 +18,9 @@ from splat.domain.value_objects import ModelLicense
 class MLX3DCaptureBackend:
     name = "mlx3d-capture"
 
+    # SfM recovers structure only up to an unknown similarity transform.
+    provides_metric_scale = False
+
     def __init__(
         self, *, weights_path: Path | None = None, device: str = "auto", license: ModelLicense
     ) -> None:
@@ -74,6 +77,9 @@ class MLX3DCaptureBackend:
             summary = run_capture(str(input_dir), str(output_dir), config, log=lambda _msg: None)
             cloud = PlyReader().read(Path(summary["splat"]))
             cloud.metadata.source_model = self.name
+            # SfM triangulates in the COLMAP frame; the PLY carries no comment
+            # saying so, and PlyReader's default would claim opengl.
+            cloud.metadata.coordinate_convention = "colmap"
             self._attach_camera_pose(cloud, summary, output_dir, load_colmap)
             return cloud
 

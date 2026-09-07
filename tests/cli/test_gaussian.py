@@ -15,6 +15,7 @@ runner = CliRunner()
 class FakeReconstructionBackend:
     name = "fake-recon"
     license = MIT
+    provides_metric_scale = False
 
     def __init__(self, cloud) -> None:
         self._cloud = cloud

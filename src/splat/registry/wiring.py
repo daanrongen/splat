@@ -3,12 +3,12 @@ factory functions. No container, no decorator-based registration magic —
 extending it means adding one dict entry and one adapter file.
 """
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from splat.domain.errors import UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
-from splat.env import resolve as resolve_env
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 
@@ -60,7 +60,7 @@ def get_manifest_repository() -> ManifestRepository:
 
 
 def get_client() -> "SplatClient":
-    url = resolve_env("SPLAT_URL", "")
+    url = os.environ.get("SPLAT_URL", "")
     if url:
         from splat.adapters.client.http import RemoteSplatClient
 

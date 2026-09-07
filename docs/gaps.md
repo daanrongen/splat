@@ -4,23 +4,31 @@ Ranked by how much they block the stated goal: *diffuse an image, chain it to a 
 
 ## Tier 0 - blocks the goal outright
 
-### G1. There is no image-to-Gaussian path
+### G1. There is no image-to-Gaussian path ~~(closed)~~
 
-`gaussian` has one working backend, `mlx3d-capture`, which runs SfM plus per-scene 3DGS optimization and needs 3+ genuinely multi-view-consistent photographs. No other `splat` command can produce those. `diffuse` produces one image, and four prompted "views" are four different objects ([pipeline.md §7](pipeline.md)):
+> **Closed.** `splat gaussian --model sharp` reconstructs from a single image. `splat diffuse "..." | splat gaussian - --model sharp` runs end to end in about 28 seconds. See [roadmap.md](roadmap.md) "Route A" for the implementation and its measurements. The rest of this entry records what the gap was.
+
+`gaussian` had one working backend, `mlx3d-capture`, which runs SfM plus per-scene 3DGS optimization and needs 3+ genuinely multi-view-consistent photographs. No other `splat` command could produce those. `diffuse` produces one image, and four prompted "views" are four different objects ([pipeline.md §7](pipeline.md)):
 
 ```
 RuntimeError: No image pairs with enough matches. The images likely do not overlap or lack texture.
 ```
 
-The other cataloged backend, `mvsplat`, is a deliberate `NotImplementedError` and is also the model the README's `gaussian` example names.
+The other cataloged backend, `mvsplat`, was a deliberate `NotImplementedError` and was also the model the README's `gaussian` example named. Both the stub and the README example are gone.
 
-Worse, the README's own remediation advice is unsound. Piped the wrong kind, `gaussian` prints:
+Worse, the README's own remediation advice was unsound. Piped the wrong kind, `gaussian` printed:
 
 > `gaussian has no text-to-3D or depth-only reconstruction path - pipe image/sticker assets in instead, e.g. splat diffuse ... | splat segment - | splat gaussian -`
 
-That suggests feeding N SAM cutouts of *one* view into a structure-from-motion pipeline. SfM needs multiple *viewpoints*, not multiple crops of one viewpoint. The recommended chain cannot work even in principle, and as measured in §3 the first sticker it would feed in is the background plate.
+That suggested feeding N SAM cutouts of *one* view into a structure-from-motion pipeline. SfM needs multiple *viewpoints*, not multiple crops of one viewpoint. The recommended chain could not work even in principle, and as measured in §3 the first sticker it would feed in is the background plate. The hint now points at `splat gaussian frame-*.png`.
 
-**This is the single gap to close.** [roadmap.md](roadmap.md) proposes `apple/Sharp` as the fix. Everything else in this document is secondary.
+The chain, from one diffused image to a render framed at the capture camera:
+
+| Input, `splat diffuse` | Output, `splat gaussian --model sharp` then `splat render` |
+|---|---|
+| ![diffused input](images/12-sharp-input.png) | ![rendered reconstruction](images/13-sharp-render-capture-camera.png) |
+
+Reconstruction from a single view recovers the *visible* surface, so the white speckle is the studio backdrop reconstructed behind the subject, and the washed-out colour is G2 below, not a reconstruction error.
 
 ### G2. `render` uses the wrong image formation model
 
@@ -110,9 +118,21 @@ The zero-byte `segment` marker is `kind=STICKER, ext="manifest"`. It appears in 
 
 This is the clearest instance of a general pattern: the domain is a little bit aspirational and the adapters quietly do their own thing. Either use `Camera`/`Pose` in `GaussianCloudMetadata` and route the flip through `convention_flip_matrix`, or delete the dead code. The first is better, it is the difference between camera data being modelled and being nested lists.
 
-### G17. `up_axis` and `coordinate_convention` contradict each other
+### G17. `up_axis` and `coordinate_convention` contradict each other ~~(closed)~~
 
-`run_gaussian` sets `coordinate_convention = "colmap"` and leaves `up_axis` at the PLY reader's `"y"` default. COLMAP/OpenCV is +Y **down**. Two fields set three lines apart disagree. This matters precisely because Blender import orientation is downstream of it.
+> **Closed.** Clouds are now stored in one canonical OpenGL-style frame (+Y up, -Z forward) with `up_axis y` recorded truthfully. Backends declare the frame they produce and `run_gaussian` converts.
+
+`run_gaussian` set `coordinate_convention = "colmap"` and left `up_axis` at the PLY reader's `"y"` default. COLMAP/OpenCV is +Y **down**. Two fields set three lines apart disagreed, and `up_axis`'s type (`Literal["y", "z"]`) could not express COLMAP's -Y up even in principle.
+
+Reported symptom, which is what made this concrete rather than cosmetic: a SHARP cloud opened in a third-party viewer was **upside down with the camera pointing away from the scene**. Both follow from the same cause. COLMAP puts the scene at +Z while a default OpenGL-style camera looks down -Z, so it faced exactly the wrong way; and +Y down renders inverted anywhere Y-up is assumed. Verified on the data rather than by eye - in the stored cloud the brightest 3% of Gaussians (the sky) sat at negative Y:
+
+```
+COLMAP y<0 ("up"):   mean luminance 0.378     <- sky and canopy
+COLMAP y>0 ("down"): mean luminance 0.314
+source image top third 0.355, bottom third 0.289
+```
+
+After conversion, +Y is the brighter half and Z spans -218..-1.9, so a viewer's default camera points at the scene. `splat render` produces a byte-comparable image either way, since it was already flipping COLMAP clouds itself and now skips that step.
 
 ### G18. `capture_camera_count` records a silent quality failure and nobody looks
 
@@ -128,9 +148,22 @@ Twelve orbit views in, `capture_camera_count: 3` out. SfM dropped 9 views and tr
 
 PR #57 removed `splat mesh`. The README still has a `### mesh` section with usage, lists `mesh` among top-level stages, includes it in the stage-flow mermaid diagram, credits it in the kind-taxonomy table, lists `POST /mesh` in the HTTP route table, and names `mesh` as an MCP tool. None of those exist. Meanwhile `splat render` has **no README section at all**, is absent from the intro list, and is missing from the HTTP table.
 
-### G21. `splat env` prints a wrong default
+### G21. `splat env` prints a wrong default ~~(closed)~~
 
-`gaussian --model` is reported as `mvsplat`; the actual CLI default is `mlx3d-capture`. `cli/env.py` maintains a hand-written default table separate from the Typer signatures. It also omits `render` (all four options), `caption`, `embed`, `tools convert`/`declutter`/`normalize.color`/`extract.surface`, and seven of `gaussian`'s nine flags. The env table should be derived from the Typer commands, not duplicated.
+> **Closed.** `splat env` now walks the Typer commands, so the table it prints cannot claim a setting the CLI does not honor. It also turned out the wrong default was the smaller half of the problem, see below.
+
+`gaussian --model` was reported as `mvsplat`; the actual CLI default is `mlx3d-capture`. `cli/env.py` maintained a hand-written default table separate from the Typer signatures. It also omitted `render` (all four options), `caption`, `embed`, `tools convert`/`declutter`/`normalize.color`/`extract.surface`, and seven of `gaussian`'s nine flags.
+
+The larger finding, missed by this audit and caught while fixing it: **fourteen of the sixteen variables the table listed did nothing at all.** No `typer.Option` in the codebase declared `envvar=`, so nothing ever read them:
+
+```
+$ SPLAT_DIFFUSE_MODEL=sd21-coreml splat diffuse --help
+--model  <str>  [default: sdxl-turbo-mlx]        # unchanged
+```
+
+Only `SPLAT_HOST`, `SPLAT_URL` and the two cache dirs worked. 43 command options now declare `envvar=`, each named in its own `--help`, and `splat env --export` generates the committed `.env.example` from the same walk. `splat/env.py`'s parallel `mise env --json` resolution was deleted rather than extended: Click reads `os.environ`, and putting values there is mise's job or uv's.
+
+`.env.example` and `mise.local.toml.example` were both stale hand-written subsets of this, the latter still listing `SPLAT_MESH_*` and `SPLAT_TRAIN_*` for commands that do not exist. One generated file replaces both.
 
 ### G22. The four transports expose four different surfaces
 
@@ -138,7 +171,7 @@ See the matrix in [architecture.md](architecture.md). `render` is CLI+SDK only; 
 
 ### G23. `models list` cannot distinguish "downloaded" from "works"
 
-`mvsplat` reports `cached` and raises `NotImplementedError`; `sam2-coreml` reports `cached` and crashes. `cached` means "weights are on disk". `models info mvsplat` does say "adapter is not implemented yet" via the descriptor's `notes`, so the data exists, it is just not in the list view. A `status` column (`ready` / `stub` / `untested`) would carry the actual meaning.
+`sam2-coreml` reports `cached` and crashes on its first inference call. `cached` means "weights are on disk", nothing more. `mvsplat` had the same problem and has since been removed from the catalog rather than left reporting `cached` for a `NotImplementedError`; `splat models prune` now exists to reclaim weights the catalog no longer references, which is the disk-side half of the same issue. A `status` column (`ready` / `untested`) would carry the meaning `cached` cannot.
 
 ### G24. `--steps` and other backend params are not exposed
 
