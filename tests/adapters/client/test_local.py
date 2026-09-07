@@ -9,6 +9,7 @@ from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.tools.declutter import DeclutterRequest
 from splat.handlers.upscale import UpscaleRequest
 from tests.image_helpers import sample_png_bytes, write_sample_png
 
@@ -128,6 +129,18 @@ def test_tools_compress_delegates_to_handler(tmp_path, synthetic_cloud):
     cloud = client.tools_compress(
         CompressRequest(input_path=ply_path, output_path=out_path, profile="archival")
     )
+
+    assert out_path.exists()
+    assert cloud.point_count <= synthetic_cloud.point_count
+
+
+def test_tools_declutter_delegates_to_handler(tmp_path, synthetic_cloud):
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+    out_path = tmp_path / "out.ply"
+    client = LocalSplatClient()
+
+    cloud = client.tools_declutter(DeclutterRequest(input_path=ply_path, output_path=out_path))
 
     assert out_path.exists()
     assert cloud.point_count <= synthetic_cloud.point_count

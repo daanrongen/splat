@@ -5,7 +5,7 @@
 The CLI is split by behavior:
 
 - **Model-backed stages** live at the top level: `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
-- **Deterministic tools** live under `splat tools`: `convert`, `compress`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
+- **Deterministic tools** live under `splat tools`: `convert`, `compress`, `declutter`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
 - **Inspection, services, and administration** stay separate: `info`, `validate`, `manifest`, `models`, `http`, `mcp`, and `env`.
 
 ## Getting Started
@@ -153,6 +153,16 @@ splat tools compress scene.ply scene.web.ply --profile web-delivery
 
 Key options: `--profile web-delivery|archival`.
 
+### tools declutter
+
+`splat tools declutter` removes isolated floater Gaussians via neighbor-density outlier detection - a visual-cleanliness pass, distinct from `compress`'s delivery-size pruning.
+
+```sh
+splat tools declutter scene.ply scene.clean.ply
+```
+
+Key options: `--k` (neighbors considered per point, default 16), `--std-ratio` (outlier threshold in standard deviations, default 2.0).
+
 ### tools displace.height
 
 `splat tools displace.height` turns a depth-map asset into a triangulated, textured mesh. It reads the source image through the depth asset's provenance.
@@ -247,9 +257,10 @@ flowchart LR
     depth -->|depth_map| displace([tools displace.height])
     gaussian -->|gaussian_cloud .ply| convert([tools convert])
     gaussian -->|gaussian_cloud .ply| compress([tools compress])
+    gaussian -->|gaussian_cloud .ply| declutter([tools declutter])
 ```
 
-`tools convert`/`tools compress`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages.
+`tools convert`/`tools compress`/`tools declutter`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages.
 
 ## HTTP Server
 
@@ -272,6 +283,7 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | `POST /gaussian` | `splat gaussian` | Gaussian splat bytes |
 | `POST /convert` | `splat tools convert` | converted file bytes |
 | `POST /compress` | `splat tools compress` | compressed file bytes |
+| `POST /declutter` | `splat tools declutter` | decluttered file bytes |
 | `POST /info` | `splat info` | JSON summary |
 | `POST /validate` | `splat validate` | JSON summary |
 | `GET /assets/{id}` | asset fetch | raw asset bytes |
@@ -298,7 +310,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, and `tools_displace_height`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, and `tools_displace_height`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
 
 ```sh
 splat mcp

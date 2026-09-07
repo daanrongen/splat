@@ -33,6 +33,7 @@ from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.tools.declutter import DeclutterRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.http._schemas import (
     DiffuseBody,
@@ -371,6 +372,18 @@ class RemoteSplatClient:
         if request.target_count is not None:
             form["target_count"] = request.target_count
         response = self._client.post("/compress", files=files, data=form)
+        _raise_for_domain_error(response)
+        request.output_path.write_bytes(response.content)
+        return get_reader(request.output_path.suffix).read(request.output_path)
+
+    def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud:
+        files = {"input": (request.input_path.name, request.input_path.read_bytes())}
+        form = {
+            "to": request.output_path.suffix.lstrip("."),
+            "k": request.k,
+            "std_ratio": request.std_ratio,
+        }
+        response = self._client.post("/declutter", files=files, data=form)
         _raise_for_domain_error(response)
         request.output_path.write_bytes(response.content)
         return get_reader(request.output_path.suffix).read(request.output_path)
