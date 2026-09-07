@@ -318,6 +318,23 @@ splat mcp
 
 When `SPLAT_URL` is set, remote-capable MCP tools route through the configured `splat http` server just like the CLI.
 
+## Python SDK
+
+`import splat` gives plain Python callables over the same handlers the CLI and `splat http` use - no subprocess, no argument parsing.
+
+```python
+import splat
+
+result = splat.diffuse("a small red boat", steps=4)
+stickers = splat.segment(result.asset, max_stickers=5)
+cloud_manifest = splat.gaussian(stickers)
+
+pixels = result.asset.as_image()          # numpy RGB/RGBA array
+cloud = cloud_manifest[0].as_gaussian_cloud()  # domain.gaussians.GaussianCloud
+```
+
+Every function takes a file path, `@<asset-id>`, or a `Manifest` object (or a list of any mix) wherever the CLI accepts `INPUT` positionally, and raises `SplatDomainError`/`ValueError` directly instead of exiting the process. `Manifest.load(id)` fetches a cached manifest by id, and `.as_image()`/`.as_text()`/`.as_array()`/`.as_gaussian_cloud()` decode its content per kind. Setting `SPLAT_URL` redirects remote-capable calls exactly like the CLI - `render()` is the one exception, always executing locally (see `ports/client.py`).
+
 ## Environment
 
 Cache roots default under `$XDG_CACHE_HOME/splat` or `~/.cache/splat`:

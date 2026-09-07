@@ -14,6 +14,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 
+import numpy as np
+
+from splat.domain.gaussians import GaussianCloud
+
 
 class ManifestKind(StrEnum):
     IMAGE = "image"  # generic RGB raster
@@ -52,3 +56,30 @@ class Manifest:
     content_size: int = 0  # bytes, of content_path
     content_sha256: str = ""
     created_at: str = ""  # ISO 8601 UTC, set once at first `put`
+
+    @classmethod
+    def load(cls, id: str) -> "Manifest":
+        """Fetch a cached manifest by id (accepts an optional leading `@`)."""
+        from splat.registry.wiring import get_manifest_repository
+
+        return get_manifest_repository().get(id.removeprefix("@"))
+
+    def as_image(self) -> np.ndarray:
+        """Decode this manifest's content as an RGB/RGBA array (IMAGE/STICKER kinds)."""
+        from splat.adapters.formats.image import read_rgb_or_rgba
+
+        return read_rgb_or_rgba(self.content_path)
+
+    def as_text(self) -> str:
+        """Read this manifest's content as UTF-8 text (CAPTION kind)."""
+        return self.content_path.read_text(encoding="utf-8")
+
+    def as_array(self) -> np.ndarray:
+        """Load this manifest's content as a numpy array (EMBEDDING/DEPTH_MAP kinds)."""
+        return np.load(self.content_path)
+
+    def as_gaussian_cloud(self) -> GaussianCloud:
+        """Parse this manifest's content as a GaussianCloud (GAUSSIAN_CLOUD kind)."""
+        from splat.registry.wiring import get_reader
+
+        return get_reader(self.content_path.suffix).read(self.content_path)
