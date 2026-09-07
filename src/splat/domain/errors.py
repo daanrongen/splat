@@ -24,3 +24,7 @@ class WrongManifestKind(SplatDomainError):
 
 class WrongManifestCount(SplatDomainError):
     """A stage received a number of manifests outside its contract's min/max."""
+
+
+class RenderBackendError(SplatDomainError):
+    """A render backend's external process (e.g. Blender) was missing or failed."""
