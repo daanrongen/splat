@@ -5,7 +5,7 @@ converters.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
 import numpy as np
@@ -130,3 +130,33 @@ class GaussianCloud:
             return self.opacities
         p = np.clip(self.opacities, 1e-6, 1 - 1e-6)
         return np.log(p / (1 - p))
+
+
+def normalize_gaussian_cloud(cloud: GaussianCloud, *, target_radius: float = 1.0) -> GaussianCloud:
+    """Recenter on the robust (median) centroid and rescale so the median
+    distance from center is `target_radius`.
+
+    Feed-forward and SfM-based reconstruction have no absolute scale or
+    canonical origin — this makes output consistent capture-to-capture
+    instead of carrying over whatever arbitrary position/scale the
+    backend's world frame happened to produce. Rotations, opacities, and SH
+    coefficients are untouched: recentering is a pure translation and
+    rescaling is uniform, so orientation and color are unaffected. This does
+    not change axis convention (see `GaussianCloudMetadata.coordinate_convention`
+    for that) — median is used over mean so a handful of far-flung outlier
+    points (common in sparse SfM reconstructions) don't skew the center/scale.
+    """
+    center = np.median(cloud.means, axis=0)
+    means = cloud.means - center
+
+    radius = float(np.median(np.linalg.norm(means, axis=1)))
+    scale_factor = target_radius / radius if radius > 1e-8 else 1.0
+    means = (means * scale_factor).astype(np.float32)
+
+    linear_scales = cloud.to_linear_scales() * scale_factor
+    if cloud.scale_activation == "log":
+        scales = np.log(np.clip(linear_scales, 1e-12, None)).astype(np.float32)
+    else:
+        scales = linear_scales.astype(np.float32)
+
+    return replace(cloud, means=means, scales=scales)

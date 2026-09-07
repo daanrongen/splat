@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import numpy as np
+import pytest
+
 from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.adapters.formats.ply import PlyReader
 from splat.application.pipeline import run_gaussian
@@ -47,6 +50,25 @@ def test_run_gaussian_creates_cached_ply_asset(tmp_path, synthetic_cloud):
     assert result.created_by == "gaussian:fake-recon"
     assert result.metadata.point_count == synthetic_cloud.point_count
     assert PlyReader().read(result.content_path).point_count == synthetic_cloud.point_count
+
+
+def test_run_gaussian_normalizes_output_and_sets_coordinate_convention(tmp_path, synthetic_cloud):
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    a = _image_asset(cache, tmp_path, "a.png")
+    b = _image_asset(cache, tmp_path, "b.png")
+
+    result = run_gaussian(
+        FakeReconstructionBackend(synthetic_cloud),
+        cache,
+        model_name="fake-recon",
+        input_assets=[a, b],
+        params={"device": "cpu"},
+    )
+
+    assert result.metadata.coordinate_convention == "colmap"
+    cloud = PlyReader().read(result.content_path)
+    radii = np.linalg.norm(cloud.means - np.median(cloud.means, axis=0), axis=1)
+    assert np.median(radii) == pytest.approx(1.0, abs=1e-4)
 
 
 def test_run_gaussian_reuses_cache_for_same_inputs(tmp_path, synthetic_cloud):

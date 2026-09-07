@@ -24,6 +24,15 @@ def test_ply_writer_supports_reports_no_lossy_warnings(synthetic_cloud):
     assert PlyWriter().supports(synthetic_cloud) == []
 
 
+def test_ply_roundtrip_preserves_coordinate_convention(tmp_path: Path, synthetic_cloud):
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+    out = tmp_path / "scene.ply"
+    PlyWriter().write(synthetic_cloud, out)
+    loaded = PlyReader().read(out)
+    assert loaded.metadata.coordinate_convention == "colmap"
+    assert loaded.metadata.up_axis == "y"
+
+
 def test_ply_degree_zero_roundtrip(tmp_path: Path):
     from splat.domain.gaussians import GaussianCloud
 
