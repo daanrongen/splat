@@ -3,6 +3,8 @@ from typing import Any
 from splat.application.models_admin import (
     ListModelsUseCase,
     ModelInfoUseCase,
+    OrphanedWeights,
+    PruneModelsUseCase,
     PullModelUseCase,
     RemoveModelUseCase,
 )
@@ -23,3 +25,8 @@ def info(name: str) -> Any:
 
 def rm(name: str) -> None:
     RemoveModelUseCase(get_model_source()).execute(name)
+
+
+def prune(*, apply: bool = False) -> list[OrphanedWeights]:
+    use_case = PruneModelsUseCase(get_model_source())
+    return use_case.execute() if apply else use_case.find()

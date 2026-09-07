@@ -121,9 +121,50 @@ def test_remove_noop_when_not_cached(mocker):
     HuggingFaceModelSource().remove("org/name")  # should not raise
 
 
-def test_list_cached(mocker):
+def test_list_cached(mocker, tmp_path):
+    mocker.patch("splat.adapters.model_sources.huggingface.model_cache_dir", return_value=tmp_path)
     mocker.patch(
         "splat.adapters.model_sources.huggingface.scan_cache_dir",
         return_value=FakeCacheInfo([FakeRepo("org/a"), FakeRepo("org/b")]),
     )
     assert HuggingFaceModelSource().list_cached() == ["org/a", "org/b"]
+
+
+def test_list_cached_includes_bespoke_converted_dirs(mocker, tmp_path):
+    (tmp_path / "coreml-sam2" / "apple--coreml-sam2.1-tiny").mkdir(parents=True)
+    (tmp_path / "coreml-sam2" / "apple--coreml-sam2.1-tiny" / "w.bin").write_bytes(b"x")
+    mocker.patch("splat.adapters.model_sources.huggingface.model_cache_dir", return_value=tmp_path)
+    mocker.patch(
+        "splat.adapters.model_sources.huggingface.scan_cache_dir",
+        return_value=FakeCacheInfo([FakeRepo("org/a")]),
+    )
+
+    assert HuggingFaceModelSource().list_cached() == [
+        "apple/coreml-sam2.1-tiny",
+        "org/a",
+    ]
+
+
+def test_size_on_disk_counts_blobs_once_not_through_snapshot_symlinks(mocker, tmp_path):
+    repo = tmp_path / "models--org--name"
+    blobs = repo / "blobs"
+    snapshot = repo / "snapshots" / "abc123"
+    blobs.mkdir(parents=True)
+    snapshot.mkdir(parents=True)
+    (blobs / "deadbeef").write_bytes(b"w" * 1024)
+    (snapshot / "model.safetensors").symlink_to(blobs / "deadbeef")
+
+    mocker.patch(
+        "splat.adapters.model_sources.huggingface.scan_cache_dir",
+        return_value=FakeCacheInfo([FakeRepo("org/name", [FakeRevision(snapshot)])]),
+    )
+
+    assert HuggingFaceModelSource().size_on_disk("org/name") == 1024
+
+
+def test_size_on_disk_zero_when_not_cached(mocker):
+    mocker.patch(
+        "splat.adapters.model_sources.huggingface.scan_cache_dir",
+        return_value=FakeCacheInfo([]),
+    )
+    assert HuggingFaceModelSource().size_on_disk("org/name") == 0
