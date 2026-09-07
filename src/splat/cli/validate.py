@@ -9,7 +9,12 @@ from splat.registry.wiring import get_client
 
 def validate(
     path: Path = typer.Argument(..., help="Splat file to validate."),
-    strict: bool = typer.Option(False, "--strict", help="Also flag valid-but-suspicious values."),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Also flag valid-but-suspicious values.",
+        envvar="SPLAT_VALIDATE_STRICT",
+    ),
 ) -> None:
     """Check a splat file's domain invariants; exits non-zero on failure (CI-friendly)."""
     try:

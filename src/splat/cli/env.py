@@ -1,11 +1,27 @@
+"""`splat env` reads the Typer app itself rather than keeping a second copy of
+every default. Anything with `envvar=` on its option shows up here
+automatically, so the table cannot drift from the command signatures.
+"""
+
 from dataclasses import dataclass
 
+import click
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from splat.cli._console import error
 from splat.env import resolve_verbose
+
+# Env vars that aren't command options: cache roots, the client redirect, and
+# the two the Blender adapter reads directly.
+_NON_OPTION_VARS: list[tuple[str, str, str, str]] = [
+    ("*", "(client)", "SPLAT_URL", ""),
+    ("*", "(cache)", "SPLAT_MODEL_CACHE_DIR", ""),
+    ("*", "(cache)", "SPLAT_ASSET_CACHE_DIR", ""),
+    ("render", "(adapter)", "SPLAT_BLENDER_BIN", ""),
+    ("render", "(adapter)", "SPLAT_RENDER_TIMEOUT", "1800"),
+]
 
 
 @dataclass(frozen=True)
@@ -17,35 +33,66 @@ class _Setting:
     catalog: dict | None = None  # model-name catalog to validate against, if any
 
 
-def _settings() -> list[_Setting]:
+def _catalog_for(command: str, param: str) -> dict | None:
+    if param != "--model":
+        return None
+    from splat.registry.caption import CAPTION_CATALOG
     from splat.registry.depth import DEPTH_CATALOG
     from splat.registry.diffuse import DIFFUSION_CATALOG
+    from splat.registry.embed import EMBEDDING_CATALOG
     from splat.registry.gaussian import GAUSSIAN_CATALOG
     from splat.registry.segment import SEGMENTATION_CATALOG
     from splat.registry.upscale import UPSCALE_CATALOG
 
-    return [
-        _Setting("diffuse", "--model", "SPLAT_DIFFUSE_MODEL", "sdxl-turbo-mlx", DIFFUSION_CATALOG),
-        _Setting("diffuse", "--device", "SPLAT_DIFFUSE_DEVICE", "auto"),
-        _Setting("diffuse", "--steps", "SPLAT_DIFFUSE_STEPS", ""),
-        _Setting("diffuse", "--seed", "SPLAT_DIFFUSE_SEED", ""),
-        _Setting("diffuse", "--negative", "SPLAT_DIFFUSE_NEGATIVE", ""),
-        _Setting("segment", "--model", "SPLAT_SEGMENT_MODEL", "sam-mlx", SEGMENTATION_CATALOG),
-        _Setting("segment", "--device", "SPLAT_SEGMENT_DEVICE", "auto"),
-        _Setting("segment", "--max-stickers", "SPLAT_SEGMENT_MAX_STICKERS", "20"),
-        _Setting("depth", "--model", "SPLAT_DEPTH_MODEL", "depth-pro", DEPTH_CATALOG),
-        _Setting("depth", "--device", "SPLAT_DEPTH_DEVICE", "auto"),
-        _Setting("upscale", "--model", "SPLAT_UPSCALE_MODEL", "realesrgan-mlx", UPSCALE_CATALOG),
-        _Setting("upscale", "--factor", "SPLAT_UPSCALE_FACTOR", "4"),
-        _Setting("upscale", "--tile", "SPLAT_UPSCALE_TILE", "0"),
-        _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mlx3d-capture", GAUSSIAN_CATALOG),
-        _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
-        _Setting("http", "--host", "SPLAT_HOST", "127.0.0.1:8000"),
-        _Setting("tools compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),
-        _Setting("validate", "--strict", "SPLAT_VALIDATE_STRICT", "false"),
-        _Setting("tools displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO", "glb"),
-        _Setting("*", "(client)", "SPLAT_URL", ""),
+    return {
+        "diffuse": DIFFUSION_CATALOG,
+        "caption": CAPTION_CATALOG,
+        "embed": EMBEDDING_CATALOG,
+        "segment": SEGMENTATION_CATALOG,
+        "depth": DEPTH_CATALOG,
+        "upscale": UPSCALE_CATALOG,
+        "gaussian": GAUSSIAN_CATALOG,
+    }.get(command)
+
+
+def _long_opt(param: click.Parameter) -> str:
+    """Prefer `--to` over `-t`; short flags read as noise in this table."""
+    return next((opt for opt in param.opts if opt.startswith("--")), param.opts[0])
+
+
+def _default_text(param: click.Parameter) -> str:
+    if isinstance(param.default, bool):
+        return str(param.default).lower()
+    return "" if param.default is None else str(param.default)
+
+
+def _walk(command: click.Command, path: tuple[str, ...]) -> list[_Setting]:
+    name = " ".join(path)
+    settings = [
+        _Setting(
+            command=name,
+            param=_long_opt(param),
+            var=param.envvar,
+            default=_default_text(param),
+            catalog=_catalog_for(name, _long_opt(param)),
+        )
+        for param in command.params
+        if isinstance(param.envvar, str)
     ]
+    for sub_name, sub in getattr(command, "commands", {}).items():
+        settings.extend(_walk(sub, (*path, sub_name)))
+    return settings
+
+
+def _settings() -> list[_Setting]:
+    from splat.cli.main import app
+
+    settings = _walk(typer.main.get_command(app), ())
+    settings.extend(
+        _Setting(command=command, param=param, var=var, default=default)
+        for command, param, var, default in _NON_OPTION_VARS
+    )
+    return settings
 
 
 def _reachable(host: str) -> bool:

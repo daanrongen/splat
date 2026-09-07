@@ -15,14 +15,23 @@ def render(
         ..., help="Gaussian cloud path/@<asset-id>, or '-' to read piped asset records."
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Write the rendered PNG here."),
-    model: str = typer.Option("blender", "--model", help="Render backend."),
-    width: int = typer.Option(1280, "--width", help="Render width in pixels."),
-    height: int = typer.Option(720, "--height", help="Render height in pixels."),
-    samples: int = typer.Option(32, "--samples", help="Render samples (backend-dependent)."),
+    model: str = typer.Option(
+        "blender", "--model", help="Render backend.", envvar="SPLAT_RENDER_MODEL"
+    ),
+    width: int = typer.Option(
+        1280, "--width", help="Render width in pixels.", envvar="SPLAT_RENDER_WIDTH"
+    ),
+    height: int = typer.Option(
+        720, "--height", help="Render height in pixels.", envvar="SPLAT_RENDER_HEIGHT"
+    ),
+    samples: int = typer.Option(
+        32, "--samples", help="Render samples (backend-dependent).", envvar="SPLAT_RENDER_SAMPLES"
+    ),
     engine: str = typer.Option(
         "cycles",
         "--engine",
         help="cycles (accurate alpha-blended ellipsoids) | eevee (fast preview).",
+        envvar="SPLAT_RENDER_ENGINE",
     ),
 ) -> None:
     """Render a Gaussian splat to a still image."""

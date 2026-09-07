@@ -17,9 +17,11 @@ def segment(
     output_dir: Path | None = typer.Option(
         None, "-o", "--output", help="Also export stickers here."
     ),
-    model: str = typer.Option("sam-mlx", "--model"),
-    max_stickers: int = typer.Option(20, "--max-stickers"),
-    device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
+    model: str = typer.Option("sam-mlx", "--model", envvar="SPLAT_SEGMENT_MODEL"),
+    max_stickers: int = typer.Option(20, "--max-stickers", envvar="SPLAT_SEGMENT_MAX_STICKERS"),
+    device: str = typer.Option(
+        "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_SEGMENT_DEVICE"
+    ),
 ) -> None:
     """Segment image(s) into RGBA sticker cutouts (cached; fans out to many assets)."""
     cache = get_manifest_repository()

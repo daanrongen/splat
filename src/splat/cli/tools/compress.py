@@ -12,11 +12,17 @@ from splat.registry.wiring import get_client
 def compress(
     input: Path = typer.Argument(...),
     output: Path = typer.Argument(...),
-    profile: str = typer.Option("web-delivery", "--profile", help=f"One of: {', '.join(PROFILES)}"),
+    profile: str = typer.Option(
+        "web-delivery",
+        "--profile",
+        help=f"One of: {', '.join(PROFILES)}",
+        envvar="SPLAT_COMPRESS_PROFILE",
+    ),
     pruning: str = typer.Option(
         "threshold",
         "--pruning",
         help="threshold | blue-noise (spatially-uniform, needs --target-count)",
+        envvar="SPLAT_COMPRESS_PRUNING",
     ),
     target_count: int | None = typer.Option(
         None, "--target-count", help="Target point count for --pruning blue-noise."

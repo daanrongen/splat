@@ -12,12 +12,16 @@ def declutter(
     input: Path = typer.Argument(...),
     output: Path = typer.Argument(...),
     k: int = typer.Option(
-        16, "--k", help="Neighbors considered per point when estimating local density."
+        16,
+        "--k",
+        help="Neighbors considered per point when estimating local density.",
+        envvar="SPLAT_DECLUTTER_K",
     ),
     std_ratio: float = typer.Option(
         2.0,
         "--std-ratio",
         help="Points beyond this many std-devs of mean neighbor distance are removed.",
+        envvar="SPLAT_DECLUTTER_STD_RATIO",
     ),
 ) -> None:
     """Remove isolated floater Gaussians via neighbor-density outlier detection."""

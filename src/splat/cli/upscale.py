@@ -15,9 +15,16 @@ def upscale(
         ..., help="Image path, @<asset-id>, or '-' to read piped asset records."
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Also export PNG here."),
-    factor: int = typer.Option(4, "--factor", help="Native upscale factor: 2 or 4."),
-    model: str = typer.Option("realesrgan-mlx", "--model"),
-    tile: int = typer.Option(0, "--tile", help="Tile size for large images; 0 disables tiling."),
+    factor: int = typer.Option(
+        4, "--factor", help="Native upscale factor: 2 or 4.", envvar="SPLAT_UPSCALE_FACTOR"
+    ),
+    model: str = typer.Option("realesrgan-mlx", "--model", envvar="SPLAT_UPSCALE_MODEL"),
+    tile: int = typer.Option(
+        0,
+        "--tile",
+        help="Tile size for large images; 0 disables tiling.",
+        envvar="SPLAT_UPSCALE_TILE",
+    ),
 ) -> None:
     """Upscale image or sticker assets with a model-backed super-resolution backend."""
     cache = get_manifest_repository()
