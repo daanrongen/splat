@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from splat.adapters.compression.blue_noise import weighted_sample_elimination
 from splat.domain.gaussians import GaussianCloud, GaussianCloudMetadata
 
 
@@ -38,7 +39,13 @@ class PruneQuantizeCompressor:
     name = "prune-quantize"
 
     def compress(
-        self, cloud: GaussianCloud, *, profile: str = "web-delivery", **params
+        self,
+        cloud: GaussianCloud,
+        *,
+        profile: str = "web-delivery",
+        pruning: str = "threshold",
+        target_count: int | None = None,
+        **params,
     ) -> GaussianCloud:
         try:
             spec = PROFILES[profile]
@@ -59,6 +66,20 @@ class PruneQuantizeCompressor:
             mean_dist, std_dist = distances.mean(), distances.std()
             if std_dist > 0:
                 keep &= distances <= mean_dist + spec.outlier_std * std_dist
+
+        if pruning == "blue-noise":
+            if target_count is None:
+                raise ValueError("pruning='blue-noise' requires target_count (--target-count).")
+            kept_idx = np.flatnonzero(keep)
+            survives = weighted_sample_elimination(
+                cloud.means[kept_idx], cloud.to_activated_opacities()[kept_idx], target_count
+            )
+            keep = np.zeros(cloud.point_count, dtype=bool)
+            keep[kept_idx[survives]] = True
+        elif pruning != "threshold":
+            raise ValueError(
+                f"Unknown pruning strategy {pruning!r}. Available: threshold, blue-noise"
+            )
 
         sh_rest = cloud.sh_rest[keep] if cloud.sh_rest is not None else None
         sh_degree = cloud.sh_degree

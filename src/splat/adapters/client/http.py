@@ -363,7 +363,13 @@ class RemoteSplatClient:
 
     def tools_compress(self, request: CompressRequest) -> GaussianCloud:
         files = {"input": (request.input_path.name, request.input_path.read_bytes())}
-        form = {"profile": request.profile, "to": request.output_path.suffix.lstrip(".")}
+        form = {
+            "profile": request.profile,
+            "to": request.output_path.suffix.lstrip("."),
+            "pruning": request.pruning,
+        }
+        if request.target_count is not None:
+            form["target_count"] = request.target_count
         response = self._client.post("/compress", files=files, data=form)
         _raise_for_domain_error(response)
         request.output_path.write_bytes(response.content)

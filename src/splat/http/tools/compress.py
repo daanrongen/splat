@@ -13,6 +13,8 @@ def compress(
     input: UploadFile = File(...),
     profile: str = Form("web-delivery"),
     to: str | None = Form(None),
+    pruning: str = Form("threshold"),
+    target_count: int | None = Form(None),
 ) -> Response:
     suffix = Path(input.filename or "").suffix
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -22,7 +24,13 @@ def compress(
         output_path = tmp_path / f"output.{to.lstrip('.') if to else suffix.lstrip('.')}"
 
         cloud = handle(
-            CompressRequest(input_path=input_path, output_path=output_path, profile=profile)
+            CompressRequest(
+                input_path=input_path,
+                output_path=output_path,
+                profile=profile,
+                pruning=pruning,
+                target_count=target_count,
+            )
         )
         content = output_path.read_bytes()
 

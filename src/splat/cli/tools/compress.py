@@ -13,11 +13,25 @@ def compress(
     input: Path = typer.Argument(...),
     output: Path = typer.Argument(...),
     profile: str = typer.Option("web-delivery", "--profile", help=f"One of: {', '.join(PROFILES)}"),
+    pruning: str = typer.Option(
+        "threshold",
+        "--pruning",
+        help="threshold | blue-noise (spatially-uniform, needs --target-count)",
+    ),
+    target_count: int | None = typer.Option(
+        None, "--target-count", help="Target point count for --pruning blue-noise."
+    ),
 ) -> None:
     """Prune outliers/low-opacity points and quantize for delivery."""
     try:
         cloud = get_client().tools_compress(
-            CompressRequest(input_path=input, output_path=output, profile=profile)
+            CompressRequest(
+                input_path=input,
+                output_path=output,
+                profile=profile,
+                pruning=pruning,
+                target_count=target_count,
+            )
         )
     except (SplatDomainError, ValueError) as exc:
         error(str(exc))
