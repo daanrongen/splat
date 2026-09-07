@@ -99,9 +99,17 @@ Key options: `--model realesrgan-mlx`, `--factor 2|4`, `--tile`, `-o/--output`.
 
 ### gaussian
 
-`splat gaussian` reconstructs a Gaussian splat from input images. The only backend today is `mlx3d-capture`, which is **optimization-based, not feed-forward**: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene on Apple Silicon through MLX/Metal.
+`splat gaussian` reconstructs a Gaussian splat from input images. Two backends, and which one you want depends entirely on how many images you have.
 
-That means it needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register. There is no single-image path yet (tracked in #81).
+**`sharp` (1 image)** is Apple's SHARP: a single feed-forward pass that regresses a metric 3D Gaussian representation from one photograph. This is the backend that makes the headline chain possible, since `diffuse` produces exactly one image.
+
+```sh
+splat diffuse "a small red toy robot, studio lighting" | splat gaussian - --model sharp -o robot.ply
+```
+
+About 13 seconds on an M1 Pro for ~1.18M Gaussians. Output is **metric, with absolute scale** (so `gaussian` skips the normalization it applies to every other backend) in the OpenCV/COLMAP convention, with the scene in front of the camera at +z. Because it reconstructs from one viewpoint it recovers the *visible* surface, background plate included, not a full 360-degree object. Weights are `apple/Sharp`, licensed for **research use only**.
+
+**`mlx3d-capture` (3+ images)** is optimization-based rather than feed-forward: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene through MLX/Metal. It needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register.
 
 ```sh
 splat gaussian frame-*.png --quality balanced -o scene.ply
@@ -111,7 +119,7 @@ Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 m
 
 | Option | Default | Purpose |
 |---|---|---|
-| `--model` | `mlx3d-capture` | Reconstruction backend |
+| `--model` | `mlx3d-capture` | `sharp` (1 image) or `mlx3d-capture` (3+ images) |
 | `--device` | `auto` | `auto` \| `cpu` \| `mps` |
 | `--quality` | `fast` | mlx3d preset; `balanced` and up train longer |
 | `--iters` | preset | Override training iterations |
@@ -121,6 +129,8 @@ Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 m
 | `--refine-poses` | `auto` | `auto` \| `on` \| `off` |
 | `--low-mem` | off | mlx3d low-memory mode |
 | `--seed` | `0` | Random seed; `<0` disables seeding |
+
+`--quality` through `--seed` apply to `mlx3d-capture` only. `sharp` takes `--focal-35mm` (default `30.0`), the 35mm-equivalent focal length assumed for images without EXIF, which sets the absolute scale.
 
 ### render
 
@@ -263,7 +273,7 @@ splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth
 | `shape_3d` | `mesh_3d` | tools displace.height, tools extract.surface | `.glb` / `.obj` |
 | `gaussian_cloud` | `splat_3d` | gaussian | `.ply` |
 
-Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (mlx3d-capture needs 3+); piping the wrong kind in fails with a message naming both sides:
+Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (`sharp` accepts exactly 1, `mlx3d-capture` needs 3+); piping the wrong kind in fails with a message naming both sides:
 
 ```
 $ splat depth photo.png | splat gaussian -

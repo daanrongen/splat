@@ -28,3 +28,7 @@ class WrongManifestCount(SplatDomainError):
 
 class RenderBackendError(SplatDomainError):
     """A render backend's external process (e.g. Blender) was missing or failed."""
+
+
+class ReconstructionBackendError(SplatDomainError):
+    """A reconstruction backend's weights, device or input were unusable."""

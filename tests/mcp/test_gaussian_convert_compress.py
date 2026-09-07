@@ -1,9 +1,12 @@
 from splat.adapters.formats.ply import PlyWriter
+from splat.domain.value_objects import MIT
 from tests.image_helpers import write_sample_png
 
 
 class FakeReconstructionBackend:
     name = "fake-recon"
+    license = MIT
+    provides_metric_scale = False
 
     def __init__(self, cloud) -> None:
         self._cloud = cloud

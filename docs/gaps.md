@@ -4,23 +4,31 @@ Ranked by how much they block the stated goal: *diffuse an image, chain it to a 
 
 ## Tier 0 - blocks the goal outright
 
-### G1. There is no image-to-Gaussian path
+### G1. There is no image-to-Gaussian path ~~(closed)~~
 
-`gaussian` has one working backend, `mlx3d-capture`, which runs SfM plus per-scene 3DGS optimization and needs 3+ genuinely multi-view-consistent photographs. No other `splat` command can produce those. `diffuse` produces one image, and four prompted "views" are four different objects ([pipeline.md §7](pipeline.md)):
+> **Closed.** `splat gaussian --model sharp` reconstructs from a single image. `splat diffuse "..." | splat gaussian - --model sharp` runs end to end in about 28 seconds. See [roadmap.md](roadmap.md) "Route A" for the implementation and its measurements. The rest of this entry records what the gap was.
+
+`gaussian` had one working backend, `mlx3d-capture`, which runs SfM plus per-scene 3DGS optimization and needs 3+ genuinely multi-view-consistent photographs. No other `splat` command could produce those. `diffuse` produces one image, and four prompted "views" are four different objects ([pipeline.md §7](pipeline.md)):
 
 ```
 RuntimeError: No image pairs with enough matches. The images likely do not overlap or lack texture.
 ```
 
-The other cataloged backend, `mvsplat`, is a deliberate `NotImplementedError` and is also the model the README's `gaussian` example names.
+The other cataloged backend, `mvsplat`, was a deliberate `NotImplementedError` and was also the model the README's `gaussian` example named. Both the stub and the README example are gone.
 
-Worse, the README's own remediation advice is unsound. Piped the wrong kind, `gaussian` prints:
+Worse, the README's own remediation advice was unsound. Piped the wrong kind, `gaussian` printed:
 
 > `gaussian has no text-to-3D or depth-only reconstruction path - pipe image/sticker assets in instead, e.g. splat diffuse ... | splat segment - | splat gaussian -`
 
-That suggests feeding N SAM cutouts of *one* view into a structure-from-motion pipeline. SfM needs multiple *viewpoints*, not multiple crops of one viewpoint. The recommended chain cannot work even in principle, and as measured in §3 the first sticker it would feed in is the background plate.
+That suggested feeding N SAM cutouts of *one* view into a structure-from-motion pipeline. SfM needs multiple *viewpoints*, not multiple crops of one viewpoint. The recommended chain could not work even in principle, and as measured in §3 the first sticker it would feed in is the background plate. The hint now points at `splat gaussian frame-*.png`.
 
-**This is the single gap to close.** [roadmap.md](roadmap.md) proposes `apple/Sharp` as the fix. Everything else in this document is secondary.
+The chain, from one diffused image to a render framed at the capture camera:
+
+| Input, `splat diffuse` | Output, `splat gaussian --model sharp` then `splat render` |
+|---|---|
+| ![diffused input](images/12-sharp-input.png) | ![rendered reconstruction](images/13-sharp-render-capture-camera.png) |
+
+Reconstruction from a single view recovers the *visible* surface, so the white speckle is the studio backdrop reconstructed behind the subject, and the washed-out colour is G2 below, not a reconstruction error.
 
 ### G2. `render` uses the wrong image formation model
 
@@ -138,7 +146,7 @@ See the matrix in [architecture.md](architecture.md). `render` is CLI+SDK only; 
 
 ### G23. `models list` cannot distinguish "downloaded" from "works"
 
-`mvsplat` reports `cached` and raises `NotImplementedError`; `sam2-coreml` reports `cached` and crashes. `cached` means "weights are on disk". `models info mvsplat` does say "adapter is not implemented yet" via the descriptor's `notes`, so the data exists, it is just not in the list view. A `status` column (`ready` / `stub` / `untested`) would carry the actual meaning.
+`sam2-coreml` reports `cached` and crashes on its first inference call. `cached` means "weights are on disk", nothing more. `mvsplat` had the same problem and has since been removed from the catalog rather than left reporting `cached` for a `NotImplementedError`; `splat models prune` now exists to reclaim weights the catalog no longer references, which is the disk-side half of the same issue. A `status` column (`ready` / `untested`) would carry the meaning `cached` cannot.
 
 ### G24. `--steps` and other backend params are not exposed
 

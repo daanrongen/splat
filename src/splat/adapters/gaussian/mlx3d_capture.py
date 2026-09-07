@@ -18,6 +18,9 @@ from splat.domain.value_objects import ModelLicense
 class MLX3DCaptureBackend:
     name = "mlx3d-capture"
 
+    # SfM recovers structure only up to an unknown similarity transform.
+    provides_metric_scale = False
+
     def __init__(
         self, *, weights_path: Path | None = None, device: str = "auto", license: ModelLicense
     ) -> None:

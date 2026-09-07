@@ -11,6 +11,15 @@ class ReconstructionBackend(Protocol):
     name: str
     license: ModelLicense
 
+    provides_metric_scale: bool
+    """True when the backend's output is already in real-world units.
+
+    SfM and most feed-forward reconstruction have no absolute scale, so
+    `run_gaussian` normalizes by default; a backend that predicts metres
+    (SHARP) sets this so that normalization is skipped instead of throwing
+    away the one thing it uniquely provides.
+    """
+
     def reconstruct(
         self, images: list[Path], *, device: str = "auto", **params
     ) -> GaussianCloud: ...

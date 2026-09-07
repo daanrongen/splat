@@ -14,6 +14,7 @@ from tests.image_helpers import write_sample_png
 class FakeReconstructionBackend:
     name = "fake-recon"
     license = MIT
+    provides_metric_scale = False
 
     def __init__(self, cloud) -> None:
         self._cloud = cloud
@@ -94,3 +95,67 @@ def test_run_gaussian_reuses_cache_for_same_inputs(tmp_path, synthetic_cloud):
 
     assert first.id == second.id
     assert backend.calls == 1
+
+
+class FakeMetricBackend(FakeReconstructionBackend):
+    name = "fake-metric"
+    provides_metric_scale = True
+
+    def required_image_count(self) -> tuple[int, int | None]:
+        return (1, 1)
+
+
+def test_run_gaussian_preserves_metric_scale_when_the_backend_declares_it(
+    tmp_path, synthetic_cloud
+):
+    """A metric backend's absolute scale is the one thing it uniquely provides;
+    normalizing it to a median radius of 1.0 would throw that away."""
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    a = _image_asset(cache, tmp_path, "a.png")
+    before = synthetic_cloud.means.copy()
+
+    result = run_gaussian(
+        FakeMetricBackend(synthetic_cloud),
+        cache,
+        model_name="fake-metric",
+        input_assets=[a],
+        params={"device": "cpu"},
+    )
+
+    assert result.metadata.metric_scale is True
+    cloud = PlyReader().read(result.content_path)
+    np.testing.assert_allclose(cloud.means, before, atol=1e-5)
+
+
+def test_run_gaussian_marks_normalized_clouds_as_non_metric(tmp_path, synthetic_cloud):
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    a = _image_asset(cache, tmp_path, "a.png")
+    b = _image_asset(cache, tmp_path, "b.png")
+
+    result = run_gaussian(
+        FakeReconstructionBackend(synthetic_cloud),
+        cache,
+        model_name="fake-recon",
+        input_assets=[a, b],
+        params={"device": "cpu"},
+    )
+
+    assert result.metadata.metric_scale is False
+
+
+def test_run_gaussian_records_the_backend_license(tmp_path, synthetic_cloud):
+    """Every reconstruction used to record license=None despite the descriptor
+    naming one."""
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    a = _image_asset(cache, tmp_path, "a.png")
+    b = _image_asset(cache, tmp_path, "b.png")
+
+    result = run_gaussian(
+        FakeReconstructionBackend(synthetic_cloud),
+        cache,
+        model_name="fake-recon",
+        input_assets=[a, b],
+        params={"device": "cpu"},
+    )
+
+    assert result.metadata.license == MIT

@@ -33,6 +33,7 @@ class GaussianCloudMetadata:
     license: ModelLicense | None = None
     up_axis: Literal["y", "z"] = "y"
     coordinate_convention: str = "opengl"
+    metric_scale: bool = False  # True when `means` are in real-world units
     point_count: int = 0
     sh_degree: int = 0
     scale_activation: ScaleActivation = "log"

@@ -78,6 +78,9 @@ quote-style = "double"
 minversion = "8.0"
 addopts = "-ra --cov=splat --cov-report=term-missing"
 testpaths = ["tests"]
+markers = [
+    "integration: runs a real model forward pass; needs SPLAT_INTEGRATION_TESTS=1",
+]
 
 [tool.coverage.run]
 omit = ["*/_vendor/*"]

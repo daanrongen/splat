@@ -429,9 +429,14 @@ def run_gaussian(
         device=params.get("device", "auto"),
         **execute_params,
     )
-    cloud = normalize_gaussian_cloud(cloud)
+    # SfM and most feed-forward reconstruction have no absolute scale, so the
+    # default is to normalize; a backend predicting metres says so and keeps it.
+    if not backend.provides_metric_scale:
+        cloud = normalize_gaussian_cloud(cloud)
+    cloud.metadata.metric_scale = backend.provides_metric_scale
     cloud.metadata.source_model = model_name
     cloud.metadata.source_format = "ply"
+    cloud.metadata.license = backend.license
     # Reconstruction backends here calibrate/triangulate in the OpenCV/COLMAP
     # convention (X-right, Y-down, Z-forward) — same as the original INRIA
     # 3DGS codebase, so this stays as-is for viewer/tool compatibility; a

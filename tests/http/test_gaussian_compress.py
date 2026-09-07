@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from splat.adapters.formats.ply import PlyWriter
+from splat.domain.value_objects import MIT
 from splat.http.app import app
 from tests.image_helpers import sample_png_bytes
 
@@ -9,6 +10,8 @@ client = TestClient(app)
 
 class FakeReconstructionBackend:
     name = "fake-recon"
+    license = MIT
+    provides_metric_scale = False
 
     def __init__(self, cloud) -> None:
         self._cloud = cloud

@@ -170,7 +170,7 @@ RuntimeError: No image pairs with enough matches. The images likely do not overl
 
 Two problems in one line. The reconstruction is impossible, which is the real gap. And a third-party `RuntimeError` escapes as a raw Rich traceback instead of a `SplatDomainError`, because the handler layer only catches `SplatDomainError` and no adapter translates its backend's exceptions.
 
-`mvsplat`, the model the README's `gaussian` example actually names, raises `NotImplementedError` by design.
+`mvsplat`, the model the README's `gaussian` example named at the time, raised `NotImplementedError` by design; it has since been removed from the catalog and `--model sharp` fills the single-image slot.
 
 ### What working input looks like
 
