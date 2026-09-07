@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import trimesh
 
-from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png
+from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png, read_rgb_or_rgba
 from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
@@ -23,7 +23,7 @@ from splat.application.embed import EmbedUseCase
 from splat.application.reconstruct import ReconstructUseCase
 from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
-from splat.application.tools import displace_height
+from splat.application.tools import displace_height, normalize_color
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud, normalize_gaussian_cloud
@@ -142,6 +142,48 @@ def run_segment(
         created_by=f"segment:{model_name}",
     )
     return children
+
+
+def run_normalize_color(
+    cache: ManifestRepository,
+    *,
+    input_assets: list[Manifest],
+    params: dict,
+) -> list[Manifest]:
+    """Corrects per-view exposure/white-balance drift across `input_assets` as
+    one cohort - unlike every other stage here, one output's cache key
+    depends on every other image in the batch (`cohort_ids`), not just its
+    own source, since correction is computed jointly across the whole set."""
+    cohort_ids = tuple(asset.id for asset in input_assets)
+    keys = [
+        compute_cache_key(
+            stage="tools.normalize.color",
+            model="ensemble-gain",
+            params={**params, "target_id": asset.id},
+            parent_ids=cohort_ids,
+        )
+        for asset in input_assets
+    ]
+    hits = [cache.find(key) for key in keys]
+    if all(hit is not None for hit in hits):
+        return hits
+
+    images = [read_rgb_or_rgba(asset.content_path) for asset in input_assets]
+    corrected = normalize_color.execute(images)
+
+    return [
+        cache.put(
+            key,
+            kind=ManifestKind.IMAGE,
+            content_bytes=encode_png(image),
+            ext="png",
+            metadata=RasterMetadata(output_width=image.shape[1], output_height=image.shape[0]),
+            params=params,
+            parent_ids=[asset.id],
+            created_by="tools:normalize.color",
+        )
+        for asset, key, image in zip(input_assets, keys, corrected, strict=True)
+    ]
 
 
 def run_depth(

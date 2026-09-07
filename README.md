@@ -5,7 +5,7 @@
 The CLI is split by behavior:
 
 - **Model-backed stages** live at the top level: `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
-- **Deterministic tools** live under `splat tools`: `convert`, `compress`, `declutter`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
+- **Deterministic tools** live under `splat tools`: `convert`, `compress`, `declutter`, `normalize.color`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
 - **Inspection, services, and administration** stay separate: `info`, `validate`, `manifest`, `models`, `http`, `mcp`, and `env`.
 
 ## Getting Started
@@ -163,6 +163,16 @@ splat tools declutter scene.ply scene.clean.ply
 
 Key options: `--k` (neighbors considered per point, default 16), `--std-ratio` (outlier threshold in standard deviations, default 2.0).
 
+### tools normalize.color
+
+`splat tools normalize.color` corrects per-view exposure/white-balance drift across a multi-photo capture, ahead of `gaussian` reconstruction, so it doesn't bake into per-Gaussian SH color as spurious view-dependent noise. Matches each image's per-channel mean to the cohort's per-channel median (a gray-world-style gain correction) - the cheapest per-view color-correction model in the appearance-embedding/tone-curve literature, jointly across every image passed in one call.
+
+```sh
+splat tools normalize.color capture/*.jpg | splat gaussian -
+```
+
+Takes 2 or more image/sticker paths or `@<asset-id>`s and produces one corrected image manifest per input, so it composes with piping like any other pipeline stage.
+
 ### tools displace.height
 
 `splat tools displace.height` turns a depth-map asset into a triangulated, textured mesh. It reads the source image through the depth asset's provenance.
@@ -253,6 +263,8 @@ flowchart LR
     colorlike -->|colorlike| embed([embed])
     colorlike -->|colorlike| mesh([mesh])
     colorlike -->|colorlike xN| gaussian([gaussian])
+    colorlike -->|colorlike xN| normalize([tools normalize.color])
+    normalize -->|image xN| colorlike
     caption -->|caption text| embed
     depth -->|depth_map| displace([tools displace.height])
     gaussian -->|gaussian_cloud .ply| convert([tools convert])
@@ -260,7 +272,7 @@ flowchart LR
     gaussian -->|gaussian_cloud .ply| declutter([tools declutter])
 ```
 
-`tools convert`/`tools compress`/`tools declutter`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages.
+`tools convert`/`tools compress`/`tools declutter`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages. `tools normalize.color` and `tools displace.height` are still cached pipeline stages like any model-backed command — "tools" means "no swappable model catalog," not "no `Manifest`."
 
 ## HTTP Server
 
@@ -310,7 +322,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, and `tools_displace_height`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, `tools_normalize_color`, and `tools_displace_height`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
 
 ```sh
 splat mcp

@@ -74,6 +74,22 @@ def test_displace_height_rejects_non_depth_input(tmp_path, monkeypatch):
     assert "requires a depth map" in result.output
 
 
+def test_normalize_color_corrects_a_multi_photo_cohort(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    a = tmp_path / "a.png"
+    b = tmp_path / "b.png"
+    write_sample_png(a, (2, 2))
+    write_sample_png(b, (2, 2))
+
+    result = runner.invoke(app, ["tools", "normalize.color", str(a), str(b)])
+
+    assert result.exit_code == 0, result.output
+    lines = [json.loads(line) for line in result.output.strip().splitlines()]
+    assert len(lines) == 2
+    assert all(line["kind"] == "image" for line in lines)
+    assert all(line["created_by"] == "tools:normalize.color" for line in lines)
+
+
 def test_extract_surface_reports_not_implemented(tmp_path: Path) -> None:
     result = runner.invoke(
         app, ["tools", "extract.surface", str(tmp_path / "a.ply"), str(tmp_path / "b.obj")]
