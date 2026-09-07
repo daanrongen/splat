@@ -58,8 +58,14 @@ def render(
     engine: str = typer.Option(
         "cycles",
         "--engine",
-        help="cycles (accurate alpha-blended ellipsoids) | eevee (fast preview).",
+        help="cycles (accurate alpha-composited kernels) | eevee (fast preview).",
         envvar="SPLAT_RENDER_ENGINE",
+    ),
+    background: str = typer.Option(
+        "black",
+        "--background",
+        help="Backdrop: transparent, black, white, grey, or a hex colour.",
+        envvar="SPLAT_RENDER_BACKGROUND",
     ),
 ) -> None:
     """Render a Gaussian splat to a still image."""
@@ -71,6 +77,7 @@ def render(
         height=height,
         samples=samples,
         engine=engine,
+        background=background,
     )
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)

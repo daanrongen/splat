@@ -2,12 +2,14 @@
 --python _blender_script.py` to render a GaussianCloud as a native Blender
 point cloud (see that script for the actual scene setup).
 
-v2 renders true oriented/scaled ellipsoids (rotation quaternion + per-axis
-scale) alpha-blended by opacity, on Cycles by default - EEVEE remains
-available as a faster, approximate preview (`--engine eevee`). Defaults to
-a real captured camera pose (see #59) when the cloud has one, falling back
-to v1's auto-fit heuristic otherwise. See issue #50 for the v1 scope cut
-this replaces, and #58 for the motivating research.
+Gaussians are rendered the way 3DGS defines them: unlit emission, alpha
+composited, with each kernel's `exp(-0.5 * m^2)` falloff evaluated per ray
+from the inverse-covariance basis this module derives (`_gaussian_axes`).
+Cycles by default; EEVEE remains available as a faster, approximate preview
+(`--engine eevee`). Defaults to a real captured camera pose (see #59) when
+the cloud has one, falling back to an auto-fit heuristic otherwise. See
+issue #82 for the lit-opaque-spheres model this replaces, #50 for the v1
+scope cut, and #58 for the motivating research.
 """
 
 from __future__ import annotations
@@ -31,6 +33,10 @@ _SCRIPT_PATH = Path(__file__).parent / "_blender_script.py"
 _SH_C0 = 0.28209479177387814
 _DEFAULT_TIMEOUT_SECONDS = 1800.0
 _REPORT_PREFIX = "splat| "
+# Kernel support: a Gaussian is cut off at 3 sigma, where its own falloff has
+# already dropped it to exp(-4.5) ~= 1% of centre opacity.
+_SIGMA_SUPPORT = 3.0
+_MIN_SIGMA = 1e-8
 
 # COLMAP/OpenCV world convention (+X right, +Y down, +Z forward) -> Blender/OpenGL
 # (+X right, +Y up, -Z forward). diag(1,-1,-1) has determinant +1: this is a proper
@@ -66,6 +72,35 @@ def _convert_gaussian_rotations(quats: np.ndarray) -> np.ndarray:
     return (quats * np.array([1.0, 1.0, -1.0, -1.0], dtype=np.float32)).astype(np.float32)
 
 
+def _srgb_to_linear(colors: np.ndarray) -> np.ndarray:
+    """3DGS SH coefficients are fit against sRGB-encoded training images, so the
+    activated DC term is a display value, not radiance. Blender's shaders and
+    the Standard view transform both work in linear light, so handing the
+    display value straight to an Emission node re-encodes it twice and washes
+    the whole frame out."""
+    return np.where(colors <= 0.04045, colors / 12.92, ((colors + 0.055) / 1.055) ** 2.4).astype(
+        np.float32
+    )
+
+
+def _gaussian_axes(quats: np.ndarray, scales: np.ndarray) -> np.ndarray:
+    """(N, 3, 3): the rows of `S^-1 R^T` per Gaussian, i.e. the map from a world
+    offset to the space where that Gaussian is the unit isotropic sphere. The
+    render shader needs the inverse covariance, not the covariance, and this is
+    its square root - the form that stays a plain dot product per axis."""
+    quats = quats / np.linalg.norm(quats, axis=1, keepdims=True)
+    w, x, y, z = quats[:, 0], quats[:, 1], quats[:, 2], quats[:, 3]
+    columns = np.stack(
+        [
+            np.stack([1 - 2 * (y * y + z * z), 2 * (x * y + w * z), 2 * (x * z - w * y)], axis=1),
+            np.stack([2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x)], axis=1),
+            np.stack([2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y)], axis=1),
+        ],
+        axis=1,
+    )
+    return (columns / np.maximum(scales, _MIN_SIGMA)[:, :, None]).astype(np.float32)
+
+
 def _convert_camera_rotation(
     rotation_world_to_camera: list[list[float]], *, colmap: bool = True
 ) -> np.ndarray:
@@ -91,16 +126,19 @@ def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
         if colmap
         else cloud.rotations.astype(np.float32)
     )
-    colors = np.clip(0.5 + _SH_C0 * cloud.sh_dc, 0.0, 1.0).astype(np.float32)
+    colors = _srgb_to_linear(np.clip(0.5 + _SH_C0 * cloud.sh_dc, 0.0, 1.0))
     scales = cloud.to_linear_scales().astype(np.float32)
     opacities = cloud.to_activated_opacities().astype(np.float32)
 
     arrays = {
         "means": means,
         "colors": colors,
-        "scales": scales,
-        "rotations": rotations,
         "opacities": opacities,
+        "axes": _gaussian_axes(rotations, scales),
+        # One uniform billboard radius per Gaussian: the shader evaluates the
+        # anisotropic falloff, so the proxy quad only has to be large enough to
+        # cover the widest axis.
+        "radii": (_SIGMA_SUPPORT * scales.max(axis=1)).astype(np.float32),
     }
 
     metadata = cloud.metadata
@@ -176,6 +214,7 @@ class BlenderBackend:
         height: int = 720,
         samples: int = 32,
         engine: str = "cycles",
+        background: str = "black",
         blender_bin: str | None = None,
         on_progress: Callable[[str], None] | None = None,
         **params,
@@ -205,6 +244,8 @@ class BlenderBackend:
                 str(samples),
                 "--engine",
                 engine,
+                "--background-color",
+                background,
             ]
             returncode, tail = _stream(command, _resolve_timeout(), on_progress)
 

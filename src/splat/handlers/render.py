@@ -16,6 +16,7 @@ class RenderRequest:
     height: int = 720
     samples: int = 32
     engine: str = "cycles"
+    background: str = "black"
 
 
 def handle(
@@ -29,6 +30,7 @@ def handle(
         "height": request.height,
         "samples": request.samples,
         "engine": request.engine,
+        "background": request.background,
     }
     return [
         run_render(

@@ -30,7 +30,10 @@ The chain, from one diffused image to a render framed at the capture camera:
 
 Reconstruction from a single view recovers the *visible* surface, so the white speckle is the studio backdrop reconstructed behind the subject, and the washed-out colour is G2 below, not a reconstruction error.
 
-### G2. `render` uses the wrong image formation model
+### G2. `render` uses the wrong image formation model ~~(closed)~~
+
+> **Closed.** `render` now uses emissive alpha compositing with the real 3DGS kernel: no lights, no BRDF, and `alpha = opacity * exp(-0.5 * m^2)` with `m` the Mahalanobis distance from the kernel centre to the view ray, evaluated per ray from an inverse-covariance basis (`_gaussian_axes`). Verified against a single red Gaussian of known sigma at known distance: measured alpha tracks the analytic curve from 0.99 down to 0.04 across five pixel offsets, the frame corners stay untouched at 3 sigma, and the centre pixel is `(1.00, 0.00, 0.00)` - the Gaussian's own colour, not a lighting response. Two further defects surfaced while fixing it, both of which had been reading as reconstruction error: SH DC colours are sRGB display values and were being handed to a linear-light shader, and Cycles' default 8 transparent bounces clipped the accumulation stack. The proxy geometry became a camera-facing quad instead of an 80-face IcoSphere, which is what a rasterizer does anyway and costs 40x less geometry. The rest of this entry records what the gap was.
+
 
 `_blender_script.py` renders each Gaussian as a lit, opaque, hard-edged IcoSphere under a `Principled BSDF` with `Roughness=0.5` and a `SUN` at `energy=2.5`. 3DGS is emissive volumetric alpha compositing: no lights, no BRDF, no specular, and a `exp(-½r²)` falloff integrated to about 3σ.
 

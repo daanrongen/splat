@@ -134,7 +134,11 @@ Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 m
 
 ### render
 
-`splat render` rasterizes a `GaussianCloud` to a PNG through Blender, shelling out to `blender --background`. Cycles runs on the Metal GPU; `--engine eevee` is the faster, approximate preview.
+`splat render` renders a `GaussianCloud` to a PNG through Blender, shelling out to `blender --background`. Cycles runs on the Metal GPU; `--engine eevee` is the faster, approximate preview.
+
+Gaussians are rendered the way 3DGS defines them: unlit emission, alpha composited, each kernel carrying its own `exp(-0.5 * m^2)` falloff out to 3 sigma, where `m` is the Mahalanobis distance from the kernel centre to the view ray. There are no lights and no BRDF, so a rendered pixel is the Gaussian's own colour rather than a lighting response. Each kernel is a camera-facing quad whose inverse-covariance basis is evaluated per ray, so the proxy geometry costs two triangles instead of an 80-face sphere.
+
+Because nothing is lit, `--samples` buys anti-aliasing and nothing else: at 1920x1080 a 1.18M-Gaussian frame differs by 0.7% mean absolute error between 16 and 64 samples, for 27s against 82s.
 
 Progress is reported live, including the device it picked and Cycles' first-run kernel compilation, which can take minutes on its own:
 
@@ -144,13 +148,13 @@ render device: Apple M1 Pro (GPU - 16 cores) [METAL]
 ⠹ Remaining: 00:14.54 | Mem: 3143M | Sample 12/64
 ```
 
-A 1.18M-Gaussian frame at 1920x1080 with 64 samples takes roughly 100 seconds. If Cycles cannot find a GPU it warns rather than silently falling back to the CPU.
+A 1.18M-Gaussian frame at 1920x1080 with 64 samples takes roughly 80 seconds, or 27 with `--samples 16`. If Cycles cannot find a GPU it warns rather than silently falling back to the CPU.
 
 ```sh
 splat render scene.ply -o scene.png --width 1920 --height 1080 --samples 64
 ```
 
-Key options: `--width` (1280), `--height` (720), `--samples` (32), `--engine cycles|eevee`, `-o/--output`. Set `SPLAT_BLENDER_BIN` if `blender` is not on `PATH`, and `SPLAT_RENDER_TIMEOUT` to change the 1800s cap (`0` disables it).
+Key options: `--width` (1280), `--height` (720), `--samples` (32), `--engine cycles|eevee`, `--background` (`black`, `white`, `grey`, `transparent`, or a hex colour), `-o/--output`. Set `SPLAT_BLENDER_BIN` if `blender` is not on `PATH`, and `SPLAT_RENDER_TIMEOUT` to change the 1800s cap (`0` disables it).
 
 `render` always executes locally and is deliberately not part of the `SPLAT_URL` remote surface (see `ports/client.py`).
 
