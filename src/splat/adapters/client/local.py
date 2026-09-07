@@ -23,6 +23,8 @@ from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.compress import handle as handle_compress
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.tools.convert import handle as handle_convert
+from splat.handlers.tools.declutter import DeclutterRequest
+from splat.handlers.tools.declutter import handle as handle_declutter
 from splat.handlers.upscale import UpscaleRequest
 from splat.handlers.upscale import handle as handle_upscale
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
@@ -58,6 +60,9 @@ class LocalSplatClient:
 
     def tools_compress(self, request: CompressRequest) -> GaussianCloud:
         return handle_compress(request)
+
+    def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud:
+        return handle_declutter(request)
 
     def info(self, path: Path) -> InfoSummary:
         cloud = handle_info(path)

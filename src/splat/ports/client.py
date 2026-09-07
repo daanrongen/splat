@@ -33,6 +33,7 @@ from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
+from splat.handlers.tools.declutter import DeclutterRequest
 from splat.handlers.upscale import UpscaleRequest
 
 
@@ -91,6 +92,8 @@ class SplatClient(Protocol):
     def tools_convert(self, request: ConvertRequest) -> ConvertResult: ...
 
     def tools_compress(self, request: CompressRequest) -> GaussianCloud: ...
+
+    def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud: ...
 
     def info(self, path: Path) -> InfoSummary: ...
 

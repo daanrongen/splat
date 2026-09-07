@@ -22,7 +22,7 @@ from splat.http import (
     upscale,
     validate,
 )
-from splat.http.tools import compress, convert
+from splat.http.tools import compress, convert, declutter
 
 _ROUTERS = (
     diffuse,
@@ -34,6 +34,7 @@ _ROUTERS = (
     gaussian,
     convert,
     compress,
+    declutter,
     info,
     validate,
     models,

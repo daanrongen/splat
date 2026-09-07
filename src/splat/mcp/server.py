@@ -26,6 +26,7 @@ from splat.mcp import segment as segment_tool
 from splat.mcp import upscale as upscale_tool
 from splat.mcp.tools import compress as tools_compress
 from splat.mcp.tools import convert as tools_convert
+from splat.mcp.tools import declutter as tools_declutter
 from splat.mcp.tools import displace_height as tools_displace_height
 
 server = MCPServer("splat", version="0.1.0")
@@ -54,6 +55,7 @@ server.add_tool(_as_tool_error(upscale_tool.upscale), name="upscale")
 server.add_tool(_as_tool_error(gaussian.gaussian), name="gaussian")
 server.add_tool(_as_tool_error(tools_convert.convert), name="tools_convert")
 server.add_tool(_as_tool_error(tools_compress.compress), name="tools_compress")
+server.add_tool(_as_tool_error(tools_declutter.declutter), name="tools_declutter")
 server.add_tool(_as_tool_error(inspect_tool.info), name="info")
 server.add_tool(_as_tool_error(inspect_tool.validate), name="validate")
 server.add_tool(_as_tool_error(models_tool.list_models), name="models_list")
