@@ -15,6 +15,7 @@ parameterization the aggregate defaults to.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -87,6 +88,18 @@ class PlyReader:
                 source_format="ply",
                 up_axis=comments.get("up_axis", "y"),
                 coordinate_convention=comments.get("coordinate_convention", "opengl"),
+                capture_camera_position=json.loads(comments["capture_camera_position"])
+                if "capture_camera_position" in comments
+                else None,
+                capture_camera_rotation=json.loads(comments["capture_camera_rotation"])
+                if "capture_camera_rotation" in comments
+                else None,
+                capture_camera_intrinsics=json.loads(comments["capture_camera_intrinsics"])
+                if "capture_camera_intrinsics" in comments
+                else None,
+                capture_camera_count=int(comments["capture_camera_count"])
+                if "capture_camera_count" in comments
+                else None,
             ),
         )
 
@@ -154,6 +167,20 @@ class PlyWriter:
             f"up_axis {cloud.metadata.up_axis}",
             f"coordinate_convention {cloud.metadata.coordinate_convention}",
         ]
+        if cloud.metadata.capture_camera_position is not None:
+            comments.append(
+                f"capture_camera_position {json.dumps(cloud.metadata.capture_camera_position)}"
+            )
+        if cloud.metadata.capture_camera_rotation is not None:
+            comments.append(
+                f"capture_camera_rotation {json.dumps(cloud.metadata.capture_camera_rotation)}"
+            )
+        if cloud.metadata.capture_camera_intrinsics is not None:
+            comments.append(
+                f"capture_camera_intrinsics {json.dumps(cloud.metadata.capture_camera_intrinsics)}"
+            )
+        if cloud.metadata.capture_camera_count is not None:
+            comments.append(f"capture_camera_count {cloud.metadata.capture_camera_count}")
         PlyData([element], text=False, comments=comments).write(str(path))
 
     def supports(self, cloud: GaussianCloud) -> list[str]:

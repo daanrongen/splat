@@ -114,6 +114,25 @@ def test_normalize_preserves_rotations_opacities_and_sh():
     np.testing.assert_array_equal(normalized.sh_dc, cloud.sh_dc)
 
 
+def test_normalize_transforms_capture_camera_position():
+    from splat.domain.gaussians import GaussianCloudMetadata
+
+    cloud = _offset_cloud(center=np.array([10.0, -5.0, 2.0]), radius=2.0)
+    cloud.metadata = GaussianCloudMetadata(capture_camera_position=[11.0, -5.0, 2.0])
+    normalized = normalize_gaussian_cloud(cloud, target_radius=1.0)
+    # centroid [10,-5,2], scale factor 0.5 (radius 2.0 -> target 1.0):
+    # (11,-5,2) - (10,-5,2) = (1,0,0); * 0.5 = (0.5, 0, 0)
+    np.testing.assert_allclose(
+        normalized.metadata.capture_camera_position, [0.5, 0.0, 0.0], atol=1e-5
+    )
+
+
+def test_normalize_leaves_absent_capture_camera_pose_as_none():
+    cloud = _offset_cloud(center=np.array([1.0, 2.0, 3.0]), radius=2.0)
+    normalized = normalize_gaussian_cloud(cloud)
+    assert normalized.metadata.capture_camera_position is None
+
+
 def test_normalize_degenerate_zero_radius_is_a_no_op_scale():
     means = np.full((4, 3), 7.0, dtype=np.float32)
     cloud = make_cloud(n=4, means=means)

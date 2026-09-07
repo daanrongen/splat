@@ -33,6 +33,28 @@ def test_ply_roundtrip_preserves_coordinate_convention(tmp_path: Path, synthetic
     assert loaded.metadata.up_axis == "y"
 
 
+def test_ply_roundtrip_preserves_capture_camera_pose(tmp_path: Path, synthetic_cloud):
+    synthetic_cloud.metadata.capture_camera_position = [1.0, 2.0, 3.0]
+    synthetic_cloud.metadata.capture_camera_rotation = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    synthetic_cloud.metadata.capture_camera_intrinsics = [800.0, 800.0, 320.0, 240.0, 640.0, 480.0]
+    synthetic_cloud.metadata.capture_camera_count = 5
+    out = tmp_path / "scene.ply"
+    PlyWriter().write(synthetic_cloud, out)
+    loaded = PlyReader().read(out)
+    assert loaded.metadata.capture_camera_position == [1.0, 2.0, 3.0]
+    assert loaded.metadata.capture_camera_rotation == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    assert loaded.metadata.capture_camera_intrinsics == [800.0, 800.0, 320.0, 240.0, 640.0, 480.0]
+    assert loaded.metadata.capture_camera_count == 5
+
+
+def test_ply_roundtrip_leaves_absent_capture_camera_pose_as_none(tmp_path: Path, synthetic_cloud):
+    out = tmp_path / "scene.ply"
+    PlyWriter().write(synthetic_cloud, out)
+    loaded = PlyReader().read(out)
+    assert loaded.metadata.capture_camera_position is None
+    assert loaded.metadata.capture_camera_count is None
+
+
 def test_ply_degree_zero_roundtrip(tmp_path: Path):
     from splat.domain.gaussians import GaussianCloud
 

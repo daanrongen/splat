@@ -37,6 +37,10 @@ class GaussianCloudMetadata:
     sh_degree: int = 0
     scale_activation: ScaleActivation = "log"
     opacity_activation: OpacityActivation = "logit"
+    capture_camera_position: list[float] | None = None  # (3,) world-space, same frame as `means`
+    capture_camera_rotation: list[list[float]] | None = None  # (3,3) world-to-camera, COLMAP/OpenCV
+    capture_camera_intrinsics: list[float] | None = None  # [fx, fy, cx, cy, width, height]
+    capture_camera_count: int | None = None  # total cameras the reconstruction backend registered
 
 
 @dataclass
@@ -159,4 +163,12 @@ def normalize_gaussian_cloud(cloud: GaussianCloud, *, target_radius: float = 1.0
     else:
         scales = linear_scales.astype(np.float32)
 
-    return replace(cloud, means=means, scales=scales)
+    metadata = cloud.metadata
+    if metadata.capture_camera_position is not None:
+        # A camera pose's position lives in the same world frame as `means`, so it gets the
+        # same recenter+rescale; rotation is untouched by pure translation + uniform scale.
+        camera_position = np.asarray(metadata.capture_camera_position, dtype=np.float32)
+        position = (camera_position - center) * scale_factor
+        metadata = replace(metadata, capture_camera_position=position.tolist())
+
+    return replace(cloud, means=means, scales=scales, metadata=metadata)

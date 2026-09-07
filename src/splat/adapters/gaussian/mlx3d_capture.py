@@ -42,6 +42,7 @@ class MLX3DCaptureBackend:
     ) -> GaussianCloud:
         try:
             from mlx3d.capture import CaptureConfig, run_capture
+            from mlx3d.datasets.colmap import load_colmap
         except ImportError as exc:
             raise NotImplementedError(
                 "The mlx3d-capture backend requires the optional mlx3d capture runtime. "
@@ -73,8 +74,40 @@ class MLX3DCaptureBackend:
             summary = run_capture(str(input_dir), str(output_dir), config, log=lambda _msg: None)
             cloud = PlyReader().read(Path(summary["splat"]))
             cloud.metadata.source_model = self.name
+            self._attach_camera_pose(cloud, summary, output_dir, load_colmap)
             return cloud
 
     @classmethod
     def required_image_count(cls) -> tuple[int, int | None]:
         return (3, None)
+
+    @staticmethod
+    def _attach_camera_pose(
+        cloud: GaussianCloud, summary: dict, output_dir: Path, load_colmap
+    ) -> None:
+        """Reads the SfM sparse model `run_capture` already wrote and stashes one real
+        camera pose on the cloud's metadata (in the same COLMAP world frame as `means` -
+        composes with zero conversion) instead of letting it disappear with the temp dir.
+        Prefers the pose-refined sparse model when refinement ran, since that's the one
+        consistent with the trained Gaussians.
+        """
+        refined_sparse = summary.get("train", {}).get("refined_sparse")
+        colmap_root = Path(refined_sparse).parent.parent if refined_sparse else output_dir
+        try:
+            colmap = load_colmap(str(colmap_root), load_images=False)
+        except (FileNotFoundError, OSError):
+            return
+        if not colmap.cameras:
+            return
+        cam = colmap.cameras[0]
+        cloud.metadata.capture_camera_position = cam.camera_center.tolist()
+        cloud.metadata.capture_camera_rotation = cam.R.tolist()
+        cloud.metadata.capture_camera_intrinsics = [
+            float(cam.fx),
+            float(cam.fy),
+            float(cam.cx),
+            float(cam.cy),
+            float(cam.width),
+            float(cam.height),
+        ]
+        cloud.metadata.capture_camera_count = len(colmap.cameras)
