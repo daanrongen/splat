@@ -28,6 +28,7 @@ from splat.mcp.tools import compress as tools_compress
 from splat.mcp.tools import convert as tools_convert
 from splat.mcp.tools import declutter as tools_declutter
 from splat.mcp.tools import displace_height as tools_displace_height
+from splat.mcp.tools import normalize_color as tools_normalize_color
 
 server = MCPServer("splat", version="0.1.0")
 
@@ -63,6 +64,7 @@ server.add_tool(_as_tool_error(models_tool.pull), name="models_pull")
 server.add_tool(_as_tool_error(models_tool.info), name="models_info")
 server.add_tool(_as_tool_error(models_tool.rm), name="models_rm")
 server.add_tool(_as_tool_error(tools_displace_height.displace_height), name="tools_displace_height")
+server.add_tool(_as_tool_error(tools_normalize_color.normalize_color), name="tools_normalize_color")
 server.add_tool(_as_tool_error(manifest_tool.list_manifests), name="manifest_list")
 server.add_tool(_as_tool_error(manifest_tool.get), name="manifest_get")
 server.add_tool(_as_tool_error(manifest_tool.delete), name="manifest_delete")
