@@ -78,13 +78,14 @@ Key options: `--model mobileclip2-s0`, `--text`, `--device`, `-o/--output`. `mob
 
 ### depth
 
-`splat depth` turns an image or sticker into a metric depth-map asset stored losslessly as `.npy`, with `-o` writing a normalized preview PNG.
+`splat depth` turns an image or sticker into a depth-map asset stored losslessly as `.npy`, with `-o` writing a normalized preview PNG.
 
 ```sh
 splat depth stickers/sticker_000.png --model depth-pro -o depth.png
+splat depth stickers/sticker_000.png --model depth-anything-v2-coreml -o depth.png
 ```
 
-Key options: `--model depth-pro`, `--device`, `-o/--output`.
+Key options: `--model depth-pro|depth-anything-v2-coreml`, `--device`, `-o/--output`. `depth-pro` produces metric depth in meters with a focal-length estimate; `depth-anything-v2-coreml` (Apple's CoreML export of Depth Anything V2 Small) produces relative inverse depth (disparity, higher value = closer) on an arbitrary per-image scale, with no focal length - `tools displace.height` requires a known focal length, so it only works with `depth-pro` output.
 
 ### upscale
 
