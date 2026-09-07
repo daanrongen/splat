@@ -38,7 +38,7 @@ def _settings() -> list[_Setting]:
         _Setting("upscale", "--model", "SPLAT_UPSCALE_MODEL", "realesrgan-mlx", UPSCALE_CATALOG),
         _Setting("upscale", "--factor", "SPLAT_UPSCALE_FACTOR", "4"),
         _Setting("upscale", "--tile", "SPLAT_UPSCALE_TILE", "0"),
-        _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mvsplat", GAUSSIAN_CATALOG),
+        _Setting("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL", "mlx3d-capture", GAUSSIAN_CATALOG),
         _Setting("gaussian", "--device", "SPLAT_GAUSSIAN_DEVICE", "auto"),
         _Setting("http", "--host", "SPLAT_HOST", "127.0.0.1:8000"),
         _Setting("tools compress", "--profile", "SPLAT_COMPRESS_PROFILE", "web-delivery"),

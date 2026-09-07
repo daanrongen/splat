@@ -45,8 +45,8 @@ def handle(request: GaussianRequest) -> list[Manifest]:
                 max_count=max_images,
                 hint=(
                     "gaussian has no text-to-3D or depth-only reconstruction path — pipe "
-                    "image/sticker assets in instead, e.g. "
-                    "`splat diffuse ... | splat segment - | splat gaussian -`."
+                    "3+ image assets of the same scene from different viewpoints, e.g. "
+                    "`splat gaussian frame-*.png`."
                 ),
             ),
         ),

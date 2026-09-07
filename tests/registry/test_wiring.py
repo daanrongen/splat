@@ -50,9 +50,11 @@ def test_get_reconstruction_backend_wires_known_model(tmp_path):
         def pull(self, model_id, *, revision=None):
             return tmp_path
 
-    backend = get_reconstruction_backend("mvsplat", model_source=DummyModelSource(), device="cpu")
-    assert backend.name == "mvsplat"
-    assert backend.required_image_count() == (2, None)
+    backend = get_reconstruction_backend(
+        "mlx3d-capture", model_source=DummyModelSource(), device="cpu"
+    )
+    assert backend.name == "mlx3d-capture"
+    assert backend.required_image_count() == (3, None)
 
 
 def test_get_render_backend_unknown_model_raises():

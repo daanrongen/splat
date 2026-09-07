@@ -66,8 +66,7 @@ def gaussian(
             warn(warning)
         if not is_piped():
             console.print(
-                f"[green]wrote[/green] {output} "
-                f"({results[0].metadata.point_count:,} points)"
+                f"[green]wrote[/green] {output} ({results[0].metadata.point_count:,} points)"
             )
 
     def _human(assets: list[Manifest]) -> None:

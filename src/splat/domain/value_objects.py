@@ -36,11 +36,6 @@ CC_BY_NC_SA_4_0 = ModelLicense(
     is_commercial=False,
     notes="Non-commercial use only.",
 )
-UNCONFIRMED = ModelLicense(
-    spdx_id="UNCONFIRMED",
-    is_commercial=False,
-    notes="License could not be confirmed from public sources — treat as research-only.",
-)
 OPENRAIL_M = ModelLicense(
     spdx_id="OpenRAIL-M",
     is_commercial=True,
@@ -61,35 +56,6 @@ APPLE_AMLR = ModelLicense(
     is_commercial=False,
     notes="Apple Machine Learning Research Model License — research use only.",
 )
-
-
-# --- Camera / pose ---------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Camera:
-    """Pinhole camera intrinsics, in pixels."""
-
-    fx: float
-    fy: float
-    cx: float
-    cy: float
-    width: int
-    height: int
-
-
-@dataclass(frozen=True)
-class Pose:
-    """Camera-to-world rigid transform."""
-
-    position: np.ndarray  # (3,) float32
-    rotation: np.ndarray  # (4,) float32 quaternion (w, x, y, z)
-
-    def __post_init__(self) -> None:
-        if self.position.shape != (3,):
-            raise ValueError(f"Pose.position must have shape (3,), got {self.position.shape}")
-        if self.rotation.shape != (4,):
-            raise ValueError(f"Pose.rotation must have shape (4,), got {self.rotation.shape}")
 
 
 # --- Coordinate conventions -------------------------------------------------

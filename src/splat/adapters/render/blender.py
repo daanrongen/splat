@@ -22,15 +22,17 @@ import numpy as np
 
 from splat.domain.errors import RenderBackendError
 from splat.domain.gaussians import GaussianCloud
+from splat.domain.value_objects import convention_flip_matrix
 
 _SCRIPT_PATH = Path(__file__).parent / "_blender_script.py"
 _SH_C0 = 0.28209479177387814
+_DEFAULT_TIMEOUT_SECONDS = 1800.0
 
 # COLMAP/OpenCV world convention (+X right, +Y down, +Z forward) -> Blender/OpenGL
 # (+X right, +Y up, -Z forward). diag(1,-1,-1) has determinant +1: this is a proper
 # 180-degree rotation about X, not a mirroring, so it applies cleanly to positions,
 # per-Gaussian orientations, and camera poses alike.
-_COLMAP_TO_BLENDER_FLIP = np.array([1.0, -1.0, -1.0], dtype=np.float32)
+_COLMAP_TO_BLENDER_FLIP = convention_flip_matrix("colmap", "opengl")
 
 
 def _resolve_blender_bin(explicit: str | None) -> str:
@@ -43,8 +45,14 @@ def _resolve_blender_bin(explicit: str | None) -> str:
     return candidate
 
 
+def _resolve_timeout() -> float | None:
+    """0 or a negative value disables the timeout, for very large clouds."""
+    seconds = float(os.environ.get("SPLAT_RENDER_TIMEOUT", _DEFAULT_TIMEOUT_SECONDS))
+    return seconds if seconds > 0 else None
+
+
 def _convert_positions(points: np.ndarray) -> np.ndarray:
-    return (points * _COLMAP_TO_BLENDER_FLIP).astype(np.float32)
+    return (points @ _COLMAP_TO_BLENDER_FLIP).astype(np.float32)
 
 
 def _convert_gaussian_rotations(quats: np.ndarray) -> np.ndarray:
@@ -61,8 +69,7 @@ def _convert_camera_rotation(rotation_colmap: list[list[float]]) -> np.ndarray:
     local -Z with +Y up, also related by the same 180-about-X rotation."""
     r_world_to_cam = np.asarray(rotation_colmap, dtype=np.float32)
     r_cam_to_world = r_world_to_cam.T
-    flip = np.diag(_COLMAP_TO_BLENDER_FLIP)
-    return (flip @ r_cam_to_world @ flip).astype(np.float32)
+    return (_COLMAP_TO_BLENDER_FLIP @ r_cam_to_world @ _COLMAP_TO_BLENDER_FLIP).astype(np.float32)
 
 
 def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
@@ -145,7 +152,14 @@ class BlenderBackend:
                 "--engine",
                 engine,
             ]
-            result = subprocess.run(command, capture_output=True, text=True)
+            timeout = _resolve_timeout()
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+            except subprocess.TimeoutExpired as exc:
+                raise RenderBackendError(
+                    f"Blender render exceeded {timeout:.0f}s. Lower --samples, use "
+                    "--engine eevee, or raise SPLAT_RENDER_TIMEOUT (0 disables it)."
+                ) from exc
 
         if result.returncode != 0 or not output_path.exists():
             raise RenderBackendError(

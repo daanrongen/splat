@@ -1,10 +1,10 @@
 # splat
 
-`splat` is a local 3D image-space toolkit for generating, captioning, embedding, segmenting, upscaling, estimating depth, predicting meshes, reconstructing Gaussian splats, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, PyTorch/MPS, and OpenCV-backed image I/O, and it downloads model weights on demand instead of shipping them in the package.
+`splat` is a local 3D image-space toolkit for generating, captioning, embedding, segmenting, upscaling, estimating depth, reconstructing Gaussian splats, rendering them, and transforming Gaussian splat files. It is designed for Apple Silicon first, with MLX, CoreML, PyTorch/MPS, and OpenCV-backed image I/O, and it downloads model weights on demand instead of shipping them in the package.
 
 The CLI is split by behavior:
 
-- **Model-backed stages** live at the top level: `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `gaussian`, `mesh`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
+- **Model-backed stages** live at the top level: `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `gaussian`, `render`, and `train`. These commands choose a model/runtime or run model optimization, may use substantial compute, and can produce backend-dependent results.
 - **Deterministic tools** live under `splat tools`: `convert`, `compress`, `declutter`, `normalize.color`, `displace.height`, and `extract.surface`. These commands are pure transforms for a given input and option set; they do not select models, devices, or licenses.
 - **Inspection, services, and administration** stay separate: `info`, `validate`, `manifest`, `models`, `http`, `mcp`, and `env`.
 
@@ -99,23 +99,40 @@ Key options: `--model realesrgan-mlx`, `--factor 2|4`, `--tile`, `-o/--output`.
 
 ### gaussian
 
-`splat gaussian` reconstructs a Gaussian splat from input images via a feed-forward reconstruction backend.
+`splat gaussian` reconstructs a Gaussian splat from input images. The only backend today is `mlx3d-capture`, which is **optimization-based, not feed-forward**: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene on Apple Silicon through MLX/Metal.
+
+That means it needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register. There is no single-image path yet (tracked in #81).
 
 ```sh
-splat gaussian view-a.png view-b.png --model mvsplat -o scene.ply
+splat gaussian frame-*.png --quality balanced -o scene.ply
 ```
 
-Key options: `--model mvsplat`, `--device`, `-o/--output`. `mvsplat` is currently a deliberate stub because the available license-clean, Apple-native feed-forward options are not ready for this package.
+Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 minutes on an M1 Pro.
 
-### mesh
+| Option | Default | Purpose |
+|---|---|---|
+| `--model` | `mlx3d-capture` | Reconstruction backend |
+| `--device` | `auto` | `auto` \| `cpu` \| `mps` |
+| `--quality` | `fast` | mlx3d preset; `balanced` and up train longer |
+| `--iters` | preset | Override training iterations |
+| `--max-dim` | preset | Max training image dimension |
+| `--sh-degree` | preset | Spherical-harmonic degree (0-3) |
+| `--poses` | `auto` | `auto` \| `colmap` \| `builtin` \| `existing` |
+| `--refine-poses` | `auto` | `auto` \| `on` \| `off` |
+| `--low-mem` | off | mlx3d low-memory mode |
+| `--seed` | `0` | Random seed; `<0` disables seeding |
 
-`splat mesh` predicts a mesh from an image via a learned image-to-mesh backend.
+### render
+
+`splat render` rasterizes a `GaussianCloud` to a PNG through Blender, shelling out to `blender --background`. Cycles runs on the Metal GPU; `--engine eevee` is the faster, approximate preview.
 
 ```sh
-splat mesh sticker.png --model triposr -o sticker.glb
+splat render scene.ply -o scene.png --width 1920 --height 1080 --samples 64
 ```
 
-Key options: `--model triposr`, `--device`, `-o/--output`. `triposr` is currently a deliberate stub; use `splat tools displace.height` for the deterministic depth-map-to-mesh path available today.
+Key options: `--width` (1280), `--height` (720), `--samples` (32), `--engine cycles|eevee`, `-o/--output`. Set `SPLAT_BLENDER_BIN` if `blender` is not on `PATH`, and `SPLAT_RENDER_TIMEOUT` to change the 1800s cap (`0` disables it).
+
+`render` always executes locally and is deliberately not part of the `SPLAT_URL` remote surface (see `ports/client.py`).
 
 ### train
 
@@ -243,7 +260,7 @@ splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth
 | `caption` | `text` | caption | `.txt` |
 | `embedding` | `vector` | embed | `.npy` |
 | `depth_map` | `raster`, `single_channel`, `metric` | depth | `.npy` |
-| `shape_3d` | `mesh_3d` | mesh, tools displace.height | `.glb` / `.obj` |
+| `shape_3d` | `mesh_3d` | tools displace.height, tools extract.surface | `.glb` / `.obj` |
 | `gaussian_cloud` | `splat_3d` | gaussian | `.ply` |
 
 Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (mlx3d-capture needs 3+); piping the wrong kind in fails with a message naming both sides:
@@ -251,8 +268,8 @@ Every model-backed stage declares what it needs as a `StageContract` (`domain/co
 ```
 $ splat depth photo.png | splat gaussian -
 error: gaussian (mlx3d-capture) requires at least 3 image or sticker, got 1 depth_map. gaussian has no
-text-to-3D or depth-only reconstruction path — pipe image/sticker assets in instead, e.g.
-`splat diffuse ... | splat segment - | splat gaussian -`.
+text-to-3D or depth-only reconstruction path — pipe 3+ image assets of the same scene from different
+viewpoints, e.g. `splat gaussian frame-*.png`.
 ```
 
 ### Stage flow
@@ -269,7 +286,6 @@ flowchart LR
     colorlike -->|colorlike| depth([depth])
     colorlike -->|colorlike| caption([caption])
     colorlike -->|colorlike| embed([embed])
-    colorlike -->|colorlike| mesh([mesh])
     colorlike -->|colorlike xN| gaussian([gaussian])
     colorlike -->|colorlike xN| normalize([tools normalize.color])
     normalize -->|image xN| colorlike
@@ -279,6 +295,8 @@ flowchart LR
     gaussian -->|gaussian_cloud .ply| compress([tools compress])
     gaussian -->|gaussian_cloud .ply| declutter([tools declutter])
     gaussian -->|gaussian_cloud .ply| extract([tools extract.surface])
+    gaussian -->|gaussian_cloud .ply| render([render])
+    render -->|image| colorlike
 ```
 
 `tools convert`/`tools compress`/`tools declutter`/`tools extract.surface`/`info`/`validate` sit outside the `Manifest` system by design — they're deterministic file-in/file-out transforms over `GaussianCloud`, not cached pipeline stages. `tools normalize.color` and `tools displace.height` are still cached pipeline stages like any model-backed command — "tools" means "no swappable model catalog," not "no `Manifest`."
@@ -300,7 +318,6 @@ SPLAT_HOST=0.0.0.0:8000 splat http
 | `POST /segment` | `splat segment` | list of sticker manifest summaries |
 | `POST /depth` | `splat depth` | depth `.npy` bytes |
 | `POST /upscale` | `splat upscale` | image bytes |
-| `POST /mesh` | `splat mesh` | mesh bytes |
 | `POST /gaussian` | `splat gaussian` | Gaussian splat bytes |
 | `POST /convert` | `splat tools convert` | converted file bytes |
 | `POST /compress` | `splat tools compress` | compressed file bytes |
@@ -332,7 +349,7 @@ SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o test.png
 
 ## MCP Server
 
-`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `mesh`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, `tools_normalize_color`, `tools_displace_height`, and `tools_extract_surface`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
+`splat mcp` exposes the same command taxonomy over stdio for MCP clients. Model-backed operations use top-level tool names such as `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, and `gaussian`; deterministic operations use `tools_convert`, `tools_compress`, `tools_declutter`, `tools_normalize_color`, `tools_displace_height`, and `tools_extract_surface`; manifest CRUD uses `manifest_list`, `manifest_get`, and `manifest_delete`.
 
 ```sh
 splat mcp
@@ -349,10 +366,11 @@ import splat
 
 result = splat.diffuse("a small red boat", steps=4)
 stickers = splat.segment(result.asset, max_stickers=5)
-cloud_manifest = splat.gaussian(stickers)
+caption = splat.caption(result.asset)
 
-pixels = result.asset.as_image()          # numpy RGB/RGBA array
-cloud = cloud_manifest[0].as_gaussian_cloud()  # domain.gaussians.GaussianCloud
+pixels = result.asset.as_image()  # numpy RGB/RGBA array
+cutout = stickers[0].as_image()  # RGBA sticker
+cloud = splat.gaussian(["frame-a.png", "frame-b.png", "frame-c.png"])[0].as_gaussian_cloud()
 ```
 
 Every function takes a file path, `@<asset-id>`, or a `Manifest` object (or a list of any mix) wherever the CLI accepts `INPUT` positionally, and raises `SplatDomainError`/`ValueError` directly instead of exiting the process. `Manifest.load(id)` fetches a cached manifest by id, and `.as_image()`/`.as_text()`/`.as_array()`/`.as_gaussian_cloud()` decode its content per kind. Setting `SPLAT_URL` redirects remote-capable calls exactly like the CLI - `render()` is the one exception, always executing locally (see `ports/client.py`).
