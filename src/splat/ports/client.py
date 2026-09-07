@@ -16,6 +16,10 @@ a future PR adds that route. `splat render` follows the same pattern (see
 #50): its `blender` model needs a Blender install on whichever machine
 actually renders, so it stays wired directly to handlers.render for now
 rather than assuming SPLAT_URL's remote-execution model fits it unexamined.
+
+`splat models prune` is deliberately not on this contract either: it deletes
+weights from whichever machine's disk it runs on, and a route that lets a
+client reclaim a shared server's model cache is a footgun, not parity.
 """
 
 from dataclasses import dataclass

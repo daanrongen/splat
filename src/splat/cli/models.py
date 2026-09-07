@@ -1,6 +1,6 @@
 import typer
 
-from splat.cli._console import console, error
+from splat.cli._console import console, error, warn
 from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_client
 
@@ -48,6 +48,41 @@ def info(name: str = typer.Argument(...)) -> None:
         console.print(f"norm:    {info.normalized}")
     if info.notes:
         console.print(f"notes:   {info.notes}")
+
+
+def _human_bytes(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024 or unit == "GB":
+            return f"{value:,.1f} {unit}"
+        value /= 1024
+    return f"{value:,.1f} GB"
+
+
+@models_app.command("prune")
+def prune(
+    yes: bool = typer.Option(False, "--yes", help="Actually delete; otherwise just report."),
+) -> None:
+    """Report (or with --yes, delete) cached weights no catalog model uses."""
+    from splat.handlers import models as models_handler
+
+    orphans = models_handler.prune(apply=yes)
+    if not orphans:
+        console.print("[green]nothing to prune[/green]")
+        return
+
+    for orphan in orphans:
+        verb = "removed" if yes else "orphaned"
+        color = "green" if yes else "yellow"
+        console.print(
+            f"[{color}]{verb}[/{color}] {orphan.repo_id:48} {_human_bytes(orphan.size_bytes)}"
+        )
+
+    total = _human_bytes(sum(orphan.size_bytes for orphan in orphans))
+    if yes:
+        console.print(f"reclaimed {total}")
+    else:
+        warn(f"{total} reclaimable; re-run with --yes to delete")
 
 
 @models_app.command("rm")

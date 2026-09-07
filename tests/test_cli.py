@@ -132,3 +132,40 @@ def test_models_info() -> None:
     result = runner.invoke(app, ["models", "info", "mlx3d-capture"])
     assert result.exit_code == 0, result.output
     assert "MIT" in result.output
+
+
+def test_models_prune_reports_without_deleting(mocker):
+    from splat.application.models_admin import OrphanedWeights
+
+    use_case = mocker.patch("splat.handlers.models.PruneModelsUseCase").return_value
+    use_case.find.return_value = [OrphanedWeights("dropped/model", 444_000_000)]
+
+    result = runner.invoke(app, ["models", "prune"])
+
+    assert result.exit_code == 0, result.output
+    assert "dropped/model" in result.output
+    assert "--yes" in result.output
+    use_case.execute.assert_not_called()
+
+
+def test_models_prune_yes_deletes(mocker):
+    from splat.application.models_admin import OrphanedWeights
+
+    use_case = mocker.patch("splat.handlers.models.PruneModelsUseCase").return_value
+    use_case.execute.return_value = [OrphanedWeights("dropped/model", 1024)]
+
+    result = runner.invoke(app, ["models", "prune", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert "removed" in result.output
+    use_case.find.assert_not_called()
+
+
+def test_models_prune_reports_clean_cache(mocker):
+    use_case = mocker.patch("splat.handlers.models.PruneModelsUseCase").return_value
+    use_case.find.return_value = []
+
+    result = runner.invoke(app, ["models", "prune"])
+
+    assert result.exit_code == 0, result.output
+    assert "nothing to prune" in result.output

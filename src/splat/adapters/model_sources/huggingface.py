@@ -31,6 +31,21 @@ class HuggingFaceModelSource:
                 return candidate
         return None
 
+    def _bespoke_repo_ids(self) -> set[str]:
+        return {
+            candidate.name.replace("--", "/", 1)
+            for candidate in model_cache_dir().glob("*/*")
+            if "--" in candidate.name and candidate.is_dir() and any(candidate.iterdir())
+        }
+
+    @staticmethod
+    def _repo_root(path: Path) -> Path:
+        """snapshot_download resolves to .../models--org--name/snapshots/<rev>;
+        the whole repo dir is what `remove`/`size_on_disk` care about."""
+        if path.parent.name == "snapshots" and path.parent.parent.name.startswith("models--"):
+            return path.parent.parent
+        return path
+
     def pull(self, model_id: str, *, revision: str | None = None) -> Path:
         path = snapshot_download(repo_id=model_id, revision=revision)
         return Path(path)
@@ -53,17 +68,25 @@ class HuggingFaceModelSource:
         path = self.local_path(model_id)
         if path is None:
             return
-        # snapshot_download resolves to .../models--org--name/snapshots/<rev>.
-        if path.parent.name == "snapshots" and path.parent.parent.name.startswith("models--"):
-            shutil.rmtree(path.parent.parent, ignore_errors=True)
-            return
-        shutil.rmtree(path, ignore_errors=True)
+        shutil.rmtree(self._repo_root(path), ignore_errors=True)
+
+    def size_on_disk(self, model_id: str) -> int:
+        path = self.local_path(model_id)
+        if path is None:
+            return 0
+        # Snapshot entries are symlinks into blobs/; following them would
+        # double-count every weight file.
+        return sum(
+            entry.stat().st_size
+            for entry in self._repo_root(path).rglob("*")
+            if entry.is_file() and not entry.is_symlink()
+        )
 
     def list_cached(self) -> list[str]:
-        names: set[str] = set()
+        names: set[str] = self._bespoke_repo_ids()
         try:
             info = scan_cache_dir()
         except Exception:
-            return []
+            return sorted(names)
         names.update(repo.repo_id for repo in info.repos)
         return sorted(names)

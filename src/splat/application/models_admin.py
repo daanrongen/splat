@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any
 
 from splat.domain.errors import UnsupportedFormat
@@ -85,6 +86,39 @@ class PullModelUseCase:
 class ModelInfoUseCase:
     def execute(self, name: str) -> Any:
         return _lookup(name)
+
+
+@dataclass(frozen=True)
+class OrphanedWeights:
+    repo_id: str
+    size_bytes: int
+
+
+class PruneModelsUseCase:
+    """Cached repos no catalog entry references any more - left behind when a
+    model is dropped from the catalog, since `models rm` can only address
+    names the catalog still knows."""
+
+    def __init__(self, model_source: ModelSource) -> None:
+        self._model_source = model_source
+
+    def find(self) -> list[OrphanedWeights]:
+        wanted = {
+            source
+            for descriptor in _all_catalogs().values()
+            for source in model_sources(descriptor)
+        }
+        return [
+            OrphanedWeights(repo_id, self._model_source.size_on_disk(repo_id))
+            for repo_id in self._model_source.list_cached()
+            if repo_id not in wanted
+        ]
+
+    def execute(self) -> list[OrphanedWeights]:
+        orphans = self.find()
+        for orphan in orphans:
+            self._model_source.remove(orphan.repo_id)
+        return orphans
 
 
 class RemoveModelUseCase:
