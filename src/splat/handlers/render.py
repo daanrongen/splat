@@ -17,6 +17,11 @@ class RenderRequest:
     samples: int = 32
     engine: str = "cycles"
     background: str = "black"
+    azimuth: float | None = None
+    elevation: float | None = None
+    distance: float | None = None
+    fov: float | None = None
+    look_at: str | None = None
 
 
 def handle(
@@ -31,6 +36,11 @@ def handle(
         "samples": request.samples,
         "engine": request.engine,
         "background": request.background,
+        "azimuth": request.azimuth,
+        "elevation": request.elevation,
+        "distance": request.distance,
+        "fov": request.fov,
+        "look_at": request.look_at,
     }
     return [
         run_render(

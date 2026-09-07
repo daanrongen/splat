@@ -170,6 +170,11 @@ def render(
     samples: int = 32,
     engine: str = "cycles",
     background: str = "black",
+    azimuth: float | None = None,
+    elevation: float | None = None,
+    distance: float | None = None,
+    fov: float | None = None,
+    look_at: str | None = None,
 ) -> list[Manifest]:
     from splat.handlers.render import RenderRequest
     from splat.handlers.render import handle as handle_render
@@ -184,6 +189,11 @@ def render(
             samples=samples,
             engine=engine,
             background=background,
+            azimuth=azimuth,
+            elevation=elevation,
+            distance=distance,
+            fov=fov,
+            look_at=look_at,
         )
     )
 

@@ -118,6 +118,22 @@ def _convert_camera_rotation(
     return (_COLMAP_TO_BLENDER_FLIP @ r_cam_to_world @ _COLMAP_TO_BLENDER_FLIP).astype(np.float32)
 
 
+def _parse_look_at(spec: str | None) -> str | None:
+    """Normalizes `--look-at` and rejects it here rather than inside Blender,
+    where a bad value surfaces as a subprocess exit code and a log tail."""
+    if spec is None:
+        return None
+    try:
+        values = [float(part) for part in spec.replace(" ", "").split(",")]
+    except ValueError as exc:
+        raise RenderBackendError(
+            f"--look-at expects three comma-separated numbers, got {spec!r}"
+        ) from exc
+    if len(values) != 3:
+        raise RenderBackendError(f"--look-at expects three coordinates, got {len(values)}")
+    return ",".join(str(value) for value in values)
+
+
 def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
     colmap = cloud.metadata.coordinate_convention == "colmap"
     means = _convert_positions(cloud.means) if colmap else cloud.means.astype(np.float32)
@@ -215,6 +231,11 @@ class BlenderBackend:
         samples: int = 32,
         engine: str = "cycles",
         background: str = "black",
+        azimuth: float | None = None,
+        elevation: float | None = None,
+        distance: float | None = None,
+        fov: float | None = None,
+        look_at: str | None = None,
         blender_bin: str | None = None,
         on_progress: Callable[[str], None] | None = None,
         **params,
@@ -247,6 +268,18 @@ class BlenderBackend:
                 "--background-color",
                 background,
             ]
+            # Only what the caller actually asked for: the script needs to
+            # distinguish "no viewpoint given" (use the capture pose) from an
+            # explicit one, and a defaulted value would erase that.
+            for name, value in (
+                ("azimuth", azimuth),
+                ("elevation", elevation),
+                ("distance", distance),
+                ("fov", fov),
+                ("look-at", _parse_look_at(look_at)),
+            ):
+                if value is not None:
+                    command += [f"--{name}", str(value)]
             returncode, tail = _stream(command, _resolve_timeout(), on_progress)
 
         if returncode != 0 or not output_path.exists():

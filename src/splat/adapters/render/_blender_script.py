@@ -39,6 +39,16 @@ _TRANSPARENT_BOUNCES = 256
 
 _NAMED_COLOURS = {"black": "000000", "white": "ffffff", "grey": "808080"}
 
+# A three-quarter view: the default only applies when nothing else framed the
+# shot, and a dead-on front view of a single-view reconstruction shows nothing
+# of its geometry.
+_DEFAULT_AZIMUTH = 25.0
+_DEFAULT_ELEVATION = 20.0
+
+# Clouds are handed to Blender in the OpenGL convention (up is +Y), not
+# Blender's own world convention (up is +Z). See `_look_at_euler`.
+_UP = Vector((0.0, 1.0, 0.0))
+
 # Per-Gaussian attributes that have to survive Realize Instances, as
 # (name, geometry-nodes data type, shader Attribute output socket).
 _INSTANCE_ATTRIBUTES = (
@@ -64,6 +74,11 @@ def _parse_args():
     # and two of them in one argv reads as a bug even though argparse only sees
     # what follows the `--` separator.
     parser.add_argument("--background-color", default="black")
+    parser.add_argument("--azimuth", type=float, default=None)
+    parser.add_argument("--elevation", type=float, default=None)
+    parser.add_argument("--distance", type=float, default=None)
+    parser.add_argument("--fov", type=float, default=None)
+    parser.add_argument("--look-at", default=None)
     return parser.parse_args(argv)
 
 
@@ -241,25 +256,76 @@ def _build_billboard_instancer(mat, rotation):
     return ng
 
 
-def _frame_camera_auto_fit(means: np.ndarray):
-    median_center = np.median(means, axis=0)
-    radii = np.linalg.norm(means - median_center, axis=1)
-    # A high percentile, not the median: normalize_gaussian_cloud pins the
-    # median radius to 1.0 while real clouds reach several times that, so a
-    # median-derived distance puts the camera inside the cloud (issue #83).
+def _look_at_euler(position: Vector, target: Vector):
+    """Orientation for a camera at `position` aimed at `target`, with +Y up.
+
+    `Vector.to_track_quat` looks like the tool for this but resolves its up
+    hint against Blender's world +Z, and a Y-up cloud framed that way comes out
+    upside down. Building the basis explicitly is both correct and the only
+    place in this script that needs to know which axis is up. Camera local axes
+    are +X right, +Y up, -Z forward, so the columns go (right, up, backward).
+    """
+    backward = (position - target).normalized()
+    right = _UP.cross(backward)
+    if right.length < 1e-6:  # aimed straight along the up axis; any roll will do
+        right = Vector((1.0, 0.0, 0.0))
+    right.normalize()
+    up = backward.cross(right)
+    return Matrix((right, up, backward)).transposed().to_euler()
+
+
+def _frame_camera_orbit(means: np.ndarray, args):
+    """Spherical framing around the cloud's robust centre.
+
+    Clouds arrive in the OpenGL convention, so up is +Y and azimuth 0 sits on
+    +Z looking down -Z - the direction a default camera already points. The
+    distance comes off a high percentile of the radius distribution rather
+    than the median, because `normalize_gaussian_cloud` pins the median radius
+    to exactly 1.0 while a real cloud reaches several times that, and a
+    median-derived distance put the camera inside the cloud (issue #83).
+    """
+    if args.look_at is not None:
+        center = np.array([float(part) for part in args.look_at.split(",")], dtype=np.float64)
+    else:
+        center = np.median(means, axis=0)
+    radii = np.linalg.norm(means - center, axis=1)
     extent = float(np.percentile(radii, 95)) or 1.0
-    center = Vector(median_center.tolist())
+    distance = extent * 2.5 if args.distance is None else args.distance
+
+    azimuth = np.radians(_DEFAULT_AZIMUTH if args.azimuth is None else args.azimuth)
+    elevation = np.radians(_DEFAULT_ELEVATION if args.elevation is None else args.elevation)
+    offset = distance * np.array(
+        [
+            np.sin(azimuth) * np.cos(elevation),
+            np.sin(elevation),
+            np.cos(azimuth) * np.cos(elevation),
+        ]
+    )
 
     cam_data = bpy.data.cameras.new("RenderCamera")
     cam_obj = bpy.data.objects.new("RenderCamera", cam_data)
     bpy.context.collection.objects.link(cam_obj)
-    distance = extent * 2.5
-    cam_obj.location = center + Vector((distance * 0.7, -distance * 0.9, distance * 0.5))
-    direction = (center - cam_obj.location).normalized()
-    euler = direction.to_track_quat("-Z", "Y").to_euler()
+    target = Vector(center.tolist())
+    cam_obj.location = target + Vector(offset.tolist())
+    euler = _look_at_euler(cam_obj.location, target)
     cam_obj.rotation_euler = euler
+    if args.fov is not None:
+        cam_data.sensor_fit = "HORIZONTAL"
+        cam_data.lens_unit = "FOV"
+        cam_data.angle = np.radians(args.fov)
     bpy.context.scene.camera = cam_obj
+    _report(
+        f"camera orbit azimuth {np.degrees(azimuth):.1f} elevation "
+        f"{np.degrees(elevation):.1f} distance {distance:.3f}"
+    )
     return euler
+
+
+def _requested_orbit(args) -> bool:
+    return any(
+        value is not None
+        for value in (args.azimuth, args.elevation, args.distance, args.fov, args.look_at)
+    )
 
 
 def _frame_camera_from_capture(position, rotation, intrinsics):
@@ -276,6 +342,7 @@ def _frame_camera_from_capture(position, rotation, intrinsics):
         cam_data.lens_unit = "FOV"
         cam_data.angle = 2.0 * np.arctan(width / (2.0 * fx))
     bpy.context.scene.camera = cam_obj
+    _report("camera capture pose")
     return quaternion.to_euler()
 
 
@@ -355,12 +422,15 @@ def main() -> None:
         bpy.data.objects.remove(obj, do_unlink=True)
 
     # The camera is framed first: every billboard is oriented by its rotation.
-    if "camera_position" in data and "camera_rotation" in data:
+    # An explicit viewpoint wins over the capture pose; without either, the
+    # orbit defaults are a three-quarter view of the whole cloud.
+    has_capture = "camera_position" in data and "camera_rotation" in data
+    if has_capture and not _requested_orbit(args):
         camera_euler = _frame_camera_from_capture(
             data["camera_position"], data["camera_rotation"], data.get("camera_intrinsics")
         )
     else:
-        camera_euler = _frame_camera_auto_fit(means)
+        camera_euler = _frame_camera_orbit(means, args)
 
     mat = _make_material()
     ng = _build_billboard_instancer(mat, camera_euler)

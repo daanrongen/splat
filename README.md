@@ -152,7 +152,12 @@ A 1.18M-Gaussian frame at 1920x1080 with 64 samples takes roughly 80 seconds, or
 
 ```sh
 splat render scene.ply -o scene.png --width 1920 --height 1080 --samples 64
+splat render scene.ply -o side.png --azimuth 90 --elevation 10 --look-at 0,0.4,0
 ```
+
+The viewpoint is spherical around the cloud's robust centre: `--azimuth` (degrees around the up axis, default 25), `--elevation` (degrees above the horizon, default 20), `--distance` (defaults to a fit from the 95th-percentile radius), `--fov` (horizontal degrees), and `--look-at x,y,z` (defaults to the cloud's median point). Clouds are stored Y-up, so azimuth 0 is a head-on view and positive azimuth swings toward +X.
+
+Naming any of those overrides the capture camera. A cloud that carries `capture_camera_*` metadata is otherwise rendered from the pose it was reconstructed from, which for a single-image reconstruction reproduces the input framing.
 
 Key options: `--width` (1280), `--height` (720), `--samples` (32), `--engine cycles|eevee`, `--background` (`black`, `white`, `grey`, `transparent`, or a hex colour), `-o/--output`. Set `SPLAT_BLENDER_BIN` if `blender` is not on `PATH`, and `SPLAT_RENDER_TIMEOUT` to change the 1800s cap (`0` disables it).
 

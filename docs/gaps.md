@@ -41,7 +41,10 @@ Consequences visible in [pipeline.md §9](pipeline.md): colours are a lighting r
 
 Fix direction: `ShaderNodeEmission` (or a volume shader) with `Alpha = opacity`, no lights, `scale × ~2.5-3`, higher subdivisions or a billboard-with-Gaussian-texture instancer, and a configurable world background. This is a small, well-scoped change to one 165-statement script that currently has 0% coverage, and it changes every rendered image the tool produces.
 
-### G3. `render` has no camera controls
+### G3. `render` has no camera controls ~~(mostly closed)~~
+
+> **Mostly closed.** `render` takes `--azimuth`, `--elevation`, `--distance`, `--fov` and `--look-at`, framing spherically around the cloud's robust centre; naming any of them overrides the capture pose. The auto-fit distance now comes off the 95th-percentile radius rather than the median, so it stops landing inside the cloud, and `run_render` reads through the format registry so `splat render scene.sog` works. One defect surfaced while building it: `Vector.to_track_quat` resolves its up hint against Blender's world +Z, but clouds are handed over Y-up, so every externally-framed shot came out upside down. The camera basis is now built explicitly. Still open: `--frames N` turntable output, and storing all registered COLMAP poses instead of `cameras[0]` so `--camera <i>` can pick one (which is the multi-slot question in #55). The rest of this entry records what the gap was.
+
 
 `--width`, `--height`, `--samples`, `--engine`. That is the whole surface of the presentation command.
 

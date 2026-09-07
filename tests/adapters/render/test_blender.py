@@ -12,6 +12,7 @@ from splat.adapters.render.blender import (
     _convert_gaussian_rotations,
     _convert_positions,
     _gaussian_axes,
+    _parse_look_at,
     _resolve_blender_bin,
     _resolve_timeout,
     _srgb_to_linear,
@@ -175,6 +176,37 @@ def test_render_command_passes_the_background_through(monkeypatch, tmp_path, syn
     BlenderBackend().render(synthetic_cloud, tmp_path / "render.png", background="transparent")
     command = captured["command"]
     assert command[command.index("--background-color") + 1] == "transparent"
+
+
+def test_render_omits_camera_flags_that_were_not_asked_for(monkeypatch, tmp_path, synthetic_cloud):
+    """The script needs to tell "no viewpoint given" (use the capture pose)
+    from an explicit one, so a defaulted value must not appear in argv."""
+    captured = {}
+
+    _patch_popen(monkeypatch, captured)
+
+    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png", azimuth=90.0)
+    command = captured["command"]
+    assert command[command.index("--azimuth") + 1] == "90.0"
+    assert "--elevation" not in command
+    assert "--distance" not in command
+    assert "--look-at" not in command
+
+
+def test_render_normalizes_look_at(monkeypatch, tmp_path, synthetic_cloud):
+    captured = {}
+
+    _patch_popen(monkeypatch, captured)
+
+    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png", look_at=" 1, 2 ,3 ")
+    command = captured["command"]
+    assert command[command.index("--look-at") + 1] == "1.0,2.0,3.0"
+
+
+@pytest.mark.parametrize("spec", ["1,2", "1,2,3,4", "a,b,c", ""])
+def test_parse_look_at_rejects_anything_but_three_numbers(spec):
+    with pytest.raises(RenderBackendError, match="look-at"):
+        _parse_look_at(spec)
 
 
 def test_gaussian_axes_of_an_unrotated_kernel_are_the_inverse_scales():

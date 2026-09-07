@@ -13,7 +13,11 @@ from tests.image_helpers import write_sample_png
 class FakeRenderBackend:
     name = "fake-render"
 
+    def __init__(self) -> None:
+        self.params: dict = {}
+
     def render(self, cloud, output_path, **params):
+        self.params = params
         output_path.write_bytes(encode_png(np.zeros((4, 8, 3), dtype=np.uint8)))
 
 
@@ -35,6 +39,27 @@ def test_handle_creates_image_asset(mocker, tmp_path, monkeypatch, synthetic_clo
     assert results[0].kind == ManifestKind.IMAGE
     assert results[0].parent_ids == [asset.id]
     assert results[0].created_by == "render:fake-render"
+
+
+def test_handle_forwards_camera_framing_to_the_backend(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    backend = FakeRenderBackend()
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
+    cache = get_manifest_repository()
+    asset = _gaussian_asset(cache, tmp_path, synthetic_cloud)
+
+    handle(
+        RenderRequest(
+            inputs=[asset], model="fake-render", azimuth=90.0, elevation=-10.0, look_at="0,1,2"
+        )
+    )
+
+    assert backend.params["azimuth"] == 90.0
+    assert backend.params["elevation"] == -10.0
+    assert backend.params["look_at"] == "0,1,2"
+    assert backend.params["distance"] is None
 
 
 def test_handle_rejects_non_gaussian_input(mocker, tmp_path, monkeypatch, synthetic_cloud):

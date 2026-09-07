@@ -64,6 +64,7 @@ def _render(cloud, tmp_path, **params) -> np.ndarray:
     from PIL import Image
 
     output = tmp_path / "render.png"
+    params.setdefault("background", "black")
     BlenderBackend().render(cloud, output, width=_SIZE, height=_SIZE, samples=16, **params)
     return np.asarray(Image.open(output).convert("RGBA"), dtype=np.float32) / 255.0
 
@@ -98,6 +99,51 @@ def test_kernel_support_ends_well_inside_the_frame(one_red_gaussian, tmp_path):
 
     assert pixels[0, 0, 3] == 0.0
     assert pixels[-1, -1, 3] == 0.0
+
+
+@pytest.fixture
+def axis_markers() -> GaussianCloud:
+    """Red above, blue below, green on +X, no capture pose - so the orbit
+    camera has to place them, and where they land says which axis it treated
+    as up and which way azimuth turns."""
+    return GaussianCloud(
+        means=np.array([[0, 1, 0], [0, -1, 0], [1, 0, 0]], dtype=np.float32),
+        scales=np.full((3, 3), np.log(0.15), dtype=np.float32),
+        rotations=np.tile([1.0, 0.0, 0.0, 0.0], (3, 1)).astype(np.float32),
+        opacities=np.full(3, _OPACITY_LOGIT, dtype=np.float32),
+        sh_dc=np.array([[0.5, -0.5, -0.5], [-0.5, -0.5, 0.5], [-0.5, 0.5, -0.5]], dtype=np.float32)
+        / _SH_C0,
+        metadata=GaussianCloudMetadata(coordinate_convention="opengl"),
+    )
+
+
+def _brightest(pixels: np.ndarray, channel: int) -> tuple[int, int]:
+    others = [index for index in range(3) if index != channel]
+    score = pixels[:, :, channel] - pixels[:, :, others].max(axis=2)
+    row, column = np.unravel_index(int(np.argmax(score)), score.shape)
+    return int(row), int(column)
+
+
+def test_orbit_camera_treats_plus_y_as_up(axis_markers, tmp_path):
+    """Blender's world up is +Z and clouds are handed over in the OpenGL
+    convention, so anything framed with `to_track_quat`'s up hint comes out
+    upside down (issue #83)."""
+    pixels = _render(axis_markers, tmp_path, azimuth=0.0, elevation=0.0, distance=5.0)
+
+    red_row, _ = _brightest(pixels, 0)
+    blue_row, _ = _brightest(pixels, 2)
+
+    assert red_row < _SIZE // 2 < blue_row
+
+
+def test_orbit_azimuth_turns_toward_plus_x(axis_markers, tmp_path):
+    front = _render(axis_markers, tmp_path, azimuth=0.0, elevation=0.0, distance=5.0)
+    side = _render(axis_markers, tmp_path, azimuth=90.0, elevation=0.0, distance=5.0)
+
+    # green sits on +X: to the right of centre head-on, and dead centre once
+    # the camera has swung a quarter turn onto its axis.
+    assert _brightest(front, 1)[1] > _SIZE // 2 + 4
+    assert abs(_brightest(side, 1)[1] - _SIZE // 2) <= 2
 
 
 def test_colour_is_the_gaussians_own_and_not_a_lighting_response(one_red_gaussian, tmp_path):
