@@ -19,3 +19,6 @@ mise.local.toml
 
 # Claude Code local bookkeeping
 .claude/
+
+# audit/debug playground
+.splat/
