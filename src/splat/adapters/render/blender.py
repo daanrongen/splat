@@ -16,6 +16,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
+from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +30,7 @@ from splat.domain.value_objects import convention_flip_matrix
 _SCRIPT_PATH = Path(__file__).parent / "_blender_script.py"
 _SH_C0 = 0.28209479177387814
 _DEFAULT_TIMEOUT_SECONDS = 1800.0
+_REPORT_PREFIX = "splat| "
 
 # COLMAP/OpenCV world convention (+X right, +Y down, +Z forward) -> Blender/OpenGL
 # (+X right, +Y up, -Z forward). diag(1,-1,-1) has determinant +1: this is a proper
@@ -62,13 +66,20 @@ def _convert_gaussian_rotations(quats: np.ndarray) -> np.ndarray:
     return (quats * np.array([1.0, 1.0, -1.0, -1.0], dtype=np.float32)).astype(np.float32)
 
 
-def _convert_camera_rotation(rotation_colmap: list[list[float]]) -> np.ndarray:
-    """World-to-camera -> camera-to-world, then conjugate by the flip on both the
-    world side (left) and the camera's own local-axis convention side (right) -
-    COLMAP cameras look down local +Z with +Y down; Blender cameras look down
-    local -Z with +Y up, also related by the same 180-about-X rotation."""
-    r_world_to_cam = np.asarray(rotation_colmap, dtype=np.float32)
-    r_cam_to_world = r_world_to_cam.T
+def _convert_camera_rotation(
+    rotation_world_to_camera: list[list[float]], *, colmap: bool = True
+) -> np.ndarray:
+    """World-to-camera -> the camera-to-world matrix Blender wants on the object.
+
+    The transpose applies either way; only the axis flip is conditional. For a
+    COLMAP cloud it conjugates on both sides: the world side (left) and the
+    camera's own local-axis convention (right), since COLMAP cameras look down
+    local +Z with +Y down while Blender's look down local -Z with +Y up - the
+    same 180-degree rotation about X.
+    """
+    r_cam_to_world = np.asarray(rotation_world_to_camera, dtype=np.float32).T
+    if not colmap:
+        return r_cam_to_world.astype(np.float32)
     return (_COLMAP_TO_BLENDER_FLIP @ r_cam_to_world @ _COLMAP_TO_BLENDER_FLIP).astype(np.float32)
 
 
@@ -99,9 +110,8 @@ def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
     ):
         position = np.asarray(metadata.capture_camera_position, dtype=np.float32)
         arrays["camera_position"] = _convert_positions(position) if colmap else position
-        rotation = metadata.capture_camera_rotation
-        arrays["camera_rotation"] = (
-            _convert_camera_rotation(rotation) if colmap else np.asarray(rotation, dtype=np.float32)
+        arrays["camera_rotation"] = _convert_camera_rotation(
+            metadata.capture_camera_rotation, colmap=colmap
         )
         if metadata.capture_camera_intrinsics is not None:
             arrays["camera_intrinsics"] = np.asarray(
@@ -109,6 +119,49 @@ def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
             )
 
     np.savez(path, **arrays)
+
+
+def _stream(
+    command: list[str], timeout: float | None, on_progress: Callable[[str], None] | None
+) -> tuple[int, list[str]]:
+    """Run Blender, forwarding its progress instead of swallowing it.
+
+    A 1.18M-Gaussian frame at 1920x1080/64 takes about 100 seconds and Blender
+    prints nothing at all in background mode, so the old `capture_output=True`
+    made every slow render look like a hang. `_blender_script.py` reports
+    through a `render_stats` handler; those lines are forwarded and the rest is
+    kept only as a tail for the failure message.
+    """
+    deadline = None if timeout is None else time.monotonic() + timeout
+    tail: deque[str] = deque(maxlen=40)
+    process = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+    )
+    assert process.stdout is not None
+    for raw in process.stdout:
+        line = raw.rstrip()
+        tail.append(line)
+        if on_progress is not None and line.startswith(_REPORT_PREFIX):
+            on_progress(line[len(_REPORT_PREFIX) :])
+        if deadline is not None and time.monotonic() > deadline:
+            process.kill()
+            process.wait()
+            raise RenderBackendError(_timeout_message(timeout))
+    try:
+        remaining = None if deadline is None else max(deadline - time.monotonic(), 0.0)
+        return process.wait(timeout=remaining), list(tail)
+    except subprocess.TimeoutExpired as exc:
+        process.kill()
+        process.wait()
+        raise RenderBackendError(_timeout_message(timeout)) from exc
+
+
+def _timeout_message(timeout: float | None) -> str:
+    return (
+        f"Blender render exceeded {timeout:.0f}s. Lower --samples, use --engine eevee, "
+        "thin the cloud with `splat tools compress --pruning blue-noise`, or raise "
+        "SPLAT_RENDER_TIMEOUT (0 disables it)."
+    )
 
 
 class BlenderBackend:
@@ -124,6 +177,7 @@ class BlenderBackend:
         samples: int = 32,
         engine: str = "cycles",
         blender_bin: str | None = None,
+        on_progress: Callable[[str], None] | None = None,
         **params,
     ) -> None:
         blender = _resolve_blender_bin(blender_bin)
@@ -152,16 +206,9 @@ class BlenderBackend:
                 "--engine",
                 engine,
             ]
-            timeout = _resolve_timeout()
-            try:
-                result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
-            except subprocess.TimeoutExpired as exc:
-                raise RenderBackendError(
-                    f"Blender render exceeded {timeout:.0f}s. Lower --samples, use "
-                    "--engine eevee, or raise SPLAT_RENDER_TIMEOUT (0 disables it)."
-                ) from exc
+            returncode, tail = _stream(command, _resolve_timeout(), on_progress)
 
-        if result.returncode != 0 or not output_path.exists():
+        if returncode != 0 or not output_path.exists():
             raise RenderBackendError(
-                f"Blender render failed (exit {result.returncode}):\n{result.stderr}"
+                f"Blender render failed (exit {returncode}):\n" + "\n".join(tail)
             )

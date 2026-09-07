@@ -11,7 +11,7 @@ from typing import Literal
 import numpy as np
 
 from splat.domain.errors import InvalidGaussianCloud, UnsupportedSHDegree
-from splat.domain.value_objects import ModelLicense
+from splat.domain.value_objects import ModelLicense, convention_flip_matrix
 
 ScaleActivation = Literal["log", "linear"]
 OpacityActivation = Literal["logit", "linear"]
@@ -135,6 +135,53 @@ class GaussianCloud:
             return self.opacities
         p = np.clip(self.opacities, 1e-6, 1 - 1e-6)
         return np.log(p / (1 - p))
+
+
+def to_convention(cloud: GaussianCloud, target: str) -> GaussianCloud:
+    """Re-express a cloud in another axis convention, metadata included.
+
+    Only colmap <-> opengl is needed, and both directions are the same proper
+    180-degree rotation about X, so one branch covers them. Everything that has
+    an orientation moves together: point positions, per-Gaussian rotations, and
+    the captured camera pose. Getting one of those wrong is exactly how a cloud
+    ends up upside down or with the camera facing away from the scene.
+    """
+    source = cloud.metadata.coordinate_convention
+    if source == target:
+        return cloud
+
+    flip = convention_flip_matrix(source, target)
+    metadata = replace(
+        cloud.metadata,
+        coordinate_convention=target,
+        # colmap is +Y down, so "y" is only an honest answer for opengl.
+        up_axis="y" if target == "opengl" else cloud.metadata.up_axis,
+    )
+    if metadata.capture_camera_position is not None:
+        position = np.asarray(metadata.capture_camera_position, dtype=np.float32)
+        metadata.capture_camera_position = (position @ flip).tolist()
+    if metadata.capture_camera_rotation is not None:
+        # Stored world-to-camera. The camera's own local axes differ by the same
+        # flip (colmap looks down +Z with +Y down, opengl down -Z with +Y up),
+        # so it conjugates on both sides of the camera-to-world matrix.
+        rotation = np.asarray(metadata.capture_camera_rotation, dtype=np.float32)
+        metadata.capture_camera_rotation = (flip @ rotation.T @ flip).T.tolist()
+
+    return replace(
+        cloud,
+        means=(cloud.means @ flip).astype(np.float32),
+        rotations=_flip_quaternions(cloud.rotations, flip),
+        metadata=metadata,
+    )
+
+
+def _flip_quaternions(quats: np.ndarray, flip: np.ndarray) -> np.ndarray:
+    """Conjugating a (w,x,y,z) quaternion by a 180-degree axis flip negates the
+    two components whose axes flipped - derived from the Hamilton product, and
+    checked against a matrix round-trip in the tests."""
+    signs = np.ones(4, dtype=np.float32)
+    signs[1:] = np.diag(flip)
+    return (quats * signs).astype(np.float32)
 
 
 def normalize_gaussian_cloud(cloud: GaussianCloud, *, target_radius: float = 1.0) -> GaussianCloud:

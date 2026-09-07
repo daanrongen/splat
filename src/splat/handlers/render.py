@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from splat.application.pipeline import run_render
@@ -17,7 +18,9 @@ class RenderRequest:
     engine: str = "cycles"
 
 
-def handle(request: RenderRequest) -> list[Manifest]:
+def handle(
+    request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
+) -> list[Manifest]:
     validate_inputs(RENDER_CONTRACT, request.inputs)
     cache = get_manifest_repository()
     backend = get_render_backend(request.model)
@@ -28,6 +31,13 @@ def handle(request: RenderRequest) -> list[Manifest]:
         "engine": request.engine,
     }
     return [
-        run_render(backend, cache, model_name=request.model, input_asset=asset, params=params)
+        run_render(
+            backend,
+            cache,
+            model_name=request.model,
+            input_asset=asset,
+            params=params,
+            on_progress=on_progress,
+        )
         for asset in request.inputs
     ]

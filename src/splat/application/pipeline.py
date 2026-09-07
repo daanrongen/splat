@@ -8,6 +8,7 @@ the plain use case and stores the result — this is what makes
 import hashlib
 import json
 import tempfile
+from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
 
@@ -26,7 +27,7 @@ from splat.application.segment import SegmentUseCase
 from splat.application.tools import displace_height, normalize_color
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
-from splat.domain.gaussians import GaussianCloud, normalize_gaussian_cloud
+from splat.domain.gaussians import GaussianCloud, normalize_gaussian_cloud, to_convention
 from splat.domain.image_space import DepthMap, Shape3D
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
@@ -437,11 +438,15 @@ def run_gaussian(
     cloud.metadata.source_model = model_name
     cloud.metadata.source_format = "ply"
     cloud.metadata.license = backend.license
-    # Reconstruction backends here calibrate/triangulate in the OpenCV/COLMAP
-    # convention (X-right, Y-down, Z-forward) — same as the original INRIA
-    # 3DGS codebase, so this stays as-is for viewer/tool compatibility; a
-    # consumer that needs a different up-axis (e.g. Blender) converts on import.
-    cloud.metadata.coordinate_convention = "colmap"
+    # Reconstruction backends calibrate/triangulate in the OpenCV/COLMAP frame
+    # (+X right, +Y down, +Z forward), so that is what they hand back. Storing
+    # it that way was leaving every cloud upside down with the camera facing
+    # away from the scene in any consumer that assumes Y-up: COLMAP's up is
+    # -Y and its scene sits at +Z, while a default OpenGL-style camera looks
+    # down -Z. `up_axis` could not describe it either, its type only admits
+    # "y" or "z". Converting on the way in gives one canonical stored
+    # convention whose metadata is true, and `render` skips its own flip.
+    cloud = to_convention(cloud, "opengl")
     content_bytes = _gaussian_to_ply_bytes(cloud)
 
     return cache.put(
@@ -463,6 +468,7 @@ def run_render(
     model_name: str,
     input_asset: Manifest,
     params: dict,
+    on_progress: Callable[[str], None] | None = None,
 ) -> Manifest:
     cache_key = compute_cache_key(
         stage="render", model=model_name, params=params, parent_ids=(input_asset.id,)
@@ -473,7 +479,7 @@ def run_render(
     cloud = PlyReader().read(input_asset.content_path)
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir) / "render.png"
-        RenderUseCase(backend).execute(cloud, tmp_path, **params)
+        RenderUseCase(backend).execute(cloud, tmp_path, on_progress=on_progress, **params)
         content_bytes = tmp_path.read_bytes()
 
     output = decode_rgb_or_rgba(content_bytes)

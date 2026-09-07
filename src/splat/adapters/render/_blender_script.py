@@ -25,6 +25,8 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Vector
 
+_REPORT_PREFIX = "splat| "
+
 
 def _parse_args():
     argv = sys.argv[sys.argv.index("--") + 1 :]
@@ -165,10 +167,11 @@ def _frame_camera_from_capture(position, rotation, intrinsics):
     bpy.context.scene.camera = cam_obj
 
 
-def _enable_gpu_compute(scene) -> None:
+def _enable_gpu_compute(scene) -> str:
     """Cycles defaults to CPU-only unless a compute backend is both selected in
-    preferences AND enabled per-device - falls back silently (not an error) if
-    no GPU backend is available, e.g. in a CI/headless-Linux-CPU environment."""
+    preferences AND enabled per-device. Returns a human label for whatever it
+    ended up on: a silent CPU fallback turns a 90-second render into a very
+    long one, so the caller reports it rather than leaving it invisible."""
     prefs = bpy.context.preferences.addons["cycles"].preferences
     for backend in ("METAL", "OPTIX", "CUDA", "HIP"):
         try:
@@ -179,9 +182,30 @@ def _enable_gpu_compute(scene) -> None:
         gpu_devices = [d for d in prefs.devices if d.type == backend]
         if gpu_devices:
             for device in prefs.devices:
-                device.use = device.type in (backend, "CPU") and device.type != "CPU"
+                device.use = device.type == backend
             scene.cycles.device = "GPU"
-            return
+            return f"{gpu_devices[0].name} [{backend}]"
+    scene.cycles.device = "CPU"
+    return "CPU (no GPU compute backend available)"
+
+
+def _report(message: str) -> None:
+    """Prefixed so the adapter can pick our lines out of Blender's own noise."""
+    print(f"{_REPORT_PREFIX}{message}", flush=True)
+
+
+def _install_progress_reporter() -> None:
+    """Blender renders nothing to stdout in background mode, so a multi-minute
+    Cycles render is indistinguishable from a hang. The `render_stats` handler
+    does fire here, and carries both `Sample N/M` and the first-run
+    "Loading render kernels" phase that accounts for most of the surprise."""
+
+    def on_stats(*args) -> None:
+        stats = next((arg for arg in args if isinstance(arg, str)), None)
+        if stats:
+            _report(stats)
+
+    bpy.app.handlers.render_stats.append(on_stats)
 
 
 def main() -> None:
@@ -221,12 +245,16 @@ def main() -> None:
     if args.engine == "cycles":
         scene.render.engine = "CYCLES"
         scene.cycles.samples = args.samples
-        _enable_gpu_compute(scene)
+        device = _enable_gpu_compute(scene)
     else:
         scene.render.engine = "BLENDER_EEVEE"
+        device = "EEVEE"
         if hasattr(scene, "eevee"):
             scene.eevee.taa_render_samples = args.samples
 
+    _report(f"device {device}")
+    _report(f"{len(means):,} gaussians at {args.width}x{args.height}, {args.samples} samples")
+    _install_progress_reporter()
     bpy.ops.render.render(write_still=True)
 
 

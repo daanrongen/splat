@@ -153,6 +153,10 @@ class SharpBackend:
                 cloud = PlyReader().read(ply_path)
 
         cloud.metadata.source_model = self.name
+        # SHARP follows OpenCV/COLMAP: +X right, +Y down, +Z forward, scene at
+        # +z. Declared here rather than assumed downstream - run_gaussian
+        # converts to splat's canonical frame from whatever a backend reports.
+        cloud.metadata.coordinate_convention = "colmap"
         # SHARP predicts in the input camera's own frame, so the origin looking
         # down +z *is* the capture pose - unlike SfM, where camera[0] being the
         # world origin makes the same values meaningless. Recording it lets

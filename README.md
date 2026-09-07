@@ -107,7 +107,7 @@ Key options: `--model realesrgan-mlx`, `--factor 2|4`, `--tile`, `-o/--output`.
 splat diffuse "a small red toy robot, studio lighting" | splat gaussian - --model sharp -o robot.ply
 ```
 
-About 13 seconds on an M1 Pro for ~1.18M Gaussians. Output is **metric, with absolute scale** (so `gaussian` skips the normalization it applies to every other backend) in the OpenCV/COLMAP convention, with the scene in front of the camera at +z. Because it reconstructs from one viewpoint it recovers the *visible* surface, background plate included, not a full 360-degree object. Weights are `apple/Sharp`, licensed for **research use only**.
+About 13 seconds on an M1 Pro for ~1.18M Gaussians. Output is **metric, with absolute scale**, so `gaussian` skips the normalization it applies to every other backend. Because it reconstructs from one viewpoint it recovers the *visible* surface, background plate included, not a full 360-degree object. Weights are `apple/Sharp`, licensed for **research use only**.
 
 **`mlx3d-capture` (3+ images)** is optimization-based rather than feed-forward: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene through MLX/Metal. It needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register.
 
@@ -135,6 +135,16 @@ Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 m
 ### render
 
 `splat render` rasterizes a `GaussianCloud` to a PNG through Blender, shelling out to `blender --background`. Cycles runs on the Metal GPU; `--engine eevee` is the faster, approximate preview.
+
+Progress is reported live, including the device it picked and Cycles' first-run kernel compilation, which can take minutes on its own:
+
+```text
+render device: Apple M1 Pro (GPU - 16 cores) [METAL]
+⠋ Mem: 1M | Loading render kernels (may take a few minutes the first time)
+⠹ Remaining: 00:14.54 | Mem: 3143M | Sample 12/64
+```
+
+A 1.18M-Gaussian frame at 1920x1080 with 64 samples takes roughly 100 seconds. If Cycles cannot find a GPU it warns rather than silently falling back to the CPU.
 
 ```sh
 splat render scene.ply -o scene.png --width 1920 --height 1080 --samples 64
@@ -271,7 +281,9 @@ splat diffuse "dog" | splat upscale - --factor 2 | splat segment - | splat depth
 | `embedding` | `vector` | embed | `.npy` |
 | `depth_map` | `raster`, `single_channel`, `metric` | depth | `.npy` |
 | `shape_3d` | `mesh_3d` | tools displace.height, tools extract.surface | `.glb` / `.obj` |
-| `gaussian_cloud` | `splat_3d` | gaussian | `.ply` |
+| `gaussian_cloud` | `splat_3d` | gaussian, render (input) | `.ply` |
+
+Every `gaussian_cloud` splat writes is stored in one canonical convention: **OpenGL-style, +Y up and -Z forward**, recorded in the `.ply` as `coordinate_convention opengl` / `up_axis y`. Reconstruction backends work in OpenCV/COLMAP (+Y down, +Z forward) and declare that, and `run_gaussian` converts on the way in. Storing COLMAP verbatim left every cloud upside down with the camera aimed away from the scene in any Y-up consumer, and `up_axis` could not describe it: COLMAP's up is -Y, which that field's type does not admit.
 
 Every model-backed stage declares what it needs as a `StageContract` (`domain/contracts.py`): named input slots, accepted kinds/tags, and a min/max count, checked by one shared validator instead of ad hoc kind checks. `splat gaussian`'s contract is built per-request from the chosen backend's `required_image_count()` (`sharp` accepts exactly 1, `mlx3d-capture` needs 3+); piping the wrong kind in fails with a message naming both sides:
 

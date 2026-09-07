@@ -1,13 +1,41 @@
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 
 import typer
 
-from splat.cli._console import console, error
-from splat.cli._pipeline_io import report, resolve_inputs
+from splat.cli._console import console, error, warn
+from splat.cli._pipeline_io import is_piped, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.render import RenderRequest, handle
 from splat.registry.wiring import get_manifest_repository
+
+
+@contextmanager
+def _progress() -> Iterator[Callable[[str], None] | None]:
+    """Blender reports device, then scene sync, then `Sample n/m`. Cycles can
+    also spend minutes compiling Metal kernels on first use, which is the part
+    that reads as a hang, so it goes on one live line rather than nowhere.
+    Suppressed when piped, where stdout is a machine-readable record."""
+    if is_piped():
+        yield None
+        return
+
+    with console.status("[dim]starting render[/dim]") as status:
+
+        def on_progress(message: str) -> None:
+            if message.startswith("device "):
+                device = message.removeprefix("device ")
+                if device.startswith("CPU"):
+                    warn(f"cycles is rendering on {device}; expect this to be slow")
+                else:
+                    console.print(f"[dim]render device:[/dim] {device}")
+                return
+            status.update(f"[dim]{message}[/dim]")
+
+        yield on_progress
 
 
 def render(
@@ -36,18 +64,18 @@ def render(
 ) -> None:
     """Render a Gaussian splat to a still image."""
     cache = get_manifest_repository()
+    request = RenderRequest(
+        inputs=[],
+        model=model,
+        width=width,
+        height=height,
+        samples=samples,
+        engine=engine,
+    )
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)
-        results = handle(
-            RenderRequest(
-                inputs=inputs,
-                model=model,
-                width=width,
-                height=height,
-                samples=samples,
-                engine=engine,
-            )
-        )
+        with _progress() as on_progress:
+            results = handle(replace(request, inputs=inputs), on_progress=on_progress)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc

@@ -53,20 +53,28 @@ def test_run_gaussian_creates_cached_ply_asset(tmp_path, synthetic_cloud):
     assert PlyReader().read(result.content_path).point_count == synthetic_cloud.point_count
 
 
-def test_run_gaussian_normalizes_output_and_sets_coordinate_convention(tmp_path, synthetic_cloud):
+def test_run_gaussian_normalizes_output_and_stores_a_canonical_y_up_cloud(
+    tmp_path, synthetic_cloud
+):
+    """Backends report COLMAP (+Y down, scene at +Z). Storing that verbatim left
+    every cloud upside down with the camera facing away in any Y-up consumer,
+    and `up_axis` could not even describe it."""
     cache = FilesystemManifestRepository(tmp_path / "cache")
     a = _image_asset(cache, tmp_path, "a.png")
     b = _image_asset(cache, tmp_path, "b.png")
+    backend = FakeReconstructionBackend(synthetic_cloud)
+    backend._cloud.metadata.coordinate_convention = "colmap"
 
     result = run_gaussian(
-        FakeReconstructionBackend(synthetic_cloud),
+        backend,
         cache,
         model_name="fake-recon",
         input_assets=[a, b],
         params={"device": "cpu"},
     )
 
-    assert result.metadata.coordinate_convention == "colmap"
+    assert result.metadata.coordinate_convention == "opengl"
+    assert result.metadata.up_axis == "y"
     cloud = PlyReader().read(result.content_path)
     radii = np.linalg.norm(cloud.means - np.median(cloud.means, axis=0), axis=1)
     assert np.median(radii) == pytest.approx(1.0, abs=1e-4)

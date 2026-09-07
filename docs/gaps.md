@@ -118,9 +118,21 @@ The zero-byte `segment` marker is `kind=STICKER, ext="manifest"`. It appears in 
 
 This is the clearest instance of a general pattern: the domain is a little bit aspirational and the adapters quietly do their own thing. Either use `Camera`/`Pose` in `GaussianCloudMetadata` and route the flip through `convention_flip_matrix`, or delete the dead code. The first is better, it is the difference between camera data being modelled and being nested lists.
 
-### G17. `up_axis` and `coordinate_convention` contradict each other
+### G17. `up_axis` and `coordinate_convention` contradict each other ~~(closed)~~
 
-`run_gaussian` sets `coordinate_convention = "colmap"` and leaves `up_axis` at the PLY reader's `"y"` default. COLMAP/OpenCV is +Y **down**. Two fields set three lines apart disagree. This matters precisely because Blender import orientation is downstream of it.
+> **Closed.** Clouds are now stored in one canonical OpenGL-style frame (+Y up, -Z forward) with `up_axis y` recorded truthfully. Backends declare the frame they produce and `run_gaussian` converts.
+
+`run_gaussian` set `coordinate_convention = "colmap"` and left `up_axis` at the PLY reader's `"y"` default. COLMAP/OpenCV is +Y **down**. Two fields set three lines apart disagreed, and `up_axis`'s type (`Literal["y", "z"]`) could not express COLMAP's -Y up even in principle.
+
+Reported symptom, which is what made this concrete rather than cosmetic: a SHARP cloud opened in a third-party viewer was **upside down with the camera pointing away from the scene**. Both follow from the same cause. COLMAP puts the scene at +Z while a default OpenGL-style camera looks down -Z, so it faced exactly the wrong way; and +Y down renders inverted anywhere Y-up is assumed. Verified on the data rather than by eye - in the stored cloud the brightest 3% of Gaussians (the sky) sat at negative Y:
+
+```
+COLMAP y<0 ("up"):   mean luminance 0.378     <- sky and canopy
+COLMAP y>0 ("down"): mean luminance 0.314
+source image top third 0.355, bottom third 0.289
+```
+
+After conversion, +Y is the brighter half and Z spans -218..-1.9, so a viewer's default camera points at the scene. `splat render` produces a byte-comparable image either way, since it was already flipping COLMAP clouds itself and now skips that step.
 
 ### G18. `capture_camera_count` records a silent quality failure and nobody looks
 
