@@ -12,11 +12,17 @@ class CompressRequest:
     input_path: Path
     output_path: Path
     profile: str = "web-delivery"
+    pruning: str = "threshold"
+    target_count: int | None = None
 
 
 def handle(request: CompressRequest) -> GaussianCloud:
     reader = get_reader(request.input_path.suffix)
     writer = get_writer(request.output_path.suffix)
     return CompressUseCase(reader, writer, PruneQuantizeCompressor()).execute(
-        request.input_path, request.output_path, profile=request.profile
+        request.input_path,
+        request.output_path,
+        profile=request.profile,
+        pruning=request.pruning,
+        target_count=request.target_count,
     )
