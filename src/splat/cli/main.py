@@ -1,10 +1,13 @@
 import os
 
+from splat.env import seed_from_mise
 from splat.paths import asset_cache_dir, hf_home_dir, model_cache_dir
 
 # Must run before any transitive `huggingface_hub` import below (it reads
 # HF_HOME at import time) — guarantees the XDG-consolidated cache applies
-# even when mise's own env activation isn't in effect for this process.
+# even when mise's own env activation isn't in effect for this process. mise
+# is seeded first because Click resolves `envvar=` against os.environ only.
+seed_from_mise()
 os.environ.setdefault("HF_HOME", str(hf_home_dir()))
 os.environ.setdefault("SPLAT_MODEL_CACHE_DIR", str(model_cache_dir()))
 os.environ.setdefault("SPLAT_ASSET_CACHE_DIR", str(asset_cache_dir()))
