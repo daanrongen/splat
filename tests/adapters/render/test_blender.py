@@ -155,3 +155,49 @@ def test_render_raises_on_nonzero_exit(monkeypatch, tmp_path, synthetic_cloud):
 
     with pytest.raises(RenderBackendError, match="boom"):
         BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
+
+
+def test_render_passes_default_timeout_to_subprocess(monkeypatch, tmp_path, synthetic_cloud):
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["timeout"] = kwargs.get("timeout")
+        Path(command[command.index("--output") + 1]).write_bytes(b"fake png")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.delenv("SPLAT_RENDER_TIMEOUT", raising=False)
+    monkeypatch.setattr("subprocess.run", fake_run)
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+
+    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
+
+    assert captured["timeout"] == 1800.0
+
+
+def test_render_timeout_env_zero_disables_timeout(monkeypatch, tmp_path, synthetic_cloud):
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["timeout"] = kwargs.get("timeout")
+        Path(command[command.index("--output") + 1]).write_bytes(b"fake png")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setenv("SPLAT_RENDER_TIMEOUT", "0")
+    monkeypatch.setattr("subprocess.run", fake_run)
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+
+    BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
+
+    assert captured["timeout"] is None
+
+
+def test_render_translates_timeout_to_domain_error(monkeypatch, tmp_path, synthetic_cloud):
+    def fake_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setenv("SPLAT_RENDER_TIMEOUT", "5")
+    monkeypatch.setattr("subprocess.run", fake_run)
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/blender")
+
+    with pytest.raises(RenderBackendError, match="exceeded 5s"):
+        BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")

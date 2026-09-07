@@ -129,6 +129,6 @@ def test_train_help_has_no_backend_options() -> None:
 
 
 def test_models_info() -> None:
-    result = runner.invoke(app, ["models", "info", "mvsplat"])
+    result = runner.invoke(app, ["models", "info", "mlx3d-capture"])
     assert result.exit_code == 0, result.output
     assert "MIT" in result.output

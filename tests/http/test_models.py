@@ -52,7 +52,7 @@ def test_rm_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    response = client.delete("/models/mvsplat")
+    response = client.delete("/models/depth-pro")
 
     assert response.status_code == 200
     assert len(fake.removed) == 1

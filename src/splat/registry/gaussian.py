@@ -22,7 +22,6 @@ def _build_catalog() -> dict[str, GaussianModelDescriptor]:
     # every other command — only `splat models pull/gaussian --model ...`
     # needs the reconstruction adapters to actually import cleanly.
     from splat.adapters.gaussian.mlx3d_capture import MLX3DCaptureBackend
-    from splat.adapters.gaussian.mvsplat import MVSplatBackend
     from splat.domain.value_objects import MIT
 
     return {
@@ -36,14 +35,6 @@ def _build_catalog() -> dict[str, GaussianModelDescriptor]:
                 "Local Apple Silicon backend using mlx3d's optimization-based capture "
                 "pipeline; requires 3+ photos or frames."
             ),
-        ),
-        "mvsplat": GaussianModelDescriptor(
-            name="mvsplat",
-            backend_cls=MVSplatBackend,
-            hf_repo_id="dylanebert/mvsplat",
-            license=MIT,
-            runtime="torch",
-            notes="Feed-forward research target; adapter is not implemented yet.",
         ),
     }
 

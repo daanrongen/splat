@@ -40,8 +40,7 @@ def depth(
     def _human(assets: list) -> None:
         for asset in assets:
             console.print(
-                f"[green]depth[/green] {asset.id}  "
-                f"focal_length={asset.metadata.focal_length_px}"
+                f"[green]depth[/green] {asset.id}  focal_length={asset.metadata.focal_length_px}"
             )
 
     report(results, _human)
