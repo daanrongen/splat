@@ -14,13 +14,19 @@ class RenderRequest:
     width: int = 1280
     height: int = 720
     samples: int = 32
+    engine: str = "cycles"
 
 
 def handle(request: RenderRequest) -> list[Manifest]:
     validate_inputs(RENDER_CONTRACT, request.inputs)
     cache = get_manifest_repository()
     backend = get_render_backend(request.model)
-    params = {"width": request.width, "height": request.height, "samples": request.samples}
+    params = {
+        "width": request.width,
+        "height": request.height,
+        "samples": request.samples,
+        "engine": request.engine,
+    }
     return [
         run_render(backend, cache, model_name=request.model, input_asset=asset, params=params)
         for asset in request.inputs
