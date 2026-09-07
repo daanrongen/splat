@@ -19,13 +19,25 @@ def render(
     width: int = typer.Option(1280, "--width", help="Render width in pixels."),
     height: int = typer.Option(720, "--height", help="Render height in pixels."),
     samples: int = typer.Option(32, "--samples", help="Render samples (backend-dependent)."),
+    engine: str = typer.Option(
+        "cycles",
+        "--engine",
+        help="cycles (accurate alpha-blended ellipsoids) | eevee (fast preview).",
+    ),
 ) -> None:
     """Render a Gaussian splat to a still image."""
     cache = get_manifest_repository()
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)
         results = handle(
-            RenderRequest(inputs=inputs, model=model, width=width, height=height, samples=samples)
+            RenderRequest(
+                inputs=inputs,
+                model=model,
+                width=width,
+                height=height,
+                samples=samples,
+                engine=engine,
+            )
         )
     except SplatDomainError as exc:
         error(str(exc))

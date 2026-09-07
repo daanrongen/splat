@@ -2,11 +2,12 @@
 --python _blender_script.py` to render a GaussianCloud as a native Blender
 point cloud (see that script for the actual scene setup).
 
-v1 renders flat-colored point splats (position + SH DC color + a uniform
-per-point radius derived from scale) - no ellipsoid orientation from the
-rotation quaternion, no opacity blending, no view-dependent SH. That's a
-deliberate scope cut (see issue #50): enough to inspect a reconstruction's
-shape/orientation at a glance, not a differentiable-rasterizer replacement.
+v2 renders true oriented/scaled ellipsoids (rotation quaternion + per-axis
+scale) alpha-blended by opacity, on Cycles by default - EEVEE remains
+available as a faster, approximate preview (`--engine eevee`). Defaults to
+a real captured camera pose (see #59) when the cloud has one, falling back
+to v1's auto-fit heuristic otherwise. See issue #50 for the v1 scope cut
+this replaces, and #58 for the motivating research.
 """
 
 from __future__ import annotations
@@ -25,6 +26,12 @@ from splat.domain.gaussians import GaussianCloud
 _SCRIPT_PATH = Path(__file__).parent / "_blender_script.py"
 _SH_C0 = 0.28209479177387814
 
+# COLMAP/OpenCV world convention (+X right, +Y down, +Z forward) -> Blender/OpenGL
+# (+X right, +Y up, -Z forward). diag(1,-1,-1) has determinant +1: this is a proper
+# 180-degree rotation about X, not a mirroring, so it applies cleanly to positions,
+# per-Gaussian orientations, and camera poses alike.
+_COLMAP_TO_BLENDER_FLIP = np.array([1.0, -1.0, -1.0], dtype=np.float32)
+
 
 def _resolve_blender_bin(explicit: str | None) -> str:
     candidate = explicit or os.environ.get("SPLAT_BLENDER_BIN") or shutil.which("blender")
@@ -36,9 +43,65 @@ def _resolve_blender_bin(explicit: str | None) -> str:
     return candidate
 
 
+def _convert_positions(points: np.ndarray) -> np.ndarray:
+    return (points * _COLMAP_TO_BLENDER_FLIP).astype(np.float32)
+
+
+def _convert_gaussian_rotations(quats: np.ndarray) -> np.ndarray:
+    """Conjugating a (w,x,y,z) quaternion by the 180-about-X flip works out to
+    negating just the y,z components - derived from the Hamilton product, not
+    guessed (a matrix round-trip gives the identical result, checked in tests)."""
+    return (quats * np.array([1.0, 1.0, -1.0, -1.0], dtype=np.float32)).astype(np.float32)
+
+
+def _convert_camera_rotation(rotation_colmap: list[list[float]]) -> np.ndarray:
+    """World-to-camera -> camera-to-world, then conjugate by the flip on both the
+    world side (left) and the camera's own local-axis convention side (right) -
+    COLMAP cameras look down local +Z with +Y down; Blender cameras look down
+    local -Z with +Y up, also related by the same 180-about-X rotation."""
+    r_world_to_cam = np.asarray(rotation_colmap, dtype=np.float32)
+    r_cam_to_world = r_world_to_cam.T
+    flip = np.diag(_COLMAP_TO_BLENDER_FLIP)
+    return (flip @ r_cam_to_world @ flip).astype(np.float32)
+
+
 def _cloud_to_npz(cloud: GaussianCloud, path: Path) -> None:
+    colmap = cloud.metadata.coordinate_convention == "colmap"
+    means = _convert_positions(cloud.means) if colmap else cloud.means.astype(np.float32)
+    rotations = (
+        _convert_gaussian_rotations(cloud.rotations)
+        if colmap
+        else cloud.rotations.astype(np.float32)
+    )
     colors = np.clip(0.5 + _SH_C0 * cloud.sh_dc, 0.0, 1.0).astype(np.float32)
-    np.savez(path, means=cloud.means.astype(np.float32), colors=colors)
+    scales = cloud.to_linear_scales().astype(np.float32)
+    opacities = cloud.to_activated_opacities().astype(np.float32)
+
+    arrays = {
+        "means": means,
+        "colors": colors,
+        "scales": scales,
+        "rotations": rotations,
+        "opacities": opacities,
+    }
+
+    metadata = cloud.metadata
+    if (
+        metadata.capture_camera_position is not None
+        and metadata.capture_camera_rotation is not None
+    ):
+        position = np.asarray(metadata.capture_camera_position, dtype=np.float32)
+        arrays["camera_position"] = _convert_positions(position) if colmap else position
+        rotation = metadata.capture_camera_rotation
+        arrays["camera_rotation"] = (
+            _convert_camera_rotation(rotation) if colmap else np.asarray(rotation, dtype=np.float32)
+        )
+        if metadata.capture_camera_intrinsics is not None:
+            arrays["camera_intrinsics"] = np.asarray(
+                metadata.capture_camera_intrinsics, dtype=np.float32
+            )
+
+    np.savez(path, **arrays)
 
 
 class BlenderBackend:
@@ -52,6 +115,7 @@ class BlenderBackend:
         width: int = 1280,
         height: int = 720,
         samples: int = 32,
+        engine: str = "cycles",
         blender_bin: str | None = None,
         **params,
     ) -> None:
@@ -78,6 +142,8 @@ class BlenderBackend:
                 str(height),
                 "--samples",
                 str(samples),
+                "--engine",
+                engine,
             ]
             result = subprocess.run(command, capture_output=True, text=True)
 
