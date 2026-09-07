@@ -18,8 +18,10 @@ def embed(
         None, "--text", help="Embed a text query instead of image input."
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Also export .npy here."),
-    model: str = typer.Option("mobileclip2-s0", "--model"),
-    device: str = typer.Option("auto", "--device", help="'auto', 'mps', or 'cpu'."),
+    model: str = typer.Option("mobileclip2-s0", "--model", envvar="SPLAT_EMBED_MODEL"),
+    device: str = typer.Option(
+        "auto", "--device", help="'auto', 'mps', or 'cpu'.", envvar="SPLAT_EMBED_DEVICE"
+    ),
 ) -> None:
     """Embed image or text inputs as normalized vector assets."""
     cache = get_manifest_repository()

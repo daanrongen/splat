@@ -24,17 +24,41 @@ def gaussian(
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Output splat file path."),
     model: str = typer.Option(
-        "mlx3d-capture", "--model", help="Reconstruction model, e.g. mlx3d-capture."
+        "mlx3d-capture",
+        "--model",
+        help="Reconstruction model, e.g. mlx3d-capture.",
+        envvar="SPLAT_GAUSSIAN_MODEL",
     ),
-    device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
-    quality: str = typer.Option("fast", "--quality", help="mlx3d quality preset."),
-    iters: int | None = typer.Option(None, "--iters", help="Override training iterations."),
-    max_dim: int | None = typer.Option(None, "--max-dim", help="Max training image dimension."),
-    sh_degree: int | None = typer.Option(None, "--sh-degree", help="Spherical harmonic degree."),
-    poses: str = typer.Option("auto", "--poses", help="auto | colmap | builtin | existing"),
-    refine_poses: str = typer.Option("auto", "--refine-poses", help="auto | on | off"),
-    low_memory: bool = typer.Option(False, "--low-mem", help="Use mlx3d low-memory mode."),
-    seed: int = typer.Option(0, "--seed", help="Random seed; <0 disables seeding."),
+    device: str = typer.Option(
+        "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_GAUSSIAN_DEVICE"
+    ),
+    quality: str = typer.Option(
+        "fast", "--quality", help="mlx3d quality preset.", envvar="SPLAT_GAUSSIAN_QUALITY"
+    ),
+    iters: int | None = typer.Option(
+        None, "--iters", help="Override training iterations.", envvar="SPLAT_GAUSSIAN_ITERS"
+    ),
+    max_dim: int | None = typer.Option(
+        None, "--max-dim", help="Max training image dimension.", envvar="SPLAT_GAUSSIAN_MAX_DIM"
+    ),
+    sh_degree: int | None = typer.Option(
+        None, "--sh-degree", help="Spherical harmonic degree.", envvar="SPLAT_GAUSSIAN_SH_DEGREE"
+    ),
+    poses: str = typer.Option(
+        "auto",
+        "--poses",
+        help="auto | colmap | builtin | existing",
+        envvar="SPLAT_GAUSSIAN_POSES",
+    ),
+    refine_poses: str = typer.Option(
+        "auto", "--refine-poses", help="auto | on | off", envvar="SPLAT_GAUSSIAN_REFINE_POSES"
+    ),
+    low_memory: bool = typer.Option(
+        False, "--low-mem", help="Use mlx3d low-memory mode.", envvar="SPLAT_GAUSSIAN_LOW_MEM"
+    ),
+    seed: int = typer.Option(
+        0, "--seed", help="Random seed; <0 disables seeding.", envvar="SPLAT_GAUSSIAN_SEED"
+    ),
 ) -> None:
     """Reconstruct a Gaussian splat from images."""
     cache = get_manifest_repository()

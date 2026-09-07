@@ -19,8 +19,10 @@ def depth(
     output: Path | None = typer.Option(
         None, "-o", "--output", help="Render a viewable (normalized) depth PNG here."
     ),
-    model: str = typer.Option("depth-pro", "--model"),
-    device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
+    model: str = typer.Option("depth-pro", "--model", envvar="SPLAT_DEPTH_MODEL"),
+    device: str = typer.Option(
+        "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_DEPTH_DEVICE"
+    ),
 ) -> None:
     """Estimate per-pixel metric depth for image(s) (cached losslessly as .npy)."""
     cache = get_manifest_repository()

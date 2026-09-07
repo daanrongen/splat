@@ -15,11 +15,15 @@ def caption(
         ..., help="Image path, @<asset-id>, or '-' to read piped asset records."
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Write caption text here."),
-    model: str = typer.Option("fastvlm-0.5b", "--model"),
-    prompt: str = typer.Option(DEFAULT_CAPTION_PROMPT, "--prompt"),
-    max_tokens: int = typer.Option(80, "--max-tokens", min=1),
-    temperature: float = typer.Option(0.0, "--temperature", min=0.0),
-    device: str = typer.Option("auto", "--device", help="auto | cpu | mps"),
+    model: str = typer.Option("fastvlm-0.5b", "--model", envvar="SPLAT_CAPTION_MODEL"),
+    prompt: str = typer.Option(DEFAULT_CAPTION_PROMPT, "--prompt", envvar="SPLAT_CAPTION_PROMPT"),
+    max_tokens: int = typer.Option(80, "--max-tokens", min=1, envvar="SPLAT_CAPTION_MAX_TOKENS"),
+    temperature: float = typer.Option(
+        0.0, "--temperature", min=0.0, envvar="SPLAT_CAPTION_TEMPERATURE"
+    ),
+    device: str = typer.Option(
+        "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_CAPTION_DEVICE"
+    ),
 ) -> None:
     """Caption image(s) as UTF-8 text assets."""
     cache = get_manifest_repository()
