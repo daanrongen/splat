@@ -177,7 +177,7 @@ Both write into one namespace under one `id` field. The consequence, demonstrate
 
 ```mermaid
 flowchart LR
-    P(["prompt (text)"]) --> diffuse([diffuse])
+    P(["text prompt"]) --> diffuse([diffuse])
     F[/"file path or @id"/] --> colorlike
 
     diffuse -->|image| colorlike{{"colorlike<br/>image / sticker"}}
