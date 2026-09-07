@@ -299,9 +299,11 @@ Every model-backed stage declares what it needs as a `StageContract` (`domain/co
 ```
 $ splat depth photo.png | splat gaussian -
 error: gaussian (mlx3d-capture) requires at least 3 image or sticker, got 1 depth_map. gaussian has no
-text-to-3D or depth-only reconstruction path — pipe 3+ image assets of the same scene from different
-viewpoints, e.g. `splat gaussian frame-*.png`.
+text-to-3D or depth-only reconstruction path; pipe 3+ image assets of the same scene from different
+viewpoints, e.g. `splat gaussian frame-*.png`. To reconstruct from one image, use --model sharp.
 ```
+
+The single-image suggestion is derived from the catalog, not written into the message, so it names whatever backends actually accept one image.
 
 ### Stage flow
 
