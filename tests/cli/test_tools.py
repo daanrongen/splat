@@ -90,10 +90,35 @@ def test_normalize_color_corrects_a_multi_photo_cohort(tmp_path, monkeypatch):
     assert all(line["created_by"] == "tools:normalize.color" for line in lines)
 
 
-def test_extract_surface_reports_not_implemented(tmp_path: Path) -> None:
+def test_extract_surface_writes_a_real_mesh(tmp_path: Path, monkeypatch) -> None:
+    from splat.adapters.formats.ply import PlyWriter
+    from tests.adapters.mesh.test_poisson import _sphere_cloud
+
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    ply_path = tmp_path / "sphere.ply"
+    PlyWriter().write(_sphere_cloud(), ply_path)
+    out_path = tmp_path / "sphere.obj"
+
     result = runner.invoke(
-        app, ["tools", "extract.surface", str(tmp_path / "a.ply"), str(tmp_path / "b.obj")]
+        app, ["tools", "extract.surface", str(ply_path), str(out_path), "--depth", "6"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert out_path.exists()
+    assert "vertices" in result.output
+
+
+def test_extract_surface_rejects_unsupported_format(tmp_path: Path, monkeypatch) -> None:
+    from splat.adapters.formats.ply import PlyWriter
+    from tests.adapters.mesh.test_poisson import _sphere_cloud
+
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    ply_path = tmp_path / "sphere.ply"
+    PlyWriter().write(_sphere_cloud(), ply_path)
+
+    result = runner.invoke(
+        app, ["tools", "extract.surface", str(ply_path), str(tmp_path / "sphere.usdz")]
     )
 
     assert result.exit_code == 1
-    assert "not yet implemented" in result.output
+    assert "supports" in result.output

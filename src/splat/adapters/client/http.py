@@ -14,6 +14,7 @@ import numpy as np
 
 from splat.adapters.formats.image import decode_rgb_or_rgba, read_rgb_or_rgba
 from splat.application.tools.convert import ConvertResult
+from splat.application.tools.extract_surface import ExtractSurfaceResult
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
 from splat.domain.manifest import Manifest, ManifestKind
@@ -34,6 +35,7 @@ from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.tools.declutter import DeclutterRequest
+from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.http._schemas import (
     DiffuseBody,
@@ -387,6 +389,19 @@ class RemoteSplatClient:
         _raise_for_domain_error(response)
         request.output_path.write_bytes(response.content)
         return get_reader(request.output_path.suffix).read(request.output_path)
+
+    def tools_extract_surface(self, request: ExtractSurfaceRequest) -> ExtractSurfaceResult:
+        files = {"input": (request.input_path.name, request.input_path.read_bytes())}
+        fmt = request.format or request.output_path.suffix.lstrip(".")
+        form = {"to": fmt, "depth": request.depth, "opacity_threshold": request.opacity_threshold}
+        response = self._client.post("/extract-surface", files=files, data=form)
+        _raise_for_domain_error(response)
+        request.output_path.write_bytes(response.content)
+        return ExtractSurfaceResult(
+            input_point_count=int(response.headers["X-Splat-Point-Count"]),
+            vertex_count=int(response.headers["X-Splat-Vertex-Count"]),
+            face_count=int(response.headers["X-Splat-Face-Count"]),
+        )
 
     def info(self, path: Path) -> InfoSummary:
         files = {"input": (path.name, path.read_bytes())}

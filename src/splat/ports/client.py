@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Protocol
 
 from splat.application.tools.convert import ConvertResult
+from splat.application.tools.extract_surface import ExtractSurfaceResult
 from splat.domain.gaussians import GaussianCloud
 from splat.domain.manifest import Manifest
 from splat.handlers.caption import CaptionRequest
@@ -34,6 +35,7 @@ from splat.handlers.segment import SegmentRequest
 from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.tools.declutter import DeclutterRequest
+from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
 from splat.handlers.upscale import UpscaleRequest
 
 
@@ -94,6 +96,8 @@ class SplatClient(Protocol):
     def tools_compress(self, request: CompressRequest) -> GaussianCloud: ...
 
     def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud: ...
+
+    def tools_extract_surface(self, request: ExtractSurfaceRequest) -> ExtractSurfaceResult: ...
 
     def info(self, path: Path) -> InfoSummary: ...
 

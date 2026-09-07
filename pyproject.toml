@@ -31,6 +31,7 @@ dependencies = [
     "open-clip-torch>=3.2",
     "realesrgan-mlx",
     "mlx3d[capture]>=0.3.0",
+    "open3d>=0.19",
 ]
 
 [project.scripts]
