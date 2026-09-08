@@ -125,6 +125,64 @@ def test_put_external_infers_image_dimensions(tmp_path):
     assert asset.metadata.output_height == 3
 
 
+def test_put_external_resolves_to_existing_manifest_with_same_bytes(tmp_path):
+    cache = FilesystemManifestRepository(tmp_path)
+    produced = cache.put(
+        "6c21cef6c26e270e",
+        kind=ManifestKind.IMAGE,
+        content_bytes=b"same-bytes",
+        ext="png",
+        metadata=RasterMetadata(),
+        params={"prompt": "a robot", "seed": 42},
+        parent_ids=[],
+        created_by="diffuse:sdxl-turbo-mlx",
+    )
+    copy_path = tmp_path / "downloaded.png"
+    copy_path.write_bytes(b"same-bytes")
+
+    resolved = cache.put_external(copy_path, kind=ManifestKind.IMAGE)
+
+    assert resolved.id == produced.id
+    assert resolved.created_by == "diffuse:sdxl-turbo-mlx"
+    assert resolved.params == {"prompt": "a robot", "seed": 42}
+    assert [m.id for m in cache.list()] == [produced.id]
+
+
+def test_put_external_is_idempotent_for_the_same_bytes(tmp_path):
+    cache = FilesystemManifestRepository(tmp_path)
+    source = write_sample_png(tmp_path / "photo.png", (2, 2))
+
+    first = cache.put_external(source, kind=ManifestKind.IMAGE)
+    second = cache.put_external(source, kind=ManifestKind.IMAGE)
+
+    assert first.id == second.id
+    assert len(cache.list()) == 1
+
+
+def test_put_external_prefers_pipeline_provenance_over_an_earlier_external_clone(tmp_path):
+    cache = FilesystemManifestRepository(tmp_path)
+    first_copy = write_sample_png(tmp_path / "first.png", (2, 2))
+    content_bytes = first_copy.read_bytes()
+    external = cache.put_external(first_copy, kind=ManifestKind.IMAGE)
+    assert external.created_by == "external"
+
+    produced = cache.put(
+        "produced",
+        kind=ManifestKind.IMAGE,
+        content_bytes=content_bytes,
+        ext="png",
+        metadata=RasterMetadata(),
+        parent_ids=[],
+        created_by="diffuse:sdxl-turbo-mlx",
+    )
+    second_copy = tmp_path / "second.png"
+    second_copy.write_bytes(content_bytes)
+
+    resolved = cache.put_external(second_copy, kind=ManifestKind.IMAGE)
+
+    assert resolved.id == produced.id
+
+
 def test_list_filters_by_kind_and_created_by_most_recent_first(tmp_path):
     cache = FilesystemManifestRepository(tmp_path)
     cache.put(
