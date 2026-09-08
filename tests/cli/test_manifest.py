@@ -56,3 +56,52 @@ def test_manifest_rm_deletes_the_manifest(tmp_path, monkeypatch):
 
     assert result.exit_code == 0
     assert get_manifest_repository().find("abc123") is None
+
+
+def test_manifest_clear_with_yes_deletes_without_prompting(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "abc123")
+    _put_image(monkeypatch, tmp_path, "def456")
+
+    result = runner.invoke(app, ["manifest", "clear", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert "cleared 2 manifest(s)" in result.output
+    assert get_manifest_repository().list() == []
+
+
+def test_manifest_clear_prompts_and_aborts_on_no(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "abc123")
+
+    result = runner.invoke(app, ["manifest", "clear"], input="n\n")
+
+    assert result.exit_code != 0
+    assert get_manifest_repository().find("abc123") is not None
+
+
+def test_manifest_clear_prompts_and_deletes_on_yes(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "abc123")
+
+    result = runner.invoke(app, ["manifest", "clear"], input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert get_manifest_repository().find("abc123") is None
+
+
+def test_manifest_clear_with_no_matches_does_not_prompt(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+
+    result = runner.invoke(app, ["manifest", "clear"])
+
+    assert result.exit_code == 0, result.output
+    assert "nothing to clear" in result.output
+
+
+def test_manifest_clear_respects_created_by_filter(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "abc123", created_by="diffuse:sdxl")
+    _put_image(monkeypatch, tmp_path, "def456", created_by="upscale:realesrgan")
+
+    result = runner.invoke(app, ["manifest", "clear", "--created-by", "diffuse", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert get_manifest_repository().find("abc123") is None
+    assert get_manifest_repository().find("def456") is not None

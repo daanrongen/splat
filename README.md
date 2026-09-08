@@ -261,6 +261,7 @@ splat validate scene.ply --strict
 splat manifest list --kind image --created-by diffuse
 splat manifest get <id>
 splat manifest rm <id>
+splat manifest clear --kind image --yes  # prompts for confirmation without --yes
 ```
 
 ## Piping And Manifests
