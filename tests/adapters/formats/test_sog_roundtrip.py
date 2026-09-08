@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -51,6 +52,21 @@ def test_sog_roundtrip_preserves_point_count_and_geometry(tmp_path: Path, synthe
         synthetic_cloud.to_activated_opacities()[match],
         atol=1 / 255 + 1e-3,
     )
+
+
+def test_sog_write_converts_colmap_coordinates_instead_of_relabelling(
+    tmp_path: Path, synthetic_cloud
+):
+    colmap_cloud = replace(
+        synthetic_cloud, metadata=replace(synthetic_cloud.metadata, coordinate_convention="colmap")
+    )
+    out = tmp_path / "scene.sog"
+    SogWriter().write(colmap_cloud, out)
+    loaded = SogReader().read(out)
+
+    expected = colmap_cloud.means @ np.diag([1.0, -1.0, -1.0]).astype(np.float32)
+    match = _match_by_position(expected, loaded.means)
+    np.testing.assert_allclose(loaded.means, expected[match], atol=1e-2)
 
 
 def test_sog_is_much_smaller_than_ply_on_a_real_sized_cloud(tmp_path: Path):

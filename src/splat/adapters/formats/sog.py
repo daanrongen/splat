@@ -30,7 +30,8 @@ from pathlib import Path
 import numpy as np
 
 from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png
-from splat.domain.gaussians import GaussianCloud, GaussianCloudMetadata
+from splat.domain.errors import SplatDomainError
+from splat.domain.gaussians import GaussianCloud, GaussianCloudMetadata, to_convention
 
 SH_C0 = 0.28209479177387814
 
@@ -73,6 +74,13 @@ class SogWriter:
     name = "sog"
 
     def write(self, cloud: GaussianCloud, path: Path) -> None:
+        # Same fixed-convention situation as `.splat`: no field to store
+        # `coordinate_convention`, so the reader always reports "opengl" -
+        # actually converting keeps that true instead of just relabelling.
+        try:
+            cloud = to_convention(cloud, "opengl")
+        except ValueError as exc:
+            raise SplatDomainError(f"Cannot write .sog: {exc}") from exc
         n = cloud.point_count
         order = morton_order(cloud.means)
         side = _grid_side(n)
