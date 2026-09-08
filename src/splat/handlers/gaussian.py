@@ -10,6 +10,37 @@ from splat.registry.wiring import (
 )
 
 
+def _single_image_models() -> list[str]:
+    """Cataloged backends that reconstruct from one image. Derived rather than
+    hardcoded so the hint below cannot go stale the way it did when `sharp`
+    landed and the multi-view hint kept telling people to shoot more frames."""
+    from splat.application.models_admin import image_count_range
+    from splat.registry.gaussian import GAUSSIAN_CATALOG
+
+    return sorted(
+        name
+        for name, descriptor in GAUSSIAN_CATALOG.items()
+        if image_count_range(descriptor)[0] == 1
+    )
+
+
+def _input_hint(min_images: int) -> str:
+    if min_images <= 1:
+        return (
+            "gaussian has no text-to-3D or depth-only reconstruction path; pipe an "
+            "image or sticker asset in."
+        )
+    hint = (
+        "gaussian has no text-to-3D or depth-only reconstruction path; pipe 3+ image "
+        "assets of the same scene from different viewpoints, e.g. "
+        "`splat gaussian frame-*.png`."
+    )
+    single = _single_image_models()
+    if single:
+        hint += f" To reconstruct from one image, use --model {' or '.join(single)}."
+    return hint
+
+
 @dataclass(frozen=True)
 class GaussianRequest:
     inputs: list[Manifest]
@@ -44,11 +75,7 @@ def handle(request: GaussianRequest) -> list[Manifest]:
                 any_of_tags=frozenset({"colorlike"}),
                 min_count=min_images,
                 max_count=max_images,
-                hint=(
-                    "gaussian has no text-to-3D or depth-only reconstruction path — pipe "
-                    "3+ image assets of the same scene from different viewpoints, e.g. "
-                    "`splat gaussian frame-*.png`."
-                ),
+                hint=_input_hint(min_images),
             ),
         ),
         produces=ManifestKind.GAUSSIAN_CLOUD,

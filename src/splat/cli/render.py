@@ -58,8 +58,44 @@ def render(
     engine: str = typer.Option(
         "cycles",
         "--engine",
-        help="cycles (accurate alpha-blended ellipsoids) | eevee (fast preview).",
+        help="cycles (accurate alpha-composited kernels) | eevee (fast preview).",
         envvar="SPLAT_RENDER_ENGINE",
+    ),
+    background: str = typer.Option(
+        "black",
+        "--background",
+        help="Backdrop: transparent, black, white, grey, or a hex colour.",
+        envvar="SPLAT_RENDER_BACKGROUND",
+    ),
+    azimuth: float | None = typer.Option(
+        None,
+        "--azimuth",
+        help="Orbit angle in degrees around the up axis (default 25).",
+        envvar="SPLAT_RENDER_AZIMUTH",
+    ),
+    elevation: float | None = typer.Option(
+        None,
+        "--elevation",
+        help="Orbit angle in degrees above the horizon (default 20).",
+        envvar="SPLAT_RENDER_ELEVATION",
+    ),
+    distance: float | None = typer.Option(
+        None,
+        "--distance",
+        help="Camera distance from the look-at point (default fits the cloud).",
+        envvar="SPLAT_RENDER_DISTANCE",
+    ),
+    fov: float | None = typer.Option(
+        None,
+        "--fov",
+        help="Horizontal field of view in degrees.",
+        envvar="SPLAT_RENDER_FOV",
+    ),
+    look_at: str | None = typer.Option(
+        None,
+        "--look-at",
+        help="Orbit centre as 'x,y,z' (default the cloud's median point).",
+        envvar="SPLAT_RENDER_LOOK_AT",
     ),
 ) -> None:
     """Render a Gaussian splat to a still image."""
@@ -71,6 +107,12 @@ def render(
         height=height,
         samples=samples,
         engine=engine,
+        background=background,
+        azimuth=azimuth,
+        elevation=elevation,
+        distance=distance,
+        fov=fov,
+        look_at=look_at,
     )
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)

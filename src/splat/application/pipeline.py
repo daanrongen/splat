@@ -16,7 +16,7 @@ import numpy as np
 import trimesh
 
 from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png, read_rgb_or_rgba
-from splat.adapters.formats.ply import PlyReader, PlyWriter
+from splat.adapters.formats.ply import PlyWriter
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
@@ -48,6 +48,7 @@ from splat.ports.reconstruction import ReconstructionBackend
 from splat.ports.render import RenderBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.upscaling import UpscalingBackend
+from splat.registry.wiring import get_reader
 
 
 def compute_cache_key(
@@ -476,7 +477,10 @@ def run_render(
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
-    cloud = PlyReader().read(input_asset.content_path)
+    # Via the registry, not PlyReader: RENDER_CONTRACT accepts any splat_3d
+    # manifest, so `splat render scene.sog` has to work as well as `splat info`
+    # already does on the same file.
+    cloud = get_reader(input_asset.content_path.suffix).read(input_asset.content_path)
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir) / "render.png"
         RenderUseCase(backend).execute(cloud, tmp_path, on_progress=on_progress, **params)
