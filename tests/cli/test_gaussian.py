@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -20,7 +21,9 @@ class FakeReconstructionBackend:
     def __init__(self, cloud) -> None:
         self._cloud = cloud
 
-    def reconstruct(self, images, *, device="auto", **params):
+    def reconstruct(self, images, *, device="auto", on_progress=None, **params):
+        if on_progress is not None:
+            on_progress("registering views")
         return self._cloud
 
     def required_image_count(self) -> tuple[int, int | None]:
@@ -80,6 +83,123 @@ def test_gaussian_asset_inputs_output_flag_writes_file(
     assert out_path.exists()
     line = json.loads(result.output.strip().splitlines()[-1])
     assert line["parent_ids"] == [a.id, b.id]
+
+
+def test_gaussian_warns_when_registration_fraction_is_low(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    low_registration = replace(
+        synthetic_cloud, metadata=replace(synthetic_cloud.metadata, capture_camera_count=1)
+    )
+    _patch_backend(mocker, low_registration)
+
+    result = runner.invoke(
+        app,
+        [
+            "gaussian",
+            str(_sample_image(tmp_path, "a.png")),
+            str(_sample_image(tmp_path, "b.png")),
+            str(_sample_image(tmp_path, "c.png")),
+            "--model",
+            "fake-recon",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "registered 1 of 3 input images (33%)" in result.output
+
+
+def test_gaussian_does_not_warn_when_registration_is_complete(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    full_registration = replace(
+        synthetic_cloud, metadata=replace(synthetic_cloud.metadata, capture_camera_count=2)
+    )
+    _patch_backend(mocker, full_registration)
+
+    result = runner.invoke(
+        app,
+        [
+            "gaussian",
+            str(_sample_image(tmp_path, "a.png")),
+            str(_sample_image(tmp_path, "b.png")),
+            "--model",
+            "fake-recon",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "registered" not in result.output
+
+
+def test_gaussian_min_registered_fails_instead_of_warning(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    low_registration = replace(
+        synthetic_cloud, metadata=replace(synthetic_cloud.metadata, capture_camera_count=1)
+    )
+    _patch_backend(mocker, low_registration)
+
+    result = runner.invoke(
+        app,
+        [
+            "gaussian",
+            str(_sample_image(tmp_path, "a.png")),
+            str(_sample_image(tmp_path, "b.png")),
+            str(_sample_image(tmp_path, "c.png")),
+            "--model",
+            "fake-recon",
+            "--min-registered",
+            "0.5",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "registered 1 of 3 input images (33%)" in result.output
+
+
+def test_gaussian_verbose_prints_backend_progress(mocker, tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    _patch_backend(mocker, synthetic_cloud)
+
+    result = runner.invoke(
+        app,
+        [
+            "gaussian",
+            str(_sample_image(tmp_path, "a.png")),
+            str(_sample_image(tmp_path, "b.png")),
+            "--model",
+            "fake-recon",
+            "--verbose",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "registering views" in result.output
+
+
+def test_gaussian_without_verbose_suppresses_backend_progress(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    _patch_backend(mocker, synthetic_cloud)
+
+    result = runner.invoke(
+        app,
+        [
+            "gaussian",
+            str(_sample_image(tmp_path, "a.png")),
+            str(_sample_image(tmp_path, "b.png")),
+            "--model",
+            "fake-recon",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "registering views" not in result.output
 
 
 def test_gaussian_stdin_ndjson_input(mocker, tmp_path, monkeypatch, synthetic_cloud):

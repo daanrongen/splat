@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 from splat.domain.gaussians import GaussianCloud
@@ -10,5 +11,12 @@ class ReconstructUseCase:
     def __init__(self, backend: ReconstructionBackend) -> None:
         self._backend = backend
 
-    def execute(self, images: list[Path], *, device: str = "auto", **params) -> GaussianCloud:
-        return self._backend.reconstruct(images, device=device, **params)
+    def execute(
+        self,
+        images: list[Path],
+        *,
+        device: str = "auto",
+        on_progress: Callable[[str], None] | None = None,
+        **params,
+    ) -> GaussianCloud:
+        return self._backend.reconstruct(images, device=device, on_progress=on_progress, **params)

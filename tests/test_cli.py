@@ -73,6 +73,25 @@ def test_info(tmp_path: Path, synthetic_cloud) -> None:
     assert "points:" in result.output
 
 
+def test_info_prints_convention_and_camera_metadata(tmp_path: Path, synthetic_cloud) -> None:
+    from dataclasses import replace
+
+    cloud = replace(
+        synthetic_cloud,
+        metadata=replace(
+            synthetic_cloud.metadata, coordinate_convention="colmap", capture_camera_count=3
+        ),
+    )
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(cloud, ply_path)
+
+    result = runner.invoke(app, ["info", str(ply_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "convention:   colmap" in result.output
+    assert "cameras:      3" in result.output
+
+
 def test_validate(tmp_path: Path, synthetic_cloud) -> None:
     ply_path = tmp_path / "in.ply"
     PlyWriter().write(synthetic_cloud, ply_path)
