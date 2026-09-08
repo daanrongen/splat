@@ -8,6 +8,7 @@ local runnable default because it works on Apple Silicon through MLX/Metal.
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 from splat.adapters.formats.ply import PlyReader
@@ -41,6 +42,7 @@ class MLX3DCaptureBackend:
         refine_poses: str = "auto",
         low_memory: bool = False,
         seed: int = 0,
+        on_progress: Callable[[str], None] | None = None,
         **params,
     ) -> GaussianCloud:
         try:
@@ -74,7 +76,9 @@ class MLX3DCaptureBackend:
                 seed=seed,
                 overwrite=True,
             )
-            summary = run_capture(str(input_dir), str(output_dir), config, log=lambda _msg: None)
+            summary = run_capture(
+                str(input_dir), str(output_dir), config, log=on_progress or (lambda _msg: None)
+            )
             cloud = PlyReader().read(Path(summary["splat"]))
             cloud.metadata.source_model = self.name
             # SfM triangulates in the COLMAP frame; the PLY carries no comment

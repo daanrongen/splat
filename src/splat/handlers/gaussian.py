@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from splat.application.pipeline import run_gaussian
@@ -57,7 +58,9 @@ class GaussianRequest:
     focal_35mm: float = 30.0
 
 
-def handle(request: GaussianRequest) -> list[Manifest]:
+def handle(
+    request: GaussianRequest, *, on_progress: Callable[[str], None] | None = None
+) -> list[Manifest]:
     model_source = get_model_source()
     backend = get_reconstruction_backend(
         request.model, model_source=model_source, device=request.device
@@ -106,5 +109,6 @@ def handle(request: GaussianRequest) -> list[Manifest]:
             model_name=request.model,
             input_assets=request.inputs,
             params=params,
+            on_progress=on_progress,
         )
     ]

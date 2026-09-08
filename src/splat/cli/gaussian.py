@@ -7,6 +7,7 @@ from splat.cli._pipeline_io import is_piped, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.handlers.gaussian import GaussianRequest
+from splat.handlers.gaussian import handle as handle_gaussian
 from splat.registry.wiring import get_client, get_manifest_repository, get_reader, get_writer
 
 
@@ -16,6 +17,29 @@ def _export_gaussian(asset: Manifest, output: Path) -> list[str]:
     warnings = writer.supports(cloud)
     writer.write(cloud, output)
     return warnings
+
+
+_REGISTRATION_WARN_FRACTION = 0.5
+
+
+def _check_registration(asset: Manifest, input_count: int, min_registered: float | None) -> None:
+    """SfM can silently register only a fraction of its input views and keep
+    going - training on that fraction still "succeeds", just on much less
+    data than the point count suggests. Warn (or, under --min-registered,
+    fail) so that isn't discovered later by reading the cloud."""
+    registered = asset.metadata.capture_camera_count
+    if registered is None or input_count == 0:
+        return
+    fraction = registered / input_count
+    message = (
+        f"reconstruction registered {registered} of {input_count} input images "
+        f"({fraction:.0%}); quality is likely lower than the point count suggests"
+    )
+    if min_registered is not None and fraction < min_registered:
+        error(message)
+        raise typer.Exit(code=1)
+    if fraction < _REGISTRATION_WARN_FRACTION:
+        warn(message)
 
 
 def gaussian(
@@ -65,6 +89,23 @@ def gaussian(
         help="sharp: 35mm-equivalent focal length assumed for images without EXIF.",
         envvar="SPLAT_GAUSSIAN_FOCAL_35MM",
     ),
+    min_registered: float | None = typer.Option(
+        None,
+        "--min-registered",
+        help=(
+            "Fail instead of warning if the fraction of input images the "
+            "backend registered falls below this (0-1)."
+        ),
+        envvar="SPLAT_GAUSSIAN_MIN_REGISTERED",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        help=(
+            "Print the reconstruction backend's own progress. Runs locally "
+            "rather than through SPLAT_URL, same as `render`."
+        ),
+    ),
 ) -> None:
     """Reconstruct a Gaussian splat from images."""
     cache = get_manifest_repository()
@@ -72,25 +113,32 @@ def gaussian(
         assets: list[Manifest] = []
         for input_arg in inputs:
             assets.extend(resolve_inputs(input_arg, cache, default_kind=ManifestKind.IMAGE))
-        results = get_client().gaussian(
-            GaussianRequest(
-                inputs=assets,
-                model=model,
-                device=device,
-                quality=quality,
-                iters=iters,
-                max_dim=max_dim,
-                sh_degree=sh_degree,
-                poses=poses,
-                refine_poses=refine_poses,
-                low_memory=low_memory,
-                seed=seed,
-                focal_35mm=focal_35mm,
-            )
+        request = GaussianRequest(
+            inputs=assets,
+            model=model,
+            device=device,
+            quality=quality,
+            iters=iters,
+            max_dim=max_dim,
+            sh_degree=sh_degree,
+            poses=poses,
+            refine_poses=refine_poses,
+            low_memory=low_memory,
+            seed=seed,
+            focal_35mm=focal_35mm,
         )
+        if verbose:
+            results = handle_gaussian(
+                request, on_progress=lambda message: console.print(f"[dim]{message}[/dim]")
+            )
+        else:
+            results = get_client().gaussian(request)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
+
+    for result in results:
+        _check_registration(result, len(assets), min_registered)
 
     if output is not None and results:
         for warning in _export_gaussian(results[0], output):

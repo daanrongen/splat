@@ -417,6 +417,7 @@ def run_gaussian(
     model_name: str,
     input_assets: list[Manifest],
     params: dict,
+    on_progress: Callable[[str], None] | None = None,
 ) -> Manifest:
     parent_ids = tuple(asset.id for asset in input_assets)
     cache_key = compute_cache_key(
@@ -429,6 +430,7 @@ def run_gaussian(
     cloud = ReconstructUseCase(backend).execute(
         [asset.content_path for asset in input_assets],
         device=params.get("device", "auto"),
+        on_progress=on_progress,
         **execute_params,
     )
     # SfM and most feed-forward reconstruction have no absolute scale, so the

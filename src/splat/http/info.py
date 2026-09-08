@@ -22,4 +22,9 @@ def info(input: UploadFile = File(...)) -> InfoResponse:
         sh_degree=cloud.sh_degree,
         bbox_min=cloud.means.min(axis=0).tolist(),
         bbox_max=cloud.means.max(axis=0).tolist(),
+        coordinate_convention=cloud.metadata.coordinate_convention,
+        up_axis=cloud.metadata.up_axis,
+        source_model=cloud.metadata.source_model,
+        license=cloud.metadata.license.spdx_id if cloud.metadata.license else None,
+        capture_camera_count=cloud.metadata.capture_camera_count,
     )

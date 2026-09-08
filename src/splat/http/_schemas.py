@@ -94,6 +94,11 @@ class InfoResponse(BaseModel):
     sh_degree: int
     bbox_min: list[float]
     bbox_max: list[float]
+    coordinate_convention: str
+    up_axis: str
+    source_model: str | None
+    license: str | None
+    capture_camera_count: int | None
 
 
 class ValidationResponse(BaseModel):

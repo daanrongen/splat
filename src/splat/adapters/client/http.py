@@ -416,6 +416,11 @@ class RemoteSplatClient:
             sh_degree=data.sh_degree,
             bbox_min=data.bbox_min,
             bbox_max=data.bbox_max,
+            coordinate_convention=data.coordinate_convention,
+            up_axis=data.up_axis,
+            source_model=data.source_model,
+            license=data.license,
+            capture_camera_count=data.capture_camera_count,
         )
 
     def validate(self, path: Path, *, strict: bool = False) -> ValidationSummary:

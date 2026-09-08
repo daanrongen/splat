@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -21,7 +22,12 @@ class ReconstructionBackend(Protocol):
     """
 
     def reconstruct(
-        self, images: list[Path], *, device: str = "auto", **params
+        self,
+        images: list[Path],
+        *,
+        device: str = "auto",
+        on_progress: Callable[[str], None] | None = None,
+        **params,
     ) -> GaussianCloud: ...
 
     def required_image_count(self) -> tuple[int, int | None]:
