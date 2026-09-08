@@ -48,9 +48,9 @@ def gaussian(
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Output splat file path."),
     model: str = typer.Option(
-        "mlx3d-capture",
+        "sharp",
         "--model",
-        help="Reconstruction model, e.g. mlx3d-capture.",
+        help="Reconstruction model, e.g. sharp or mlx3d-capture.",
         envvar="SPLAT_GAUSSIAN_MODEL",
     ),
     device: str = typer.Option(

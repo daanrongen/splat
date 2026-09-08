@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/gaussian")
 def gaussian(
     images: list[UploadFile] = File(...),
-    model: str = Form("mlx3d-capture"),
+    model: str = Form("sharp"),
     device: str = Form("auto"),
     to: str = Form("ply"),
     quality: str = Form("fast"),

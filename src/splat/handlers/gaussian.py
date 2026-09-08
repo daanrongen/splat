@@ -45,7 +45,7 @@ def _input_hint(min_images: int) -> str:
 @dataclass(frozen=True)
 class GaussianRequest:
     inputs: list[Manifest]
-    model: str = "mlx3d-capture"
+    model: str = "sharp"
     device: str = "auto"
     quality: str = "fast"
     iters: int | None = None
