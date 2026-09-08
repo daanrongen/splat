@@ -10,7 +10,7 @@ from splat.handlers.gaussian import (
     handle,
 )
 from splat.registry.wiring import get_manifest_repository
-from tests.image_helpers import write_sample_png
+from tests.image_helpers import sample_rgb, write_sample_png
 
 
 class FakeReconstructionBackend:
@@ -26,6 +26,19 @@ class FakeReconstructionBackend:
 
     def required_image_count(self) -> tuple[int, int | None]:
         return (2, None)
+
+
+class FakeRenderBackend:
+    name = "fake-render"
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def render(self, cloud, output_path, *, on_progress=None, **params):
+        self.calls.append(params)
+        from splat.adapters.formats.image import write_png
+
+        write_png(output_path, sample_rgb((2, 2)))
 
 
 def test_handle_creates_gaussian_asset(mocker, tmp_path, monkeypatch, synthetic_cloud):
@@ -93,3 +106,45 @@ def test_single_image_backends_get_a_hint_without_the_multi_view_advice():
 
 def test_single_image_models_are_read_from_the_catalog():
     assert _single_image_models() == ["sharp"]
+
+
+def test_orbit_frames_renders_a_symmetric_azimuth_sweep(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    mocker.patch(
+        "splat.handlers.gaussian.get_reconstruction_backend",
+        return_value=FakeReconstructionBackend(synthetic_cloud),
+    )
+    render_backend = FakeRenderBackend()
+    mocker.patch("splat.handlers.gaussian.get_render_backend", return_value=render_backend)
+    cache = get_manifest_repository()
+    a = cache.put_external(write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE)
+    b = cache.put_external(write_sample_png(tmp_path / "b.png", (2, 2)), kind=ManifestKind.IMAGE)
+    request = GaussianRequest(inputs=[a, b], model="fake-recon", orbit_frames=3, orbit_degrees=30.0)
+
+    results = handle(request)
+
+    assert len(results) == 4
+    cloud, frames = results[0], results[1:]
+    assert cloud.kind == ManifestKind.GAUSSIAN_CLOUD
+    assert [frame.kind for frame in frames] == [ManifestKind.IMAGE] * 3
+    assert all(frame.parent_ids == [cloud.id] for frame in frames)
+    assert [call["azimuth"] for call in render_backend.calls] == [-15.0, 0.0, 15.0]
+
+
+def test_orbit_frames_rejects_a_sweep_of_one(mocker, tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    mocker.patch(
+        "splat.handlers.gaussian.get_reconstruction_backend",
+        return_value=FakeReconstructionBackend(synthetic_cloud),
+    )
+    cache = get_manifest_repository()
+    a = cache.put_external(write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE)
+    b = cache.put_external(write_sample_png(tmp_path / "b.png", (2, 2)), kind=ManifestKind.IMAGE)
+    request = GaussianRequest(inputs=[a, b], model="fake-recon", orbit_frames=1)
+
+    with pytest.raises(SplatDomainError, match="at least 2"):
+        handle(request)

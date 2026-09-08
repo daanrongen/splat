@@ -98,6 +98,22 @@ def gaussian(
         ),
         envvar="SPLAT_GAUSSIAN_MIN_REGISTERED",
     ),
+    orbit_frames: int | None = typer.Option(
+        None,
+        "--orbit-frames",
+        help=(
+            "Render this many synthetic views of the reconstructed cloud, swept "
+            "across --orbit-degrees, e.g. as multi-view input for a second "
+            "`--model mlx3d-capture` pass."
+        ),
+        envvar="SPLAT_GAUSSIAN_ORBIT_FRAMES",
+    ),
+    orbit_degrees: float = typer.Option(
+        30.0,
+        "--orbit-degrees",
+        help="Total azimuth sweep in degrees for --orbit-frames.",
+        envvar="SPLAT_GAUSSIAN_ORBIT_DEGREES",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -126,6 +142,8 @@ def gaussian(
             low_memory=low_memory,
             seed=seed,
             focal_35mm=focal_35mm,
+            orbit_frames=orbit_frames,
+            orbit_degrees=orbit_degrees,
         )
         if verbose:
             results = handle_gaussian(
@@ -137,8 +155,7 @@ def gaussian(
         error(str(exc))
         raise typer.Exit(code=1) from exc
 
-    for result in results:
-        _check_registration(result, len(assets), min_registered)
+    _check_registration(results[0], len(assets), min_registered)
 
     if output is not None and results:
         for warning in _export_gaussian(results[0], output):
@@ -150,8 +167,11 @@ def gaussian(
 
     def _human(assets: list[Manifest]) -> None:
         for asset in assets:
-            console.print(
-                f"[green]gaussian[/green] {asset.id}  points={asset.metadata.point_count}"
-            )
+            if asset.kind is ManifestKind.GAUSSIAN_CLOUD:
+                console.print(
+                    f"[green]gaussian[/green] {asset.id}  points={asset.metadata.point_count}"
+                )
+            else:
+                console.print(f"[green]orbit frame[/green] {asset.id}  parent={results[0].id}")
 
     report(results, _human)

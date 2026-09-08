@@ -1,13 +1,17 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from splat.application.pipeline import run_gaussian
+import numpy as np
+
+from splat.application.pipeline import run_gaussian, run_render
 from splat.domain.contracts import Requirement, StageContract, validate_inputs
+from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.registry.wiring import (
     get_manifest_repository,
     get_model_source,
     get_reconstruction_backend,
+    get_render_backend,
 )
 
 
@@ -56,6 +60,44 @@ class GaussianRequest:
     low_memory: bool = False
     seed: int = 0
     focal_35mm: float = 30.0
+    orbit_frames: int | None = None
+    orbit_degrees: float = 30.0
+
+
+def _render_orbit(
+    cloud_asset: Manifest, *, orbit_frames: int, orbit_degrees: float
+) -> list[Manifest]:
+    """Renders `orbit_frames` synthetic views of a just-reconstructed cloud,
+    swept across `orbit_degrees` of azimuth - self-consistent by construction
+    since every frame comes from the same Gaussians, unlike prompting a
+    diffusion model for multiple viewpoints (see #95)."""
+    if orbit_frames < 2:
+        raise SplatDomainError("--orbit-frames must be at least 2 to sweep an angle range.")
+
+    cache = get_manifest_repository()
+    backend = get_render_backend()
+    offsets = np.linspace(-orbit_degrees / 2, orbit_degrees / 2, orbit_frames)
+    return [
+        run_render(
+            backend,
+            cache,
+            model_name="blender",
+            input_asset=cloud_asset,
+            params={
+                "width": 1280,
+                "height": 720,
+                "samples": 32,
+                "engine": "cycles",
+                "background": "black",
+                "azimuth": float(azimuth),
+                "elevation": None,
+                "distance": None,
+                "fov": None,
+                "look_at": None,
+            },
+        )
+        for azimuth in offsets
+    ]
 
 
 def handle(
@@ -102,13 +144,19 @@ def handle(
     if request.sh_degree is not None:
         params["sh_degree"] = request.sh_degree
 
-    return [
-        run_gaussian(
-            backend,
-            cache,
-            model_name=request.model,
-            input_assets=request.inputs,
-            params=params,
-            on_progress=on_progress,
+    cloud = run_gaussian(
+        backend,
+        cache,
+        model_name=request.model,
+        input_assets=request.inputs,
+        params=params,
+        on_progress=on_progress,
+    )
+    results = [cloud]
+    if request.orbit_frames is not None:
+        results.extend(
+            _render_orbit(
+                cloud, orbit_frames=request.orbit_frames, orbit_degrees=request.orbit_degrees
+            )
         )
-    ]
+    return results
