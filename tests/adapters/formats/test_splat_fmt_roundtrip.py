@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -33,3 +34,22 @@ def test_splat_file_size_matches_32_bytes_per_point(tmp_path: Path, synthetic_cl
     out = tmp_path / "scene.splat"
     SplatFormatWriter().write(synthetic_cloud, out)
     assert out.stat().st_size == synthetic_cloud.point_count * 32
+
+
+def test_splat_write_converts_colmap_coordinates_instead_of_relabelling(
+    tmp_path: Path, synthetic_cloud
+):
+    """A colmap-convention cloud written to .splat must actually land in
+    opengl coordinates - the reader always reports "opengl" (the format has
+    no field to store the convention in), so silently relabelling without
+    transforming would make every downstream consumer read it upside down."""
+    colmap_cloud = replace(
+        synthetic_cloud, metadata=replace(synthetic_cloud.metadata, coordinate_convention="colmap")
+    )
+    out = tmp_path / "scene.splat"
+    SplatFormatWriter().write(colmap_cloud, out)
+    loaded = SplatFormatReader().read(out)
+
+    expected = colmap_cloud.means @ np.diag([1.0, -1.0, -1.0]).astype(np.float32)
+    np.testing.assert_allclose(loaded.means, expected, atol=1e-4)
+    assert not np.allclose(loaded.means, colmap_cloud.means, atol=1e-4)

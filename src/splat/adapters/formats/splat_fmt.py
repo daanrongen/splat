@@ -16,7 +16,8 @@ from pathlib import Path
 
 import numpy as np
 
-from splat.domain.gaussians import GaussianCloud, GaussianCloudMetadata
+from splat.domain.errors import SplatDomainError
+from splat.domain.gaussians import GaussianCloud, GaussianCloudMetadata, to_convention
 
 SH_C0 = 0.28209479177387814
 
@@ -63,6 +64,14 @@ class SplatFormatWriter:
     name = "splat"
 
     def write(self, cloud: GaussianCloud, path: Path) -> None:
+        # This is a fixed-convention web-viewer format with no field to carry
+        # `coordinate_convention` in, so the reader always reports "opengl" -
+        # actually putting the cloud in that convention (rather than just
+        # relabelling it) is what keeps that reported value true.
+        try:
+            cloud = to_convention(cloud, "opengl")
+        except ValueError as exc:
+            raise SplatDomainError(f"Cannot write .splat: {exc}") from exc
         n = cloud.point_count
 
         colors = np.clip(0.5 + SH_C0 * cloud.sh_dc, 0.0, 1.0)
