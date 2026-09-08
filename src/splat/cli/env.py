@@ -38,9 +38,9 @@ _NON_OPTION_VARS: list[tuple[str, str, str, str, str]] = [
     (
         "global",
         "cache",
-        "SPLAT_ASSET_CACHE_DIR",
+        "SPLAT_MANIFEST_CACHE_DIR",
         "",
-        "One file per manifest; defaults to $XDG_CACHE_HOME/splat/assets",
+        "One file per manifest; defaults to $XDG_CACHE_HOME/splat/manifests",
     ),
     ("render", "adapter", "SPLAT_BLENDER_BIN", "", "Blender executable when it isn't on PATH"),
     (

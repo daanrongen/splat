@@ -23,7 +23,7 @@ def _sample_png_bytes() -> bytes:
 
 
 def test_segment_returns_asset_manifest(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.segment.get_segmentation_backend",
         return_value=FakeSegmentationBackend(),

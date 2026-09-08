@@ -19,7 +19,7 @@ class FakeDiffusionBackend:
 
 
 def test_diffuse_returns_image_content(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(MIT),
@@ -34,7 +34,7 @@ def test_diffuse_returns_image_content(mocker, tmp_path, monkeypatch, call_tool)
 
 
 def test_diffuse_reports_non_commercial_license_warning(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(CC_BY_NC_SA_4_0),
@@ -47,7 +47,7 @@ def test_diffuse_reports_non_commercial_license_warning(mocker, tmp_path, monkey
 
 
 def test_diffuse_unknown_model_is_reported_as_tool_error(tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     with pytest.raises(ToolError, match="Unknown diffusion model"):
         call_tool("diffuse", prompt="a fox", model="nope")

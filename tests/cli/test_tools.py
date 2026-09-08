@@ -34,7 +34,7 @@ def _depth_asset(tmp_path: Path, cache: FilesystemManifestRepository):
 
 
 def test_displace_height_from_piped_depth_asset(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     depth_asset, image_asset = _depth_asset(tmp_path, cache)
     stdin_payload = json.dumps({"id": depth_asset.id}) + "\n"
@@ -49,7 +49,7 @@ def test_displace_height_from_piped_depth_asset(tmp_path, monkeypatch):
 
 
 def test_displace_height_output_flag_writes_file(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     depth_asset, _ = _depth_asset(tmp_path, cache)
     out_path = tmp_path / "mesh.glb"
@@ -64,7 +64,7 @@ def test_displace_height_output_flag_writes_file(tmp_path, monkeypatch):
 
 
 def test_displace_height_rejects_non_depth_input(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
@@ -75,7 +75,7 @@ def test_displace_height_rejects_non_depth_input(tmp_path, monkeypatch):
 
 
 def test_normalize_color_corrects_a_multi_photo_cohort(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     a = tmp_path / "a.png"
     b = tmp_path / "b.png"
     write_sample_png(a, (2, 2))
@@ -94,7 +94,7 @@ def test_extract_surface_writes_a_real_mesh(tmp_path: Path, monkeypatch) -> None
     from splat.adapters.formats.ply import PlyWriter
     from tests.adapters.mesh.test_poisson import _sphere_cloud
 
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     ply_path = tmp_path / "sphere.ply"
     PlyWriter().write(_sphere_cloud(), ply_path)
     out_path = tmp_path / "sphere.obj"
@@ -112,7 +112,7 @@ def test_extract_surface_rejects_unsupported_format(tmp_path: Path, monkeypatch)
     from splat.adapters.formats.ply import PlyWriter
     from tests.adapters.mesh.test_poisson import _sphere_cloud
 
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     ply_path = tmp_path / "sphere.ply"
     PlyWriter().write(_sphere_cloud(), ply_path)
 

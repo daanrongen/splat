@@ -17,7 +17,7 @@ class FakeDiffusionBackend:
 
 
 def test_handle_returns_asset_with_no_warning_for_commercial_model(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(MIT),
@@ -36,7 +36,7 @@ def test_handle_returns_asset_with_no_warning_for_commercial_model(mocker, tmp_p
 
 
 def test_handle_warns_for_non_commercial_model(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(CC_BY_NC_SA_4_0),

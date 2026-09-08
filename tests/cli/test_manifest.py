@@ -9,7 +9,7 @@ runner = CliRunner()
 
 
 def _put_image(monkeypatch, tmp_path, manifest_id: str, created_by: str = "diffuse:sdxl") -> None:
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     get_manifest_repository().put(
         manifest_id,
         kind=ManifestKind.IMAGE,
@@ -42,7 +42,7 @@ def test_manifest_get_shows_full_detail(tmp_path, monkeypatch):
 
 
 def test_manifest_get_unknown_id_exits_nonzero(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     result = runner.invoke(app, ["manifest", "get", "does-not-exist"])
 
@@ -88,7 +88,7 @@ def test_manifest_clear_prompts_and_deletes_on_yes(tmp_path, monkeypatch):
 
 
 def test_manifest_clear_with_no_matches_does_not_prompt(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     result = runner.invoke(app, ["manifest", "clear"])
 

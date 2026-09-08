@@ -100,7 +100,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def test_diffuse_stores_asset_locally(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(MIT),
@@ -114,7 +114,7 @@ def test_diffuse_stores_asset_locally(mocker, tmp_path, monkeypatch, remote_clie
 
 
 def test_diffuse_surfaces_license_warning(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(CC_BY_NC_SA_4_0),
@@ -126,14 +126,14 @@ def test_diffuse_surfaces_license_warning(mocker, tmp_path, monkeypatch, remote_
 
 
 def test_diffuse_unknown_model_raises_domain_error(tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     with pytest.raises(SplatDomainError, match="Unknown diffusion model"):
         remote_client.diffuse(DiffuseRequest(prompt="a fox", model="nope"))
 
 
 def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -146,7 +146,7 @@ def test_depth_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote
 
 
 def test_caption_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -162,7 +162,7 @@ def test_caption_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remo
 
 
 def test_embed_stores_text_asset(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
 
     results = remote_client.embed(EmbedRequest(text="red chair", model="fake-embedder"))
@@ -175,7 +175,7 @@ def test_embed_stores_text_asset(mocker, tmp_path, monkeypatch, remote_client):
 
 
 def test_embed_stores_image_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -188,7 +188,7 @@ def test_embed_stores_image_asset_with_parent_id(mocker, tmp_path, monkeypatch, 
 
 
 def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -205,7 +205,7 @@ def test_upscale_stores_asset_with_parent_id(mocker, tmp_path, monkeypatch, remo
 
 
 def test_segment_fetches_each_sticker(mocker, tmp_path, monkeypatch, remote_client):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.segment.get_segmentation_backend",
         return_value=FakeSegmentationBackend(),
@@ -223,7 +223,7 @@ def test_segment_fetches_each_sticker(mocker, tmp_path, monkeypatch, remote_clie
 def test_gaussian_stores_remote_asset(
     mocker, tmp_path, monkeypatch, synthetic_cloud, remote_client
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",

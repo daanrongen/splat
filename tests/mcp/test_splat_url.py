@@ -51,7 +51,7 @@ def live_server_url():
 def test_diffuse_tool_redirects_to_remote_server(
     mocker, tmp_path, monkeypatch, live_server_url, call_tool
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("SPLAT_URL", live_server_url)
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend", return_value=FakeDiffusionBackend()

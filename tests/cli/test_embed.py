@@ -37,7 +37,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def test_embed_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
 
     result = runner.invoke(app, ["embed", str(_sample_image(tmp_path)), "--model", "fake-embedder"])
@@ -51,7 +51,7 @@ def test_embed_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_text_ndjson_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
 
     result = runner.invoke(app, ["embed", "--text", "red chair", "--model", "fake-embedder"])
@@ -64,7 +64,7 @@ def test_embed_text_ndjson_output(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_human_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     mocker.patch("splat.cli._pipeline_io.is_piped", return_value=False)
 
@@ -77,7 +77,7 @@ def test_embed_human_output(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_output_flag_writes_npy(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     out_path = tmp_path / "embedding.npy"
 
@@ -91,7 +91,7 @@ def test_embed_output_flag_writes_npy(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_asset_id_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -104,7 +104,7 @@ def test_embed_asset_id_input(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -121,7 +121,7 @@ def test_embed_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_stdin_caption_asset_as_text(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     caption = cache.put(
@@ -147,7 +147,7 @@ def test_embed_stdin_caption_asset_as_text(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_rejects_image_and_text_together(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
 
     result = runner.invoke(app, ["embed", str(_sample_image(tmp_path)), "--text", "red chair"])

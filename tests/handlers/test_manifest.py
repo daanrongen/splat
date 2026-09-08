@@ -8,7 +8,7 @@ from splat.registry.wiring import get_manifest_repository
 
 
 def _put_image(monkeypatch, tmp_path, manifest_id: str, created_by: str) -> None:
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     get_manifest_repository().put(
         manifest_id,
         kind=ManifestKind.IMAGE,
@@ -35,7 +35,7 @@ def test_list_filters_by_kind_string(tmp_path, monkeypatch):
 
 
 def test_list_rejects_unknown_kind(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     with pytest.raises(WrongManifestKind, match="Unknown manifest kind"):
         manifest_handler.list_manifests(kind="not-a-kind")

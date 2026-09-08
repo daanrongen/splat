@@ -28,7 +28,7 @@ def _gaussian_asset(cache, tmp_path, synthetic_cloud):
 
 
 def test_handle_creates_image_asset(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.render.get_render_backend", return_value=FakeRenderBackend())
     cache = get_manifest_repository()
     asset = _gaussian_asset(cache, tmp_path, synthetic_cloud)
@@ -44,7 +44,7 @@ def test_handle_creates_image_asset(mocker, tmp_path, monkeypatch, synthetic_clo
 def test_handle_forwards_camera_framing_to_the_backend(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     backend = FakeRenderBackend()
     mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
     cache = get_manifest_repository()
@@ -63,7 +63,7 @@ def test_handle_forwards_camera_framing_to_the_backend(
 
 
 def test_handle_rejects_non_gaussian_input(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.render.get_render_backend", return_value=FakeRenderBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(

@@ -158,7 +158,7 @@ flowchart TB
         B["sha256 of the file bytes"]
         B --> B2["id 70ea37969546e1d2<br/>created_by = external"]
     end
-    A2 --> STORE[("~/.cache/splat/assets/<br/>&lt;id&gt;.&lt;ext&gt; + &lt;id&gt;.meta.json<br/>ONE flat namespace")]
+    A2 --> STORE[("~/.cache/splat/manifests/<br/>&lt;id&gt;.&lt;ext&gt; + &lt;id&gt;.meta.json<br/>ONE flat namespace")]
     B2 --> STORE
 
     style invocation fill:none,stroke:#3b82f6

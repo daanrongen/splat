@@ -34,7 +34,7 @@ def _sample_asset(tmp_path: Path):
 
 
 def test_run_embed_image_creates_embedding_asset(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     asset = _sample_asset(tmp_path)
     backend = CountingEmbeddingBackend()
 
@@ -61,7 +61,7 @@ def test_run_embed_image_creates_embedding_asset(tmp_path, monkeypatch):
 
 
 def test_run_embed_image_reuses_cache_for_same_inputs(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     asset = _sample_asset(tmp_path)
     backend = CountingEmbeddingBackend()
     params = {"device": "cpu"}
@@ -86,7 +86,7 @@ def test_run_embed_image_reuses_cache_for_same_inputs(tmp_path, monkeypatch):
 
 
 def test_run_embed_text_hashes_text_and_reuses_cache(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     backend = CountingEmbeddingBackend()
     params = {"device": "cpu"}
 
@@ -114,7 +114,7 @@ def test_run_embed_text_hashes_text_and_reuses_cache(tmp_path, monkeypatch):
 
 
 def test_run_embed_text_cache_key_includes_text(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     backend = CountingEmbeddingBackend()
 
     first = run_embed_text(

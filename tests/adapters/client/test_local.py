@@ -47,7 +47,7 @@ class FakeEmbeddingBackend:
 
 
 def test_diffuse_delegates_to_handler(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend", return_value=FakeDiffusionBackend()
     )
@@ -60,7 +60,7 @@ def test_diffuse_delegates_to_handler(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_delegates_to_handler(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     from splat.registry.wiring import get_manifest_repository
 
@@ -76,7 +76,7 @@ def test_caption_delegates_to_handler(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_delegates_to_handler(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
     client = LocalSplatClient()
 
@@ -147,7 +147,7 @@ def test_tools_declutter_delegates_to_handler(tmp_path, synthetic_cloud):
 
 
 def test_upscale_delegates_to_handler(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     class FakeUpscaleBackend:
         name = "fake-upscaler"

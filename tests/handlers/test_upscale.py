@@ -20,7 +20,7 @@ class FakeUpscaleBackend:
 
 
 def test_handle_upscales_each_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(
@@ -37,7 +37,7 @@ def test_handle_upscales_each_input(mocker, tmp_path, monkeypatch):
 
 
 def test_handle_rejects_non_image_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put(

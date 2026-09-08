@@ -11,7 +11,7 @@ def _image_asset(cache: FilesystemManifestRepository, tmp_path, name: str, fill:
 
 
 def test_normalize_color_corrects_images(tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     a = _image_asset(cache, tmp_path, "a.png", fill=50)
     b = _image_asset(cache, tmp_path, "b.png", fill=150)

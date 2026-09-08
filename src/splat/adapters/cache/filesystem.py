@@ -18,7 +18,7 @@ from splat.domain.manifest_metadata import (
     metadata_from_dict,
     metadata_to_dict,
 )
-from splat.paths import asset_cache_dir
+from splat.paths import manifest_cache_dir
 
 _RASTER_KINDS = (ManifestKind.IMAGE, ManifestKind.STICKER)
 
@@ -41,7 +41,7 @@ class FilesystemManifestRepository:
     provenance rather than minting a second, parentless manifest for it."""
 
     def __init__(self, cache_dir: Path | None = None) -> None:
-        self._dir = cache_dir or asset_cache_dir()
+        self._dir = cache_dir or manifest_cache_dir()
         self._dir.mkdir(parents=True, exist_ok=True)
 
     def _meta_path(self, manifest_id: str) -> Path:

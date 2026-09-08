@@ -61,7 +61,7 @@ def _sample_image(tmp_path) -> str:
 
 
 def test_segment_returns_one_image_per_sticker(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.segment.get_segmentation_backend",
         return_value=FakeSegmentationBackend(),
@@ -74,7 +74,7 @@ def test_segment_returns_one_image_per_sticker(mocker, tmp_path, monkeypatch, ca
 
 
 def test_depth_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
 
     result = call_tool("depth", image=_sample_image(tmp_path))
@@ -84,7 +84,7 @@ def test_depth_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool
 
 
 def test_caption_returns_text_and_resource_content(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
 
     result = call_tool(
@@ -99,7 +99,7 @@ def test_caption_returns_text_and_resource_content(mocker, tmp_path, monkeypatch
 
 
 def test_embed_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
 
     result = call_tool("embed", text="red chair", model="fake-embedder")
@@ -110,7 +110,7 @@ def test_embed_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool
 
 
 def test_upscale_returns_resource_content(mocker, tmp_path, monkeypatch, call_tool):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
 
     result = call_tool("upscale", image=_sample_image(tmp_path), model="fake-upscaler", factor=2)

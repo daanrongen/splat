@@ -19,7 +19,7 @@ class FakeReconstructionBackend:
 
 
 def test_gaussian_writes_output_file(mocker, tmp_path, synthetic_cloud, call_tool):
-    mocker.patch.dict("os.environ", {"SPLAT_ASSET_CACHE_DIR": str(tmp_path / "cache")})
+    mocker.patch.dict("os.environ", {"SPLAT_MANIFEST_CACHE_DIR": str(tmp_path / "cache")})
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",

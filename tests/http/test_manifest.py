@@ -9,7 +9,7 @@ client = TestClient(app)
 
 
 def _put_image(monkeypatch, tmp_path, manifest_id: str, created_by: str = "diffuse:sdxl") -> None:
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     get_manifest_repository().put(
         manifest_id,
         kind=ManifestKind.IMAGE,
@@ -44,7 +44,7 @@ def test_list_manifests_filters_by_kind(tmp_path, monkeypatch):
 
 
 def test_list_manifests_rejects_unknown_kind(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     response = client.get("/manifests", params={"kind": "not-a-kind"})
 
@@ -64,7 +64,7 @@ def test_get_manifest_returns_full_detail(tmp_path, monkeypatch):
 
 
 def test_get_unknown_manifest_returns_422(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     response = client.get("/manifests/does-not-exist")
 

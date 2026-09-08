@@ -25,7 +25,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def test_handle_fans_out_stickers(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.segment.get_segmentation_backend",
         return_value=FakeSegmentationBackend(),

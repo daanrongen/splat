@@ -255,7 +255,7 @@ splat info scene.ply
 splat validate scene.ply --strict
 ```
 
-`splat manifest` reads and manages the local manifest cache directly (`~/.cache/splat/assets` by default) — a manifest already lives wherever it was produced, so this always operates on the local cache rather than routing through `SPLAT_URL`.
+`splat manifest` reads and manages the local manifest cache directly (`~/.cache/splat/manifests` by default) — a manifest already lives wherever it was produced, so this always operates on the local cache rather than routing through `SPLAT_URL`.
 
 ```sh
 splat manifest list --kind image --created-by diffuse
@@ -416,7 +416,7 @@ Raw model downloads go to `HF_HOME` (`$XDG_CACHE_HOME/huggingface` by default, s
 ```text
 $XDG_CACHE_HOME/splat/
 |-- models/     # converted or compiled model artifacts (CoreML, MLX)
-`-- assets/     # pipeline asset cache, one file per manifest
+`-- manifests/  # pipeline manifest cache, one file per manifest
 ```
 
 Every command option that can be defaulted from the environment declares it as `SPLAT_<COMMAND>_<PARAM>`, so `splat <command> --help` names the variable next to its own option:
@@ -436,7 +436,7 @@ export SPLAT_DIFFUSE_MODEL=sd21-coreml   # applies to every later `splat diffuse
 
 Precedence is CLI flag, then the environment, then the built-in default. Resolution is Click's own `envvar=` handling against `os.environ`; getting values into `os.environ` is mise's or uv's job, and `splat` does not duplicate it.
 
-Five settings are not command options: `SPLAT_MODEL_CACHE_DIR` and `SPLAT_ASSET_CACHE_DIR` (cache roots), `SPLAT_URL` (remote `splat http` base URL), and `SPLAT_BLENDER_BIN` / `SPLAT_RENDER_TIMEOUT` (read directly by the Blender adapter). `SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
+Five settings are not command options: `SPLAT_MODEL_CACHE_DIR` and `SPLAT_MANIFEST_CACHE_DIR` (cache roots), `SPLAT_URL` (remote `splat http` base URL), and `SPLAT_BLENDER_BIN` / `SPLAT_RENDER_TIMEOUT` (read directly by the Blender adapter). `SPLAT_CACHE_ROOT` is a `mise.toml` convenience for composing the two cache dirs in local dev; `splat` itself never reads it.
 
 ## Architecture
 

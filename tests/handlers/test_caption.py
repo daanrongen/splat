@@ -24,7 +24,7 @@ class FakeCaptionBackend:
 
 
 def test_handle_captions_each_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(

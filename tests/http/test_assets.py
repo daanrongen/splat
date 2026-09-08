@@ -9,7 +9,7 @@ client = TestClient(app)
 
 
 def test_get_asset_returns_content_bytes(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = get_manifest_repository()
     asset = cache.put(
         "abc123",
@@ -28,7 +28,7 @@ def test_get_asset_returns_content_bytes(tmp_path, monkeypatch):
 
 
 def test_get_unknown_asset_returns_422(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     response = client.get("/assets/does-not-exist")
 

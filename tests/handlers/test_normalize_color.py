@@ -18,7 +18,7 @@ def _image_asset(cache: FilesystemManifestRepository, tmp_path: Path, name: str,
 
 
 def test_handle_corrects_and_caches(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     a = _image_asset(cache, tmp_path, "a.png", fill=50)
     b = _image_asset(cache, tmp_path, "b.png", fill=150)
@@ -30,7 +30,7 @@ def test_handle_corrects_and_caches(tmp_path, monkeypatch):
 
 
 def test_handle_rejects_non_colorlike_input(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     caption_asset = cache.put(
         "captionkey1",

@@ -10,7 +10,7 @@ python.uv_venv_auto = "create|source"
 _.file = [".env"]
 SPLAT_CACHE_ROOT = "{{env.XDG_CACHE_HOME | default(value=env.HOME ~ '/.cache')}}/splat"
 SPLAT_MODEL_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/models"
-SPLAT_ASSET_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/assets"
+SPLAT_MANIFEST_CACHE_DIR = "{{env.SPLAT_CACHE_ROOT}}/manifests"
 
 [tasks]
 lint = "uv run ruff check ."
