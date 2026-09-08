@@ -23,7 +23,7 @@ class FakeEmbeddingBackend:
 
 
 def test_handle_embeds_each_image_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(
@@ -38,7 +38,7 @@ def test_handle_embeds_each_image_input(mocker, tmp_path, monkeypatch):
 
 
 def test_handle_embeds_text_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
 
     results = handle(EmbedRequest(text="red chair", model="fake-embedder", device="cpu"))
@@ -49,7 +49,7 @@ def test_handle_embeds_text_input(mocker, tmp_path, monkeypatch):
 
 
 def test_handle_embeds_caption_asset_as_text(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
     cache = get_manifest_repository()
     caption = cache.put(
@@ -71,7 +71,7 @@ def test_handle_embeds_caption_asset_as_text(mocker, tmp_path, monkeypatch):
 
 
 def test_handle_rejects_invalid_mode_combinations(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(

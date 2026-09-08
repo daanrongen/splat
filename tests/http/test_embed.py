@@ -23,7 +23,7 @@ class FakeEmbeddingBackend:
 
 
 def test_embed_image_returns_npy_bytes(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
 
     response = client.post(
@@ -39,7 +39,7 @@ def test_embed_image_returns_npy_bytes(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_text_returns_npy_bytes(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.embed.get_embedding_backend", return_value=FakeEmbeddingBackend())
 
     response = client.post(
@@ -52,7 +52,7 @@ def test_embed_text_returns_npy_bytes(mocker, tmp_path, monkeypatch):
 
 
 def test_embed_requires_image_or_text(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     response = client.post("/embed", data={"model": "fake-embedder"})
 

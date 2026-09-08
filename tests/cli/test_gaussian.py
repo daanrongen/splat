@@ -43,7 +43,7 @@ def _patch_backend(mocker, synthetic_cloud):
 
 
 def test_gaussian_file_inputs_emit_ndjson_asset(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
 
     result = runner.invoke(
@@ -67,7 +67,7 @@ def test_gaussian_file_inputs_emit_ndjson_asset(mocker, tmp_path, monkeypatch, s
 def test_gaussian_asset_inputs_output_flag_writes_file(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=ManifestKind.IMAGE)
@@ -88,7 +88,7 @@ def test_gaussian_asset_inputs_output_flag_writes_file(
 def test_gaussian_warns_when_registration_fraction_is_low(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     low_registration = replace(
         synthetic_cloud, metadata=replace(synthetic_cloud.metadata, capture_camera_count=1)
     )
@@ -113,7 +113,7 @@ def test_gaussian_warns_when_registration_fraction_is_low(
 def test_gaussian_does_not_warn_when_registration_is_complete(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     full_registration = replace(
         synthetic_cloud, metadata=replace(synthetic_cloud.metadata, capture_camera_count=2)
     )
@@ -137,7 +137,7 @@ def test_gaussian_does_not_warn_when_registration_is_complete(
 def test_gaussian_min_registered_fails_instead_of_warning(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     low_registration = replace(
         synthetic_cloud, metadata=replace(synthetic_cloud.metadata, capture_camera_count=1)
     )
@@ -162,7 +162,7 @@ def test_gaussian_min_registered_fails_instead_of_warning(
 
 
 def test_gaussian_verbose_prints_backend_progress(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
 
     result = runner.invoke(
@@ -184,7 +184,7 @@ def test_gaussian_verbose_prints_backend_progress(mocker, tmp_path, monkeypatch,
 def test_gaussian_without_verbose_suppresses_backend_progress(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
 
     result = runner.invoke(
@@ -203,7 +203,7 @@ def test_gaussian_without_verbose_suppresses_backend_progress(
 
 
 def test_gaussian_stdin_ndjson_input(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker, synthetic_cloud)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     a = cache.put_external(_sample_image(tmp_path, "a.png"), kind=ManifestKind.IMAGE)

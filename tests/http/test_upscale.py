@@ -19,7 +19,7 @@ class FakeUpscaleBackend:
 
 
 def test_upscale_returns_png_bytes(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
 
     response = client.post(
@@ -35,7 +35,7 @@ def test_upscale_returns_png_bytes(mocker, tmp_path, monkeypatch):
 
 
 def test_upscale_invalid_factor_returns_422(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
 
     response = client.post(

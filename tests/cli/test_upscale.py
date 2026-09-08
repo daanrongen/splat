@@ -35,7 +35,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def test_upscale_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
 
     result = runner.invoke(
@@ -59,7 +59,7 @@ def test_upscale_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
 
 
 def test_upscale_human_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     mocker.patch("splat.cli._pipeline_io.is_piped", return_value=False)
 
@@ -75,7 +75,7 @@ def test_upscale_human_output(mocker, tmp_path, monkeypatch):
 
 
 def test_upscale_output_flag_writes_png(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     out_path = tmp_path / "upscaled.png"
 
@@ -96,7 +96,7 @@ def test_upscale_output_flag_writes_png(mocker, tmp_path, monkeypatch):
 
 
 def test_upscale_asset_id_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -109,7 +109,7 @@ def test_upscale_asset_id_input(mocker, tmp_path, monkeypatch):
 
 
 def test_upscale_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -126,7 +126,7 @@ def test_upscale_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
 
 
 def test_upscale_rejects_invalid_factor(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     _patch_backend(mocker)
 
     result = runner.invoke(

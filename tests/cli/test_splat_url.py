@@ -67,7 +67,7 @@ def live_server_url():
 def test_splat_url_redirects_diffuse_to_remote_server(
     mocker, tmp_path, monkeypatch, live_server_url
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend", return_value=FakeDiffusionBackend()
     )
@@ -86,7 +86,7 @@ def test_splat_url_redirects_diffuse_to_remote_server(
 def test_splat_url_redirects_upscale_to_remote_server(
     mocker, tmp_path, monkeypatch, live_server_url
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.upscale.get_upscale_backend", return_value=FakeUpscaleBackend())
     input_path = write_sample_png(tmp_path / "input.png", (3, 2))
     out_path = tmp_path / "upscaled.png"

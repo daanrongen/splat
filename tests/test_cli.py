@@ -22,7 +22,7 @@ def test_help() -> None:
 
 
 def test_piped_asset_resolution_ignores_non_json_chatter(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(
         write_sample_png(tmp_path / "scene.png", (2, 2)), kind=ManifestKind.IMAGE

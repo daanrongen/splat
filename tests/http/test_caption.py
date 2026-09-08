@@ -26,7 +26,7 @@ class FakeCaptionBackend:
 
 
 def test_caption_returns_text_bytes(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
 
     response = client.post(
@@ -42,7 +42,7 @@ def test_caption_returns_text_bytes(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_unknown_model_returns_422(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     response = client.post(
         "/caption",

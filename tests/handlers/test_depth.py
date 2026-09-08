@@ -29,7 +29,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def test_handle_estimates_depth_for_each_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
     cache = get_manifest_repository()
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)

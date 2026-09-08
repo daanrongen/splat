@@ -31,7 +31,7 @@ The NDJSON record printed on a piped stdout is the manifest:
 
 ```json
 {"id": "6c21cef6c26e270e", "kind": "image",
- "path": "~/.cache/splat/assets/6c21cef6c26e270e.png",
+ "path": "~/.cache/splat/manifests/6c21cef6c26e270e.png",
  "metadata": {"output_width": 512, "output_height": 512},
  "params": {"negative_prompt": "", "prompt": "a small red toy robot...", "seed": 42, "steps": null},
  "parent_ids": [], "created_by": "diffuse:sdxl-turbo-mlx"}
@@ -103,7 +103,7 @@ e1824f1a74c8f830       sticker   segment:sam-mlx     <- 0 bytes, .manifest
 e1824f1a74c8f830-004   sticker   segment:sam-mlx
 ...
 $ splat depth @e1824f1a74c8f830
-error: Could not read image '~/.cache/splat/assets/e1824f1a74c8f830.manifest'
+error: Could not read image '~/.cache/splat/manifests/e1824f1a74c8f830.manifest'
 ```
 
 Contract validation passes (`kind=sticker` satisfies `colorlike`), the full DepthPro checkpoint loads, *then* it fails at decode.

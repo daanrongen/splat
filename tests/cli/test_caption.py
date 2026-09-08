@@ -34,7 +34,7 @@ def _sample_image(tmp_path: Path) -> Path:
 
 
 def test_caption_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
 
     result = runner.invoke(
@@ -50,7 +50,7 @@ def test_caption_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_human_output(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     mocker.patch("splat.cli._pipeline_io.is_piped", return_value=False)
 
@@ -63,7 +63,7 @@ def test_caption_human_output(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_output_flag_writes_text(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     out_path = tmp_path / "caption.txt"
 
@@ -76,7 +76,7 @@ def test_caption_output_flag_writes_text(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_asset_id_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -89,7 +89,7 @@ def test_caption_asset_id_input(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.caption.get_caption_backend", return_value=FakeCaptionBackend())
     cache = FilesystemManifestRepository(tmp_path / "cache")
     asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
@@ -103,7 +103,7 @@ def test_caption_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
 
 
 def test_caption_unknown_model_errors(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     result = runner.invoke(app, ["caption", str(_sample_image(tmp_path)), "--model", "nope"])
 

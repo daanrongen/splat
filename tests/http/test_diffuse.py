@@ -21,7 +21,7 @@ class FakeDiffusionBackend:
 
 
 def test_diffuse_returns_asset_bytes(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(MIT),
@@ -36,7 +36,7 @@ def test_diffuse_returns_asset_bytes(mocker, tmp_path, monkeypatch):
 
 
 def test_diffuse_reports_non_commercial_license_warning(mocker, tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(
         "splat.handlers.diffuse.get_diffusion_backend",
         return_value=FakeDiffusionBackend(CC_BY_NC_SA_4_0),
@@ -49,7 +49,7 @@ def test_diffuse_reports_non_commercial_license_warning(mocker, tmp_path, monkey
 
 
 def test_diffuse_unknown_model_returns_422(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
     response = client.post("/diffuse", json={"prompt": "a fox", "model": "nope"})
 

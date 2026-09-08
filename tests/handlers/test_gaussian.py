@@ -29,7 +29,7 @@ class FakeReconstructionBackend:
 
 
 def test_handle_creates_gaussian_asset(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
@@ -50,7 +50,7 @@ def test_handle_creates_gaussian_asset(mocker, tmp_path, monkeypatch, synthetic_
 
 
 def test_handle_rejects_too_few_images(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
@@ -71,7 +71,7 @@ def test_multi_view_rejection_names_a_single_image_model(
 ):
     """The hint used to tell people to go shoot more frames, which stopped
     being the best available advice the moment `sharp` landed."""
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",

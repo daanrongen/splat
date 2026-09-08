@@ -34,7 +34,7 @@ def _sample_asset(tmp_path: Path):
 
 
 def test_run_caption_creates_text_asset(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     asset = _sample_asset(tmp_path)
     backend = CountingCaptionBackend()
 
@@ -55,7 +55,7 @@ def test_run_caption_creates_text_asset(tmp_path, monkeypatch):
 
 
 def test_run_caption_reuses_cache_for_same_inputs(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     asset = _sample_asset(tmp_path)
     backend = CountingCaptionBackend()
     params = {"prompt": "Describe", "max_tokens": 12, "temperature": 0.0}
@@ -80,7 +80,7 @@ def test_run_caption_reuses_cache_for_same_inputs(tmp_path, monkeypatch):
 
 
 def test_run_caption_cache_key_includes_prompt(tmp_path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     asset = _sample_asset(tmp_path)
     backend = CountingCaptionBackend()
 

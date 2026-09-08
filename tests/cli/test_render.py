@@ -22,7 +22,7 @@ class FakeRenderBackend:
 
 
 def test_render_file_input_emits_ndjson_asset(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.render.get_render_backend", return_value=FakeRenderBackend())
 
     ply_path = tmp_path / "cloud.ply"
@@ -37,7 +37,7 @@ def test_render_file_input_emits_ndjson_asset(mocker, tmp_path, monkeypatch, syn
 
 
 def test_render_output_option_writes_file(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.render.get_render_backend", return_value=FakeRenderBackend())
 
     ply_path = tmp_path / "cloud.ply"

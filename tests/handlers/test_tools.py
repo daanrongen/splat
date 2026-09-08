@@ -33,7 +33,7 @@ def _depth_asset(tmp_path: Path, cache: FilesystemManifestRepository):
 
 
 def test_handle_produces_mesh_asset(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     depth_asset, image_asset = _depth_asset(tmp_path, cache)
 
@@ -45,7 +45,7 @@ def test_handle_produces_mesh_asset(tmp_path: Path, monkeypatch):
 
 
 def test_handle_rejects_non_depth_input(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
 
