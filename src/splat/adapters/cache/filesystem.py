@@ -28,9 +28,17 @@ class ManifestNotFound(SplatDomainError):
 
 
 class FilesystemManifestRepository:
-    """Content-addressed cache: `<id>.<ext>` for the payload, `<id>.meta.json`
-    for everything else. Both live flat in one directory — simple enough not
-    to need sharding at this project's scale."""
+    """Cache: `<id>.<ext>` for the payload, `<id>.meta.json` for everything
+    else. Both live flat in one directory — simple enough not to need
+    sharding at this project's scale.
+
+    `id` is an *invocation* key (`compute_cache_key` over stage/model/params/
+    parents) for everything `put()` writes, which is what gives pipeline
+    stages free memoization. `put_external()` addresses by content instead —
+    it has no invocation to hash — and resolves against every existing
+    manifest's `content_sha256` first, so a file that happens to hold the same
+    bytes as an already-produced artifact reuses that artifact's id and
+    provenance rather than minting a second, parentless manifest for it."""
 
     def __init__(self, cache_dir: Path | None = None) -> None:
         self._dir = cache_dir or asset_cache_dir()
@@ -126,6 +134,25 @@ class FilesystemManifestRepository:
             return None
         return self._manifest_from_meta(manifest_id, meta_path)
 
+    def _find_by_content_sha256(self, content_sha256: str) -> Manifest | None:
+        """Resolves bytes to whichever manifest already holds them, preferring
+        one with real provenance (`created_by != "external"`) over an earlier
+        external clone, then the earliest match — so `list`/`get` stay stable
+        across repeated lookups."""
+        candidates = []
+        for meta_path in self._dir.glob("*.meta.json"):
+            meta = self._load_meta(meta_path)
+            if meta is None or meta.get("content_sha256") != content_sha256:
+                continue
+            manifest_id = meta_path.name.removesuffix(".meta.json")
+            manifest = self._manifest_from_meta(manifest_id, meta_path)
+            if manifest is not None:
+                candidates.append(manifest)
+        if not candidates:
+            return None
+        candidates.sort(key=lambda m: (m.created_by == "external", m.created_at))
+        return candidates[0]
+
     def get(self, manifest_id: str) -> Manifest:
         manifest = self.find(manifest_id)
         if manifest is None:
@@ -184,12 +211,12 @@ class FilesystemManifestRepository:
 
     def put_external(self, path: Path, *, kind: ManifestKind) -> Manifest:
         content_bytes = path.read_bytes()
-        manifest_id = hashlib.sha256(content_bytes).hexdigest()[:16]
-        existing = self.find(manifest_id)
+        content_sha256 = hashlib.sha256(content_bytes).hexdigest()
+        existing = self._find_by_content_sha256(content_sha256)
         if existing is not None:
             return existing
         return self.put(
-            manifest_id,
+            content_sha256[:16],
             kind=kind,
             content_bytes=content_bytes,
             ext=path.suffix.lstrip("."),

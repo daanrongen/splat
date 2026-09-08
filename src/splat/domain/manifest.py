@@ -42,9 +42,14 @@ KIND_TAGS: dict[ManifestKind, frozenset[str]] = {
 
 @dataclass
 class Manifest:
-    """A cached, content-addressed artifact. `id` is a deterministic hash of
-    the inputs that produced it (stage, model, params, parents) — the same
-    inputs always resolve to the same id, giving free memoization."""
+    """A cached artifact. For pipeline-produced manifests, `id` is a
+    deterministic hash of the inputs that produced it (stage, model, params,
+    parents) — the same inputs always resolve to the same id, giving free
+    memoization. Manifests registered from an external file instead (no
+    invocation to hash) are addressed by content: `id` is a hash of the bytes
+    themselves, and a file whose bytes already exist under a pipeline-produced
+    id resolves to that id rather than minting a second one — see
+    `FilesystemManifestRepository.put_external`."""
 
     id: str
     kind: ManifestKind
