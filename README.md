@@ -104,7 +104,7 @@ Key options: `--model realesrgan-mlx`, `--factor 2|4`, `--tile`, `-o/--output`.
 **`sharp` (1 image)** is Apple's SHARP: a single feed-forward pass that regresses a metric 3D Gaussian representation from one photograph. This is the backend that makes the headline chain possible, since `diffuse` produces exactly one image.
 
 ```sh
-splat diffuse "a small red toy robot, studio lighting" | splat gaussian - --model sharp -o robot.ply
+splat diffuse "a small red toy robot, studio lighting" | splat gaussian - -o robot.ply
 ```
 
 About 13 seconds on an M1 Pro for ~1.18M Gaussians. Output is **metric, with absolute scale**, so `gaussian` skips the normalization it applies to every other backend. Because it reconstructs from one viewpoint it recovers the *visible* surface, background plate included, not a full 360-degree object. Weights are `apple/Sharp`, licensed for **research use only**.
@@ -112,14 +112,14 @@ About 13 seconds on an M1 Pro for ~1.18M Gaussians. Output is **metric, with abs
 **`mlx3d-capture` (3+ images)** is optimization-based rather than feed-forward: it runs structure-from-motion over the inputs to recover poses, then trains a 3DGS scene through MLX/Metal. It needs **3 or more genuinely multi-view-consistent photographs or video frames of one physical scene**. Multiple crops of a single image, or several separately-diffused "front view"/"side view" images, do not satisfy SfM and will fail to register.
 
 ```sh
-splat gaussian frame-*.png --quality balanced -o scene.ply
+splat gaussian frame-*.png --model mlx3d-capture --quality balanced -o scene.ply
 ```
 
 Expect minutes, not seconds: 12 views at `--quality balanced` takes roughly 10 minutes on an M1 Pro.
 
 | Option | Default | Purpose |
 |---|---|---|
-| `--model` | `mlx3d-capture` | `sharp` (1 image) or `mlx3d-capture` (3+ images) |
+| `--model` | `sharp` | `sharp` (1 image) or `mlx3d-capture` (3+ images) |
 | `--device` | `auto` | `auto` \| `cpu` \| `mps` |
 | `--quality` | `fast` | mlx3d preset; `balanced` and up train longer |
 | `--iters` | preset | Override training iterations |

@@ -12,7 +12,7 @@ from splat.registry.wiring import get_client, get_manifest_repository, get_reade
 def gaussian(
     images: list[str],
     output_path: str | None = None,
-    model: str = "mlx3d-capture",
+    model: str = "sharp",
     device: str = "auto",
     quality: str = "fast",
     focal_35mm: float = 30.0,

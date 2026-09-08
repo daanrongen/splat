@@ -133,7 +133,7 @@ def embed(
 def gaussian(
     inputs: ManifestLike | list[ManifestLike],
     *,
-    model: str = "mlx3d-capture",
+    model: str = "sharp",
     device: str = "auto",
     quality: str = "fast",
     iters: int | None = None,
