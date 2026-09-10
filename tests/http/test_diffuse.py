@@ -27,7 +27,7 @@ def test_diffuse_returns_asset_bytes(mocker, tmp_path, monkeypatch):
         return_value=FakeDiffusionBackend(MIT),
     )
 
-    response = client.post("/diffuse", json={"prompt": "a fox", "model": "fake-diffuser"})
+    response = client.post("/diffuse", data={"prompt": "a fox", "model": "fake-diffuser"})
 
     assert response.status_code == 200, response.text
     assert response.content == sample_png_bytes()
@@ -42,7 +42,7 @@ def test_diffuse_reports_non_commercial_license_warning(mocker, tmp_path, monkey
         return_value=FakeDiffusionBackend(CC_BY_NC_SA_4_0),
     )
 
-    response = client.post("/diffuse", json={"prompt": "a fox", "model": "fake-diffuser"})
+    response = client.post("/diffuse", data={"prompt": "a fox", "model": "fake-diffuser"})
 
     assert response.status_code == 200, response.text
     assert "X-Splat-License-Warning" in response.headers
@@ -51,7 +51,7 @@ def test_diffuse_reports_non_commercial_license_warning(mocker, tmp_path, monkey
 def test_diffuse_unknown_model_returns_422(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
-    response = client.post("/diffuse", json={"prompt": "a fox", "model": "nope"})
+    response = client.post("/diffuse", data={"prompt": "a fox", "model": "nope"})
 
     assert response.status_code == 422
     assert "Unknown diffusion model" in response.json()["detail"]

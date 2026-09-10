@@ -1,21 +1,40 @@
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, File, Form, Response, UploadFile
 
+from splat.domain.manifest import ManifestKind
 from splat.handlers.diffuse import DiffuseRequest, handle
-from splat.http._schemas import DiffuseBody
+from splat.http._files import saved_upload
+from splat.registry.wiring import get_manifest_repository
 
 router = APIRouter()
 
 
 @router.post("/diffuse")
-def diffuse(body: DiffuseBody) -> Response:
+def diffuse(
+    prompt: str = Form(...),
+    image: UploadFile | None = File(None),
+    model: str = Form("sdxl-turbo-mlx"),
+    negative_prompt: str = Form(""),
+    steps: int | None = Form(None),
+    strength: float | None = Form(None),
+    seed: int | None = Form(None),
+    device: str = Form("auto"),
+) -> Response:
+    inputs = []
+    if image is not None:
+        cache = get_manifest_repository()
+        with saved_upload(image) as path:
+            inputs = [cache.put_external(path, kind=ManifestKind.IMAGE)]
+
     result = handle(
         DiffuseRequest(
-            prompt=body.prompt,
-            model=body.model,
-            negative_prompt=body.negative_prompt,
-            steps=body.steps,
-            seed=body.seed,
-            device=body.device,
+            prompt=prompt,
+            inputs=inputs,
+            model=model,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            strength=strength,
+            seed=seed,
+            device=device,
         )
     )
     headers = {"X-Splat-Asset-Id": result.asset.id}

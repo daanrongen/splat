@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Protocol
 
+import numpy as np
+
 from splat.domain.value_objects import ModelLicense
 
 
@@ -16,5 +18,7 @@ class DiffusionBackend(Protocol):
         negative_prompt: str = "",
         steps: int | None = None,
         seed: int | None = None,
+        image: np.ndarray | None = None,
+        strength: float | None = None,
         **params,
     ) -> Path: ...

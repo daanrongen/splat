@@ -47,19 +47,23 @@ def _resolve_all(
 
 def diffuse(
     prompt: str,
+    image: ManifestLike | None = None,
     *,
     model: str = "sdxl-turbo-mlx",
     negative_prompt: str = "",
     steps: int | None = None,
+    strength: float | None = None,
     seed: int | None = None,
     device: str = "auto",
 ) -> DiffuseResult:
     return get_client().diffuse(
         DiffuseRequest(
             prompt=prompt,
+            inputs=_resolve_all(image) if image is not None else [],
             model=model,
             negative_prompt=negative_prompt,
             steps=steps,
+            strength=strength,
             seed=seed,
             device=device,
         )

@@ -69,15 +69,21 @@ def run_diffuse(
     model_name: str,
     prompt: str,
     params: dict,
+    input_asset: Manifest | None = None,
 ) -> Manifest:
     invocation = {"prompt": prompt, **params}
-    cache_key = compute_cache_key(stage="diffuse", model=model_name, params=invocation)
+    parent_ids = (input_asset.id,) if input_asset is not None else ()
+    cache_key = compute_cache_key(
+        stage="diffuse", model=model_name, params=invocation, parent_ids=parent_ids
+    )
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
+    source_image = read_rgb_or_rgba(input_asset.content_path) if input_asset is not None else None
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir) / "diffused.png"
-        DiffuseUseCase(backend).execute(prompt, output_path=tmp_path, **params)
+        DiffuseUseCase(backend).execute(prompt, output_path=tmp_path, image=source_image, **params)
         content_bytes = tmp_path.read_bytes()
 
     output = decode_rgb_or_rgba(content_bytes)
@@ -86,9 +92,14 @@ def run_diffuse(
         kind=ManifestKind.IMAGE,
         content_bytes=content_bytes,
         ext="png",
-        metadata=RasterMetadata(output_width=output.shape[1], output_height=output.shape[0]),
+        metadata=RasterMetadata(
+            source_width=source_image.shape[1] if source_image is not None else None,
+            source_height=source_image.shape[0] if source_image is not None else None,
+            output_width=output.shape[1],
+            output_height=output.shape[0],
+        ),
         params=invocation,
-        parent_ids=[],
+        parent_ids=list(parent_ids),
         created_by=f"diffuse:{model_name}",
     )
 

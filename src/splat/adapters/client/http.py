@@ -101,10 +101,19 @@ class RemoteSplatClient:
             model=request.model,
             negative_prompt=request.negative_prompt,
             steps=request.steps,
+            strength=request.strength,
             seed=request.seed,
             device=request.device,
         )
-        response = self._client.post("/diffuse", json=body.model_dump())
+        source_image = None
+        files = None
+        if request.inputs:
+            input_asset = request.inputs[0]
+            source_image = read_rgb_or_rgba(input_asset.content_path)
+            files = {
+                "image": (input_asset.content_path.name, input_asset.content_path.read_bytes())
+            }
+        response = self._client.post("/diffuse", data=body.model_dump(), files=files)
         _raise_for_domain_error(response)
         image = decode_rgb_or_rgba(response.content)
         asset = self._store_asset(
@@ -112,9 +121,14 @@ class RemoteSplatClient:
             kind=ManifestKind.IMAGE,
             content=response.content,
             ext="png",
-            metadata=RasterMetadata(output_width=image.shape[1], output_height=image.shape[0]),
+            metadata=RasterMetadata(
+                source_width=source_image.shape[1] if source_image is not None else None,
+                source_height=source_image.shape[0] if source_image is not None else None,
+                output_width=image.shape[1],
+                output_height=image.shape[0],
+            ),
             params={"prompt": request.prompt},
-            parent_ids=[],
+            parent_ids=[request.inputs[0].id] if request.inputs else [],
             created_by=f"diffuse:{request.model}",
         )
         return DiffuseResult(
