@@ -3,13 +3,14 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error
+from splat.cli._input_path import resolve_input_path
 from splat.domain.errors import SplatDomainError
 from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
 from splat.registry.wiring import get_client
 
 
 def extract_surface(
-    input: Path = typer.Argument(...),
+    input: str = typer.Argument(..., help="Splat file to extract from, or @<manifest-id>."),
     output: Path = typer.Argument(...),
     to: str = typer.Option(None, "-t", "--to", help="obj | glb | gltf"),
     depth: int = typer.Option(
@@ -29,7 +30,7 @@ def extract_surface(
     try:
         result = get_client().tools_extract_surface(
             ExtractSurfaceRequest(
-                input_path=input,
+                input_path=resolve_input_path(input),
                 output_path=output,
                 format=to,
                 depth=depth,

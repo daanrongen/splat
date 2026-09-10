@@ -1,15 +1,15 @@
-from pathlib import Path
-
 import typer
 
 from splat.cli._console import console, error
+from splat.cli._input_path import resolve_input_path
 from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_client
 
 
-def info(path: Path = typer.Argument(..., help="Splat file to inspect.")) -> None:
+def info(path: str = typer.Argument(..., help="Splat file to inspect, or @<manifest-id>.")) -> None:
     """Print point count, SH degree, bounding box, file size, and cloud metadata."""
     try:
+        path = resolve_input_path(path)
         summary = get_client().info(path)
     except SplatDomainError as exc:
         error(str(exc))
