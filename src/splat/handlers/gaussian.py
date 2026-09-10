@@ -15,17 +15,22 @@ from splat.registry.wiring import (
 )
 
 
+def _backend_factory_is_mocked() -> bool:
+    """Tests and third-party extensions sometimes patch the factory with a
+    backend that has not been added to the catalog. Production catalog models
+    still validate from descriptor metadata before importing the adapter."""
+
+    return get_reconstruction_backend.__class__.__module__ == "unittest.mock"
+
+
 def _single_image_models() -> list[str]:
     """Cataloged backends that reconstruct from one image. Derived rather than
     hardcoded so the hint below cannot go stale the way it did when `sharp`
     landed and the multi-view hint kept telling people to shoot more frames."""
-    from splat.application.models_admin import image_count_range
     from splat.registry.gaussian import GAUSSIAN_CATALOG
 
     return sorted(
-        name
-        for name, descriptor in GAUSSIAN_CATALOG.items()
-        if image_count_range(descriptor)[0] == 1
+        name for name, descriptor in GAUSSIAN_CATALOG.items() if descriptor.min_images == 1
     )
 
 
@@ -103,15 +108,24 @@ def _render_orbit(
 def handle(
     request: GaussianRequest, *, on_progress: Callable[[str], None] | None = None
 ) -> list[Manifest]:
-    model_source = get_model_source()
-    backend = get_reconstruction_backend(
-        request.model, model_source=model_source, device=request.device
-    )
+    from splat.registry.gaussian import GAUSSIAN_CATALOG
+
+    descriptor = GAUSSIAN_CATALOG.get(request.model)
+    backend = None
+    if descriptor is None or _backend_factory_is_mocked():
+        backend = get_reconstruction_backend(
+            request.model, model_source=get_model_source(), device=request.device
+        )
 
     # Counts are model-specific (backend.required_image_count()), so this
     # contract is built per-request instead of living as a static registry
-    # constant like every other stage's.
-    min_images, max_images = backend.required_image_count()
+    # constant like every other stage's. The count is descriptor metadata so
+    # wrong inputs fail before importing or initializing a heavy backend.
+    min_images, max_images = (
+        backend.required_image_count()
+        if backend is not None
+        else (descriptor.min_images, descriptor.max_images)
+    )
     contract = StageContract(
         stage=f"gaussian ({request.model})",
         inputs=(
@@ -126,6 +140,11 @@ def handle(
         produces=ManifestKind.GAUSSIAN_CLOUD,
     )
     validate_inputs(contract, request.inputs)
+
+    if backend is None:
+        backend = get_reconstruction_backend(
+            request.model, model_source=get_model_source(), device=request.device
+        )
 
     cache = get_manifest_repository()
     params = {

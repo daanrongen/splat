@@ -25,11 +25,12 @@ from splat.ports.render import RenderBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.splat_io import SplatReader, SplatWriter
 from splat.ports.upscaling import UpscalingBackend
-from splat.registry.formats import FORMAT_READERS, FORMAT_WRITERS
 from splat.registry.gaussian import GAUSSIAN_CATALOG
 
 
 def get_reader(ext: str) -> SplatReader:
+    from splat.registry.formats import FORMAT_READERS
+
     try:
         return FORMAT_READERS[ext]()
     except KeyError as exc:
@@ -37,6 +38,8 @@ def get_reader(ext: str) -> SplatReader:
 
 
 def get_writer(ext: str) -> SplatWriter:
+    from splat.registry.formats import FORMAT_WRITERS
+
     try:
         return FORMAT_WRITERS[ext]()
     except KeyError as exc:
@@ -44,6 +47,8 @@ def get_writer(ext: str) -> SplatWriter:
 
 
 def is_known_format(ext: str) -> bool:
+    from splat.registry.formats import FORMAT_READERS, FORMAT_WRITERS
+
     return ext in FORMAT_READERS or ext in FORMAT_WRITERS
 
 

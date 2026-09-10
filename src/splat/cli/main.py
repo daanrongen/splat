@@ -11,23 +11,49 @@ os.environ.setdefault("SPLAT_MANIFEST_CACHE_DIR", str(manifest_cache_dir()))
 
 import typer
 
-from splat.cli.caption import caption
-from splat.cli.depth import depth
-from splat.cli.diffuse import diffuse
-from splat.cli.embed import embed
-from splat.cli.env import env
-from splat.cli.gaussian import gaussian
-from splat.cli.http import http
-from splat.cli.info import info
-from splat.cli.manifest import manifest_app
-from splat.cli.mcp import mcp
-from splat.cli.models import models_app
-from splat.cli.render import render
-from splat.cli.segment import segment
-from splat.cli.tools import tools_app
-from splat.cli.train import train
-from splat.cli.upscale import upscale
-from splat.cli.validate import validate
+from splat.cli._lazy import LazyCommandSpec, LazyTyperGroup
+
+LazyTyperGroup.lazy_commands = {
+    "diffuse": LazyCommandSpec(
+        "splat.cli.diffuse", "diffuse", "command", "Generate or edit an image asset."
+    ),
+    "caption": LazyCommandSpec(
+        "splat.cli.caption", "caption", "command", "Caption image or sticker assets."
+    ),
+    "embed": LazyCommandSpec(
+        "splat.cli.embed", "embed", "command", "Embed image, sticker, caption, or text assets."
+    ),
+    "segment": LazyCommandSpec(
+        "splat.cli.segment", "segment", "command", "Segment images into RGBA stickers."
+    ),
+    "depth": LazyCommandSpec(
+        "splat.cli.depth", "depth", "command", "Estimate per-pixel depth maps."
+    ),
+    "upscale": LazyCommandSpec("splat.cli.upscale", "upscale", "command", "Upscale raster assets."),
+    "gaussian": LazyCommandSpec(
+        "splat.cli.gaussian", "gaussian", "command", "Reconstruct Gaussian splats."
+    ),
+    "render": LazyCommandSpec(
+        "splat.cli.render", "render", "command", "Render Gaussian splats to images."
+    ),
+    "train": LazyCommandSpec(
+        "splat.cli.train", "train", "command", "Train or refine per-scene Gaussian splats."
+    ),
+    "tools": LazyCommandSpec("splat.cli.tools", "tools_app", "typer", "Deterministic transforms."),
+    "info": LazyCommandSpec("splat.cli.info", "info", "command", "Inspect a Gaussian splat file."),
+    "validate": LazyCommandSpec(
+        "splat.cli.validate", "validate", "command", "Validate a Gaussian splat file."
+    ),
+    "models": LazyCommandSpec(
+        "splat.cli.models", "models_app", "typer", "Manage locally cached model weights."
+    ),
+    "manifest": LazyCommandSpec(
+        "splat.cli.manifest", "manifest_app", "typer", "Inspect and manage cached manifests."
+    ),
+    "http": LazyCommandSpec("splat.cli.http", "http", "command", "Run the local HTTP server."),
+    "mcp": LazyCommandSpec("splat.cli.mcp", "mcp", "command", "Run the MCP stdio server."),
+    "env": LazyCommandSpec("splat.cli.env", "env", "command", "Show SPLAT_* environment settings."),
+}
 
 app = typer.Typer(
     help=(
@@ -35,25 +61,13 @@ app = typer.Typer(
         "level; single fixed-algorithm operations with no catalog live under `splat tools`."
     ),
     no_args_is_help=True,
+    cls=LazyTyperGroup,
 )
 
-app.command("diffuse")(diffuse)
-app.command("caption")(caption)
-app.command("embed")(embed)
-app.command("segment")(segment)
-app.command("depth")(depth)
-app.command("upscale")(upscale)
-app.command("gaussian")(gaussian)
-app.command("render")(render)
-app.command("train")(train)
-app.add_typer(tools_app, name="tools")
-app.command("info")(info)
-app.command("validate")(validate)
-app.add_typer(models_app, name="models")
-app.add_typer(manifest_app, name="manifest")
-app.command("http")(http)
-app.command("mcp")(mcp)
-app.command("env")(env)
+
+@app.callback()
+def _main() -> None:
+    """splat runs model-backed stages, deterministic tools, and local cache admin."""
 
 
 if __name__ == "__main__":

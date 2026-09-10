@@ -111,7 +111,7 @@ def test_single_image_models_are_read_from_the_catalog():
 def test_orbit_frames_renders_a_symmetric_azimuth_sweep(
     mocker, tmp_path, monkeypatch, synthetic_cloud
 ):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",
@@ -135,7 +135,7 @@ def test_orbit_frames_renders_a_symmetric_azimuth_sweep(
 
 
 def test_orbit_frames_rejects_a_sweep_of_one(mocker, tmp_path, monkeypatch, synthetic_cloud):
-    monkeypatch.setenv("SPLAT_ASSET_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
     mocker.patch(
         "splat.handlers.gaussian.get_reconstruction_backend",

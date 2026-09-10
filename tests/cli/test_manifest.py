@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 from typer.testing import CliRunner
 
 from splat.cli.main import app
@@ -105,3 +108,26 @@ def test_manifest_clear_respects_created_by_filter(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert get_manifest_repository().find("abc123") is None
     assert get_manifest_repository().find("def456") is not None
+
+
+def test_manifest_command_path_does_not_import_heavy_backends():
+    code = """
+import click
+import sys
+import typer
+import splat.cli.main
+
+cmd = typer.main.get_command(splat.cli.main.app)
+cmd.get_command(click.Context(cmd), "manifest")
+for name in ("torch", "coremltools", "mlx", "transformers", "trimesh", "cv2"):
+    assert name not in sys.modules, name
+assert "splat.application.pipeline" not in sys.modules
+assert [m for m in sys.modules if m.startswith("splat.handlers.")] == ["splat.handlers.manifest"]
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr

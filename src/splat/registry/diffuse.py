@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Literal
+from importlib import import_module
+from typing import Any, Literal
 
 from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import ModelLicense
-from splat.ports.diffusion import DiffusionBackend
 
 Runtime = Literal["mlx", "coreml", "torch"]
 
@@ -20,22 +20,25 @@ DIFFUSE_CONTRACT = StageContract(
 @dataclass(frozen=True)
 class DiffusionModelDescriptor:
     name: str
-    backend_cls: type[DiffusionBackend]
+    backend: str
     hf_repo_id: str
     sdxl: bool
     license: ModelLicense
     runtime: Runtime
 
+    @property
+    def backend_cls(self) -> type[Any]:
+        module_name, class_name = self.backend.rsplit(":", 1)
+        return getattr(import_module(module_name), class_name)
+
 
 def _build_catalog() -> dict[str, DiffusionModelDescriptor]:
-    from splat.adapters.diffuse.coreml_stable_diffusion import CoreMLStableDiffusionBackend
-    from splat.adapters.diffuse.mlx_stable_diffusion import MLXStableDiffusionBackend
     from splat.domain.value_objects import OPENRAIL_M, SAI_NC_COMMUNITY
 
     return {
         "sdxl-turbo-mlx": DiffusionModelDescriptor(
             name="sdxl-turbo-mlx",
-            backend_cls=MLXStableDiffusionBackend,
+            backend="splat.adapters.diffuse.mlx_stable_diffusion:MLXStableDiffusionBackend",
             hf_repo_id="stabilityai/sdxl-turbo",
             sdxl=True,
             license=SAI_NC_COMMUNITY,
@@ -43,7 +46,7 @@ def _build_catalog() -> dict[str, DiffusionModelDescriptor]:
         ),
         "sd21-coreml": DiffusionModelDescriptor(
             name="sd21-coreml",
-            backend_cls=CoreMLStableDiffusionBackend,
+            backend="splat.adapters.diffuse.coreml_stable_diffusion:CoreMLStableDiffusionBackend",
             hf_repo_id="apple/coreml-stable-diffusion-2-1-base",
             sdxl=False,
             license=OPENRAIL_M,

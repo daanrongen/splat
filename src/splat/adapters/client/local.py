@@ -1,36 +1,27 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from splat.application.models_admin import image_count_range, model_source_label, model_stage
-from splat.application.tools.convert import ConvertResult
-from splat.application.tools.extract_surface import ExtractSurfaceResult
-from splat.domain.gaussians import GaussianCloud
-from splat.domain.manifest import Manifest
-from splat.handlers import models as models_handler
-from splat.handlers.caption import CaptionRequest
-from splat.handlers.caption import handle as handle_caption
-from splat.handlers.depth import DepthRequest
-from splat.handlers.depth import handle as handle_depth
-from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
-from splat.handlers.diffuse import handle as handle_diffuse
-from splat.handlers.embed import EmbedRequest
-from splat.handlers.embed import handle as handle_embed
-from splat.handlers.gaussian import GaussianRequest
-from splat.handlers.gaussian import handle as handle_gaussian
-from splat.handlers.inspect import info as handle_info
-from splat.handlers.inspect import validate as handle_validate
-from splat.handlers.segment import SegmentRequest
-from splat.handlers.segment import handle as handle_segment
-from splat.handlers.tools.compress import CompressRequest
-from splat.handlers.tools.compress import handle as handle_compress
-from splat.handlers.tools.convert import ConvertRequest
-from splat.handlers.tools.convert import handle as handle_convert
-from splat.handlers.tools.declutter import DeclutterRequest
-from splat.handlers.tools.declutter import handle as handle_declutter
-from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
-from splat.handlers.tools.extract_surface import handle as handle_extract_surface
-from splat.handlers.upscale import UpscaleRequest
-from splat.handlers.upscale import handle as handle_upscale
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
+
+if TYPE_CHECKING:
+    from splat.application.tools.convert import ConvertResult
+    from splat.application.tools.extract_surface import ExtractSurfaceResult
+    from splat.domain.gaussians import GaussianCloud
+    from splat.domain.manifest import Manifest
+    from splat.handlers.caption import CaptionRequest
+    from splat.handlers.depth import DepthRequest
+    from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
+    from splat.handlers.embed import EmbedRequest
+    from splat.handlers.gaussian import GaussianRequest
+    from splat.handlers.segment import SegmentRequest
+    from splat.handlers.tools.compress import CompressRequest
+    from splat.handlers.tools.convert import ConvertRequest
+    from splat.handlers.tools.declutter import DeclutterRequest
+    from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
+    from splat.handlers.upscale import UpscaleRequest
 
 
 class LocalSplatClient:
@@ -38,39 +29,63 @@ class LocalSplatClient:
     SPLAT_URL isn't set."""
 
     def diffuse(self, request: DiffuseRequest) -> DiffuseResult:
+        from splat.handlers.diffuse import handle as handle_diffuse
+
         return handle_diffuse(request)
 
     def segment(self, request: SegmentRequest) -> list[Manifest]:
+        from splat.handlers.segment import handle as handle_segment
+
         return handle_segment(request)
 
     def caption(self, request: CaptionRequest) -> list[Manifest]:
+        from splat.handlers.caption import handle as handle_caption
+
         return handle_caption(request)
 
     def depth(self, request: DepthRequest) -> list[Manifest]:
+        from splat.handlers.depth import handle as handle_depth
+
         return handle_depth(request)
 
     def upscale(self, request: UpscaleRequest) -> list[Manifest]:
+        from splat.handlers.upscale import handle as handle_upscale
+
         return handle_upscale(request)
 
     def embed(self, request: EmbedRequest) -> list[Manifest]:
+        from splat.handlers.embed import handle as handle_embed
+
         return handle_embed(request)
 
     def gaussian(self, request: GaussianRequest) -> list[Manifest]:
+        from splat.handlers.gaussian import handle as handle_gaussian
+
         return handle_gaussian(request)
 
     def tools_convert(self, request: ConvertRequest) -> ConvertResult:
+        from splat.handlers.tools.convert import handle as handle_convert
+
         return handle_convert(request)
 
     def tools_compress(self, request: CompressRequest) -> GaussianCloud:
+        from splat.handlers.tools.compress import handle as handle_compress
+
         return handle_compress(request)
 
     def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud:
+        from splat.handlers.tools.declutter import handle as handle_declutter
+
         return handle_declutter(request)
 
     def tools_extract_surface(self, request: ExtractSurfaceRequest) -> ExtractSurfaceResult:
+        from splat.handlers.tools.extract_surface import handle as handle_extract_surface
+
         return handle_extract_surface(request)
 
     def info(self, path: Path) -> InfoSummary:
+        from splat.handlers.inspect import info as handle_info
+
         cloud = handle_info(path)
         return InfoSummary(
             format=cloud.metadata.source_format,
@@ -86,12 +101,16 @@ class LocalSplatClient:
         )
 
     def validate(self, path: Path, *, strict: bool = False) -> ValidationSummary:
+        from splat.handlers.inspect import validate as handle_validate
+
         result = handle_validate(path, strict=strict)
         return ValidationSummary(
             valid=not result.issues, issues=result.issues, points=result.cloud.point_count
         )
 
     def models_list(self) -> list[ModelSummary]:
+        from splat.handlers import models as models_handler
+
         return [
             ModelSummary(
                 name=descriptor.name,
@@ -105,9 +124,13 @@ class LocalSplatClient:
         ]
 
     def models_pull(self, name: str) -> None:
+        from splat.handlers import models as models_handler
+
         models_handler.pull(name)
 
     def models_info(self, name: str) -> ModelInfo:
+        from splat.handlers import models as models_handler
+
         descriptor = models_handler.info(name)
         min_images, max_images = image_count_range(descriptor)
         return ModelInfo(
@@ -123,4 +146,6 @@ class LocalSplatClient:
         )
 
     def models_rm(self, name: str) -> None:
+        from splat.handlers import models as models_handler
+
         models_handler.rm(name)
