@@ -16,6 +16,7 @@ class DiffuseBody(BaseModel):
     model: str = "sdxl-turbo-mlx"
     negative_prompt: str = ""
     steps: int | None = None
+    strength: float | None = None
     seed: int | None = None
     device: str = "auto"
 

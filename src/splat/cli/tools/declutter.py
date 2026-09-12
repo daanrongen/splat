@@ -3,13 +3,14 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error
+from splat.cli._input_path import resolve_input_path
 from splat.domain.errors import SplatDomainError
 from splat.handlers.tools.declutter import DeclutterRequest
 from splat.registry.wiring import get_client
 
 
 def declutter(
-    input: Path = typer.Argument(...),
+    input: str = typer.Argument(..., help="Splat file to declutter, or @<manifest-id>."),
     output: Path = typer.Argument(...),
     k: int = typer.Option(
         16,
@@ -27,7 +28,9 @@ def declutter(
     """Remove isolated floater Gaussians via neighbor-density outlier detection."""
     try:
         cloud = get_client().tools_declutter(
-            DeclutterRequest(input_path=input, output_path=output, k=k, std_ratio=std_ratio)
+            DeclutterRequest(
+                input_path=resolve_input_path(input), output_path=output, k=k, std_ratio=std_ratio
+            )
         )
     except (SplatDomainError, ValueError) as exc:
         error(str(exc))

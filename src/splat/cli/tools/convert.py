@@ -3,14 +3,16 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
+from splat.cli._input_path import resolve_input_path
 from splat.domain.errors import SplatDomainError
 from splat.handlers.tools.convert import ConvertRequest
 from splat.registry.wiring import get_client
 
 
 def convert(
-    inputs: list[Path] = typer.Argument(
-        ..., help="INPUT OUTPUT positional form, or one INPUT with -o/--output."
+    inputs: list[str] = typer.Argument(
+        ...,
+        help="INPUT OUTPUT positional form, or one INPUT (or @<manifest-id>) with -o/--output.",
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Output file path."),
     from_format: str | None = typer.Option(
@@ -31,11 +33,11 @@ def convert(
         if output is not None:
             if len(inputs) != 1:
                 raise SplatDomainError("Provide exactly one input file when using -o/--output.")
-            input_path, output_path = inputs[0], output
+            input_path, output_path = resolve_input_path(inputs[0]), output
         else:
             if len(inputs) != 2:
                 raise SplatDomainError("Provide INPUT and OUTPUT paths, or use -o/--output.")
-            input_path, output_path = inputs
+            input_path, output_path = resolve_input_path(inputs[0]), Path(inputs[1])
 
         result = get_client().tools_convert(
             ConvertRequest(

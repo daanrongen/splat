@@ -1,10 +1,20 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from splat.domain.contracts import Requirement, StageContract
+from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import ModelLicense
 from splat.ports.diffusion import DiffusionBackend
 
 Runtime = Literal["mlx", "coreml", "torch"]
+
+DIFFUSE_CONTRACT = StageContract(
+    stage="diffuse",
+    inputs=(
+        Requirement(name="image", any_of_tags=frozenset({"colorlike"}), min_count=0, max_count=1),
+    ),
+    produces=ManifestKind.IMAGE,
+)
 
 
 @dataclass(frozen=True)

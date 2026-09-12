@@ -12,8 +12,18 @@ from splat.adapters.diffuse._vendor.mlx_stable_diffusion import (
     StableDiffusion,
     StableDiffusionXL,
 )
-from splat.adapters.formats.image import write_png
+from splat.adapters.formats.image import resize, write_png
 from splat.domain.value_objects import ModelLicense
+
+_INIT_IMAGE_SIZE = (512, 512)
+_DEFAULT_STRENGTH = 0.7
+
+
+def _encode_init_image(model: StableDiffusion, image: np.ndarray) -> mx.array:
+    resized = resize(image[..., :3], _INIT_IMAGE_SIZE)
+    normalized = resized.astype(np.float32) / 127.5 - 1.0
+    return mx.array(normalized, dtype=model.dtype)
+
 
 # The vendored loader only recognizes repo ids it has an explicit path-map
 # entry for (see _vendor/mlx_stable_diffusion/model_io.py's `_MODELS`) —
@@ -47,21 +57,38 @@ class MLXStableDiffusionBackend:
         steps: int | None = None,
         seed: int | None = None,
         cfg_weight: float | None = None,
+        image: np.ndarray | None = None,
+        strength: float | None = None,
         **params,
     ) -> Path:
         model = self._load()
         default_steps = 2 if self._sdxl else 50
         default_cfg = 0.0 if self._sdxl else 7.5
+        cfg_weight = cfg_weight if cfg_weight is not None else default_cfg
+
+        if image is not None:
+            latents_iter = model.generate_latents_from_image(
+                _encode_init_image(model, image),
+                prompt,
+                n_images=1,
+                strength=strength if strength is not None else _DEFAULT_STRENGTH,
+                num_steps=steps or default_steps,
+                cfg_weight=cfg_weight,
+                negative_text=negative_prompt,
+                seed=seed,
+            )
+        else:
+            latents_iter = model.generate_latents(
+                prompt,
+                n_images=1,
+                num_steps=steps or default_steps,
+                cfg_weight=cfg_weight,
+                negative_text=negative_prompt,
+                seed=seed,
+            )
 
         latents = None
-        for x_t in model.generate_latents(
-            prompt,
-            n_images=1,
-            num_steps=steps or default_steps,
-            cfg_weight=cfg_weight if cfg_weight is not None else default_cfg,
-            negative_text=negative_prompt,
-            seed=seed,
-        ):
+        for x_t in latents_iter:
             mx.eval(x_t)
             latents = x_t
 

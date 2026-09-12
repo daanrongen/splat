@@ -1,11 +1,15 @@
 import json
 
+import numpy as np
+import pytest
+
 from splat.adapters.diffuse.coreml_stable_diffusion import (
     _PACKAGE_PREFIX,
     _SUBFOLDER,
     _TOKENIZER_SUBFOLDER,
     CoreMLStableDiffusionBackend,
 )
+from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import APPLE_ASCL
 
 _COMPONENTS = ["text_encoder", "unet", "vae_decoder"]
@@ -73,6 +77,15 @@ def test_load_downloads_when_files_missing(mocker, tmp_path):
 
     mock_download.assert_called_once()
     assert backend._unet is not None
+
+
+def test_diffuse_rejects_image_to_image(mocker, tmp_path):
+    backend = _make_backend(mocker, tmp_path)
+
+    with pytest.raises(SplatDomainError, match="image-to-image"):
+        backend.diffuse(
+            "a fox", output_path=tmp_path / "out.png", image=np.zeros((2, 2, 3), dtype=np.uint8)
+        )
 
 
 def test_load_only_downloads_once_per_process(mocker, tmp_path):

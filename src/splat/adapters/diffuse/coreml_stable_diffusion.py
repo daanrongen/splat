@@ -20,6 +20,7 @@ from huggingface_hub import snapshot_download
 
 from splat.adapters.diffuse._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
 from splat.adapters.formats.image import write_png
+from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import ModelLicense
 from splat.paths import model_cache_dir
 
@@ -131,8 +132,14 @@ class CoreMLStableDiffusionBackend:
         steps: int | None = None,
         seed: int | None = None,
         cfg_weight: float | None = None,
+        image: np.ndarray | None = None,
+        strength: float | None = None,
         **params,
     ) -> Path:
+        if image is not None:
+            raise SplatDomainError(
+                "sd21-coreml does not support image-to-image (no VAE encoder)."
+            )
         self._load()
         steps = steps or 25
         cfg_weight = cfg_weight if cfg_weight is not None else 7.5
