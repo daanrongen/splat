@@ -10,13 +10,18 @@ rigid subtype tree. `domain.contracts` builds on these tags to declare what
 each stage accepts.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import numpy as np
+if TYPE_CHECKING:
+    import numpy as np
 
-from splat.domain.gaussians import GaussianCloud
+    from splat.domain.gaussians import GaussianCloud
+    from splat.domain.manifest_metadata import ManifestMetadata
 
 
 class ManifestKind(StrEnum):
@@ -54,7 +59,7 @@ class Manifest:
     id: str
     kind: ManifestKind
     content_path: Path
-    metadata: "ManifestMetadata"  # noqa: F821 — typed per kind, see domain/manifest_metadata.py
+    metadata: ManifestMetadata  # typed per kind, see domain/manifest_metadata.py
     params: dict = field(default_factory=dict)  # stage-invocation args (prompt, steps, seed, ...)
     parent_ids: list[str] = field(default_factory=list)
     created_by: str = ""  # "<stage>:<model-name>"
@@ -63,7 +68,7 @@ class Manifest:
     created_at: str = ""  # ISO 8601 UTC, set once at first `put`
 
     @classmethod
-    def load(cls, id: str) -> "Manifest":
+    def load(cls, id: str) -> Manifest:
         """Fetch a cached manifest by id (accepts an optional leading `@`)."""
         from splat.registry.wiring import get_manifest_repository
 
@@ -81,6 +86,8 @@ class Manifest:
 
     def as_array(self) -> np.ndarray:
         """Load this manifest's content as a numpy array (EMBEDDING/DEPTH_MAP kinds)."""
+        import numpy as np
+
         return np.load(self.content_path)
 
     def as_gaussian_cloud(self) -> GaussianCloud:

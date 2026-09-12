@@ -48,9 +48,12 @@ def model_source_label(descriptor: Any) -> str:
 
 def image_count_range(descriptor: Any) -> tuple[int | None, int | None]:
     """(min, max) images a reconstruction backend accepts, read straight off
-    the backend class — `required_image_count` is a classmethod so this
-    doesn't need to pull weights or instantiate anything just to display it.
+    descriptor metadata when available. Falling back to the backend class is
+    kept only for third-party descriptors; built-in catalogs should not import
+    adapter modules just to display model info.
     """
+    if hasattr(descriptor, "min_images"):
+        return (descriptor.min_images, descriptor.max_images)
     backend_cls = getattr(descriptor, "backend_cls", None)
     required_image_count = getattr(backend_cls, "required_image_count", None)
     if required_image_count is None:
