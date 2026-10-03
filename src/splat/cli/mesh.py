@@ -28,7 +28,10 @@ def mesh(
         envvar="SPLAT_MESH_TO",
     ),
     depth: int = typer.Option(
-        9, "--depth", help="poisson: octree depth.", envvar="SPLAT_MESH_DEPTH"
+        8,
+        "--depth",
+        help="poisson: octree depth; retries lower if PoissonRecon fails.",
+        envvar="SPLAT_MESH_DEPTH",
     ),
     opacity_threshold: float = typer.Option(
         0.1,

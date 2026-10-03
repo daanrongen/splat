@@ -20,6 +20,7 @@ from splat.domain.gaussians import GaussianCloud
 
 SUPPORTED_FORMATS = ("obj", "glb", "gltf")
 MIN_POINTS = 4
+MIN_DEPTH = 6
 
 
 class PoissonMeshExporter:
@@ -31,7 +32,7 @@ class PoissonMeshExporter:
         path: Path,
         *,
         format: str,
-        depth: int = 9,
+        depth: int = 8,
         opacity_threshold: float = 0.1,
         density_quantile: float = 0.05,
         **params,
@@ -54,7 +55,12 @@ class PoissonMeshExporter:
         pcd.points = o3d.utility.Vector3dVector(means.astype(np.float64))
         pcd.colors = o3d.utility.Vector3dVector(colors.astype(np.float64))
         pcd.estimate_normals()
-        pcd.orient_normals_consistent_tangent_plane(k=min(16, means.shape[0] - 1))
+        camera = cloud.metadata.capture_camera_position
+        if camera is not None:
+            # A capture camera gives every normal a consistent outward side.
+            pcd.orient_normals_towards_camera_location(np.asarray(camera, dtype=np.float64))
+        else:
+            pcd.orient_normals_consistent_tangent_plane(k=min(16, means.shape[0] - 1))
 
         mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
             pcd, depth=depth
@@ -69,26 +75,39 @@ class PoissonMeshExporter:
         return len(mesh.vertices), len(mesh.triangles)
 
 
-def poisson_mesh(cloud: GaussianCloud, *, format: str, **params) -> tuple[bytes, int, int]:
+def poisson_mesh(
+    cloud: GaussianCloud, *, format: str, depth: int = 8, **params
+) -> tuple[bytes, dict]:
     """Runs Poisson in a fresh interpreter: Open3D's OpenMP segfaults when it
-    shares a process with torch's (#85)."""
+    shares a process with torch's (#85), and its PoissonRecon exits the whole
+    process with status 0 when isosurface extraction fails, so a missing result
+    retries one octree level lower."""
     from splat.adapters.formats.ply import PlyWriter
 
     if format not in SUPPORTED_FORMATS:
         raise UnsupportedFormat(f"poisson meshing supports {SUPPORTED_FORMATS}, got {format!r}")
     with tempfile.TemporaryDirectory() as tmp_dir:
-        cloud_path, out_path = Path(tmp_dir) / "cloud.ply", Path(tmp_dir) / f"mesh.{format}"
+        cloud_path = Path(tmp_dir) / "cloud.ply"
         PlyWriter().write(cloud, cloud_path)
-        args = [str(cloud_path), str(out_path), format, json.dumps(params)]
-        done = subprocess.run(
-            [sys.executable, "-m", __name__, *args], capture_output=True, text=True
-        )
-        counts_path = out_path.with_suffix(".json")
-        if done.returncode != 0 or not counts_path.exists():
+        detail = ""
+        for attempt in range(depth, MIN_DEPTH - 1, -1):
+            out_path = Path(tmp_dir) / f"mesh-{attempt}.{format}"
+            args = [
+                str(cloud_path),
+                str(out_path),
+                format,
+                json.dumps({**params, "depth": attempt}),
+            ]
+            done = subprocess.run(
+                [sys.executable, "-m", __name__, *args], capture_output=True, text=True
+            )
+            counts_path = out_path.with_suffix(".json")
+            if counts_path.exists():
+                vertices, faces = json.loads(counts_path.read_text())
+                metadata = {"vertex_count": vertices, "face_count": faces, "depth": attempt}
+                return out_path.read_bytes(), metadata
             detail = (done.stderr.strip().splitlines() or [f"exit {done.returncode}"])[-1]
-            raise SplatDomainError(f"Poisson meshing failed in its worker process: {detail}")
-        vertices, faces = json.loads(counts_path.read_text())
-        return out_path.read_bytes(), vertices, faces
+        raise SplatDomainError(f"Poisson meshing failed down to depth {MIN_DEPTH}: {detail}")
 
 
 if __name__ == "__main__":

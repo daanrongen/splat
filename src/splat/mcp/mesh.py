@@ -11,7 +11,7 @@ def mesh(
     input: str,
     model: str | None = None,
     format: str = "glb",
-    depth: int = 9,
+    depth: int = 8,
     opacity_threshold: float = 0.1,
 ) -> list[types.ContentBlock]:
     """Mesh a metric depth map (heightfield) or a Gaussian cloud (poisson), given a path

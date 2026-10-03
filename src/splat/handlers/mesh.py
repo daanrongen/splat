@@ -17,7 +17,7 @@ class MeshRequest:
     inputs: list[Manifest]
     model: str | None = None  # inferred from each input's kind
     format: str = "glb"
-    depth: int = 9
+    depth: int = 8
     opacity_threshold: float = 0.1
 
 
@@ -85,12 +85,11 @@ def _poisson(asset: Manifest, request: MeshRequest, cache: ManifestRepository) -
     }
 
     def build() -> tuple[bytes, dict]:
-        content, vertices, faces = poisson_mesh(
+        return poisson_mesh(
             asset.as_gaussian_cloud(),
             format=request.format,
             depth=request.depth,
             opacity_threshold=request.opacity_threshold,
         )
-        return content, {"vertex_count": vertices, "face_count": faces}
 
     return run_mesh(cache, model_name="poisson", parent_ids=(asset.id,), params=params, build=build)

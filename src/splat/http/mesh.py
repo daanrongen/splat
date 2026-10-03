@@ -12,7 +12,7 @@ router = APIRouter()
 def mesh(
     cloud: UploadFile = File(...),
     format: str = Form("glb"),
-    depth: int = Form(9),
+    depth: int = Form(8),
     opacity_threshold: float = Form(0.1),
 ) -> Response:
     cache = get_manifest_repository()
