@@ -42,6 +42,8 @@ class GaussianCloudMetadata:
     capture_camera_rotation: list[list[float]] | None = None  # (3,3) world-to-camera, COLMAP/OpenCV
     capture_camera_intrinsics: list[float] | None = None  # [fx, fy, cx, cy, width, height]
     capture_camera_count: int | None = None  # total cameras the reconstruction backend registered
+    # Every registered camera as {position, rotation, intrinsics}, same conventions as above.
+    source_cameras: list[dict] | None = None
 
 
 @dataclass
@@ -158,14 +160,18 @@ def to_convention(cloud: GaussianCloud, target: str) -> GaussianCloud:
         up_axis="y" if target == "opengl" else cloud.metadata.up_axis,
     )
     if metadata.capture_camera_position is not None:
-        position = np.asarray(metadata.capture_camera_position, dtype=np.float32)
-        metadata.capture_camera_position = (position @ flip).tolist()
+        metadata.capture_camera_position = _flip_position(metadata.capture_camera_position, flip)
     if metadata.capture_camera_rotation is not None:
-        # Stored world-to-camera. The camera's own local axes differ by the same
-        # flip (colmap looks down +Z with +Y down, opengl down -Z with +Y up),
-        # so it conjugates on both sides of the camera-to-world matrix.
-        rotation = np.asarray(metadata.capture_camera_rotation, dtype=np.float32)
-        metadata.capture_camera_rotation = (flip @ rotation.T @ flip).T.tolist()
+        metadata.capture_camera_rotation = _flip_rotation(metadata.capture_camera_rotation, flip)
+    if metadata.source_cameras is not None:
+        metadata.source_cameras = [
+            {
+                **camera,
+                "position": _flip_position(camera["position"], flip),
+                "rotation": _flip_rotation(camera["rotation"], flip),
+            }
+            for camera in metadata.source_cameras
+        ]
 
     return replace(
         cloud,
@@ -173,6 +179,17 @@ def to_convention(cloud: GaussianCloud, target: str) -> GaussianCloud:
         rotations=_flip_quaternions(cloud.rotations, flip),
         metadata=metadata,
     )
+
+
+def _flip_position(position: list[float], flip: np.ndarray) -> list[float]:
+    return (np.asarray(position, dtype=np.float32) @ flip).tolist()
+
+
+def _flip_rotation(rotation: list[list[float]], flip: np.ndarray) -> list[list[float]]:
+    # Stored world-to-camera. The camera's own local axes differ by the same
+    # flip (colmap looks down +Z with +Y down, opengl down -Z with +Y up),
+    # so it conjugates on both sides of the camera-to-world matrix.
+    return (flip @ np.asarray(rotation, dtype=np.float32).T @ flip).T.tolist()
 
 
 def _flip_quaternions(quats: np.ndarray, flip: np.ndarray) -> np.ndarray:
@@ -211,12 +228,33 @@ def normalize_gaussian_cloud(cloud: GaussianCloud, *, target_radius: float = 1.0
     else:
         scales = linear_scales.astype(np.float32)
 
+    # Camera positions live in the same world frame as `means`, so they get the same
+    # recenter+rescale; rotations are untouched by pure translation + uniform scale.
+    def move(position: list[float]) -> list[float]:
+        return ((np.asarray(position, dtype=np.float32) - center) * scale_factor).tolist()
+
     metadata = cloud.metadata
     if metadata.capture_camera_position is not None:
-        # A camera pose's position lives in the same world frame as `means`, so it gets the
-        # same recenter+rescale; rotation is untouched by pure translation + uniform scale.
-        camera_position = np.asarray(metadata.capture_camera_position, dtype=np.float32)
-        position = (camera_position - center) * scale_factor
-        metadata = replace(metadata, capture_camera_position=position.tolist())
+        metadata = replace(metadata, capture_camera_position=move(metadata.capture_camera_position))
+    if metadata.source_cameras is not None:
+        cameras = [{**c, "position": move(c["position"])} for c in metadata.source_cameras]
+        metadata = replace(metadata, source_cameras=cameras)
 
     return replace(cloud, means=means, scales=scales, metadata=metadata)
+
+
+def with_view(cloud: GaussianCloud, index: int) -> GaussianCloud:
+    """The cloud with source camera `index` as its capture pose, for rendering an input view."""
+    cameras = cloud.metadata.source_cameras or []
+    if not 0 <= index < len(cameras):
+        raise InvalidGaussianCloud(
+            f"View {index} does not exist; this cloud has {len(cameras)} source camera(s)."
+        )
+    camera = cameras[index]
+    metadata = replace(
+        cloud.metadata,
+        capture_camera_position=camera["position"],
+        capture_camera_rotation=camera["rotation"],
+        capture_camera_intrinsics=camera["intrinsics"],
+    )
+    return replace(cloud, metadata=metadata)

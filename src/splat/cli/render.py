@@ -97,6 +97,12 @@ def render(
         help="Orbit centre as 'x,y,z' (default the cloud's median point).",
         envvar="SPLAT_RENDER_LOOK_AT",
     ),
+    view: int | None = typer.Option(
+        None,
+        "--view",
+        help="Render from source camera N (0-based) instead of the primary capture pose.",
+        envvar="SPLAT_RENDER_VIEW",
+    ),
 ) -> None:
     """Render a Gaussian splat to a still image."""
     cache = get_manifest_repository()
@@ -113,6 +119,7 @@ def render(
         distance=distance,
         fov=fov,
         look_at=look_at,
+        view=view,
     )
     try:
         prepare_output(output)

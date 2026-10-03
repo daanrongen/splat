@@ -103,6 +103,9 @@ class PlyReader:
                 capture_camera_count=int(comments["capture_camera_count"])
                 if "capture_camera_count" in comments
                 else None,
+                source_cameras=json.loads(comments["source_cameras"])
+                if "source_cameras" in comments
+                else None,
             ),
         )
 
@@ -184,6 +187,8 @@ class PlyWriter:
             )
         if cloud.metadata.capture_camera_count is not None:
             comments.append(f"capture_camera_count {cloud.metadata.capture_camera_count}")
+        if cloud.metadata.source_cameras is not None:
+            comments.append(f"source_cameras {json.dumps(cloud.metadata.source_cameras)}")
         PlyData([element], text=False, comments=comments).write(str(path))
 
     def supports(self, cloud: GaussianCloud) -> list[str]:

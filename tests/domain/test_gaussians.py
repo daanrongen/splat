@@ -7,6 +7,7 @@ from splat.domain.gaussians import (
     normalize_gaussian_cloud,
     sh_rest_count,
     to_convention,
+    with_view,
 )
 
 
@@ -202,3 +203,27 @@ def test_to_convention_moves_the_camera_pose_with_the_cloud(synthetic_cloud):
 
     assert converted.metadata.capture_camera_position == [1.0, -2.0, -3.0]
     np.testing.assert_allclose(converted.metadata.capture_camera_rotation, np.eye(3))
+
+
+def _camera(position):
+    return {"position": position, "rotation": np.eye(3).tolist(), "intrinsics": [1, 1, 0, 0, 2, 2]}
+
+
+def test_to_convention_moves_every_source_camera(synthetic_cloud):
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+    synthetic_cloud.metadata.source_cameras = [_camera([1.0, 2.0, 3.0]), _camera([0.0, 1.0, 0.0])]
+
+    converted = to_convention(synthetic_cloud, "opengl")
+
+    positions = [c["position"] for c in converted.metadata.source_cameras]
+    assert positions == [[1.0, -2.0, -3.0], [0.0, -1.0, 0.0]]
+
+
+def test_with_view_makes_a_source_camera_the_capture_pose(synthetic_cloud):
+    synthetic_cloud.metadata.source_cameras = [_camera([1.0, 0.0, 0.0]), _camera([0.0, 5.0, 0.0])]
+
+    viewed = with_view(synthetic_cloud, 1)
+
+    assert viewed.metadata.capture_camera_position == [0.0, 5.0, 0.0]
+    with pytest.raises(InvalidGaussianCloud, match="2 source camera"):
+        with_view(synthetic_cloud, 2)
