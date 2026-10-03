@@ -213,7 +213,7 @@ def _stream(
 def _timeout_message(timeout: float | None) -> str:
     return (
         f"Blender render exceeded {timeout:.0f}s. Lower --samples, use --engine eevee, "
-        "thin the cloud with `splat tools compress --pruning blue-noise`, or raise "
+        "thin the cloud with `splat export --profile web-delivery`, or raise "
         "SPLAT_RENDER_TIMEOUT (0 disables it)."
     )
 

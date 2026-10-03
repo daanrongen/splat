@@ -3,11 +3,10 @@ Depth Anything V2 Small (`apple/coreml-depth-anything-v2-small`,
 Apache-2.0). Unlike `depth-pro`, this model predicts inverse depth
 (disparity, higher value = closer) on an arbitrary per-image scale, not
 metric depth in meters, and carries no focal length/field-of-view
-estimate - `DepthMap.focal_length_px` stays `None`, which `tools
-displace.height` already treats as a clean domain error (it requires a
-known focal length). Useful anywhere a normalized depth ordering is
-enough - segmentation-adjacent masking, depth-aware compositing - not
-for anything needing physical scale.
+estimate - `DepthMap.focal_length_px` stays `None`, which `splat mesh`
+treats as a clean domain error (heightfield needs metric depth). Useful
+anywhere a normalized depth ordering is enough - segmentation-adjacent
+masking, depth-aware compositing - not for anything needing physical scale.
 """
 
 from pathlib import Path

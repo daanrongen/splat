@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import os
@@ -7,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from splat.domain.errors import SplatDomainError
+from splat.domain.errors import ManifestHasChildren, SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
     KIND_METADATA_CLS,
@@ -31,6 +33,7 @@ _SIDECAR_KEYS = (
     "parent_ids",
     "created_by",
     "created_at",
+    "label",
 )
 
 
@@ -170,6 +173,7 @@ class FilesystemManifestRepository:
             content_size=content_size,
             content_sha256=content_sha256 or "",
             created_at=created_at,
+            label=meta.get("label") if isinstance(meta.get("label"), str) else "",
         )
 
     def find(self, manifest_id: str) -> Manifest | None:
@@ -228,8 +232,8 @@ class FilesystemManifestRepository:
         self._atomic_write_bytes(self._dir / content_file, content_bytes)
         content_mtime_ns = (self._dir / content_file).stat().st_mtime_ns
 
-        existing_meta = self._load_meta(self._meta_path(manifest_id))
-        created_at = (existing_meta or {}).get("created_at") or datetime.now(UTC).isoformat()
+        existing_meta = self._load_meta(self._meta_path(manifest_id)) or {}
+        created_at = existing_meta.get("created_at") or datetime.now(UTC).isoformat()
 
         meta = {
             "kind": kind.value,
@@ -242,6 +246,7 @@ class FilesystemManifestRepository:
             "parent_ids": parent_ids,
             "created_by": created_by,
             "created_at": created_at,
+            "label": existing_meta.get("label", ""),
         }
         self._atomic_write_text(
             self._meta_path(manifest_id),
@@ -298,7 +303,7 @@ class FilesystemManifestRepository:
             for sibling in path.parent.glob(f"{parent_id}.*"):
                 if _read_sidecar(sibling) is not None:
                     self.put_external(sibling, kind=kind)
-        return self.put(
+        restored = self.put(
             sidecar["id"],
             kind=kind,
             content_bytes=content_bytes,
@@ -308,6 +313,9 @@ class FilesystemManifestRepository:
             parent_ids=sidecar["parent_ids"],
             created_by=sidecar["created_by"],
         )
+        if sidecar.get("label"):
+            restored = self.set_label(restored.id, sidecar["label"])
+        return restored
 
     def write_sidecar(self, manifest_id: str, path: Path) -> None:
         meta = self._load_meta(self._meta_path(manifest_id)) or {}
@@ -336,6 +344,7 @@ class FilesystemManifestRepository:
         *,
         kind: ManifestKind | None = None,
         created_by: str | None = None,
+        label: str | None = None,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[Manifest]:
@@ -349,15 +358,51 @@ class FilesystemManifestRepository:
                 continue
             if created_by is not None and created_by not in manifest.created_by:
                 continue
+            if label is not None and label not in manifest.label:
+                continue
             manifests.append(manifest)
 
         manifests.sort(key=lambda m: m.created_at, reverse=True)
         end = None if limit is None else offset + limit
         return manifests[offset:end]
 
-    def delete(self, manifest_id: str) -> None:
+    def set_label(self, manifest_id: str, label: str) -> Manifest:
+        self.get(manifest_id)
+        meta_path = self._meta_path(manifest_id)
+        meta = self._load_meta(meta_path) or {}
+        self._atomic_write_text(meta_path, json.dumps({**meta, "label": label}, sort_keys=True))
+        return self.get(manifest_id)
+
+    def children(self, manifest_id: str) -> list[Manifest]:
+        return [m for m in self.list() if manifest_id in m.parent_ids]
+
+    def delete(self, manifest_id: str, *, cascade: bool = False) -> None:
         manifest = self.get(manifest_id)
+        children = self.children(manifest_id)
+        if children and not cascade:
+            raise ManifestHasChildren(
+                f"{manifest_id} has {len(children)} derived manifest(s); "
+                "delete with cascade to remove them too."
+            )
+        for child in children:
+            if self.find(child.id) is not None:
+                self.delete(child.id, cascade=True)
         manifest.content_path.unlink(missing_ok=True)
         self._meta_path(manifest_id).unlink(missing_ok=True)
         if self._find_by_content_sha256(manifest.content_sha256) is None:
             self._sha_index_path(manifest.content_sha256).unlink(missing_ok=True)
+
+    def gc(self) -> list[Path]:
+        """Removes what no valid manifest owns: payloads without metadata, metadata
+        whose payload is missing or corrupt, stale digest index entries."""
+        valid = {m.id for m in self.list() if self.find(m.id) is not None}
+        removed = []
+        for path in self._dir.iterdir():
+            if path.is_file() and path.name.split(".", 1)[0] not in valid:
+                path.unlink()
+                removed.append(path)
+        for path in self._sha_index_dir.iterdir():
+            if path.read_text() not in valid:
+                path.unlink()
+                removed.append(path)
+        return removed

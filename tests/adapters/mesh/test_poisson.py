@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 
@@ -61,3 +63,28 @@ def test_export_falls_back_when_opacity_filter_leaves_too_few_points(tmp_path):
 
     assert vertex_count > 0
     assert face_count > 0
+
+
+def test_poisson_mesh_retries_lower_when_the_worker_exits_without_a_mesh(monkeypatch):
+    """PoissonRecon exits its process with status 0 when isosurface extraction fails."""
+    import subprocess
+
+    from splat.adapters.mesh import poisson
+
+    real_run = subprocess.run
+    depths = []
+
+    def flaky_run(cmd, **kwargs):
+        depth = json.loads(cmd[-1])["depth"]
+        depths.append(depth)
+        if depth == 7:
+            return subprocess.CompletedProcess(cmd, 0, "", "[ERROR] Failed to close loop")
+        return real_run(cmd, **kwargs)
+
+    monkeypatch.setattr(poisson.subprocess, "run", flaky_run)
+
+    content, metadata = poisson.poisson_mesh(_sphere_cloud(), format="obj", depth=7)
+
+    assert depths == [7, 6]
+    assert metadata["depth"] == 6
+    assert content.startswith(b"#")

@@ -25,6 +25,8 @@ def gaussian(
     refine_poses: str = Form("auto"),
     low_memory: bool = Form(False),
     seed: int = Form(0),
+    declutter: bool = Form(False),
+    normalize_color: bool = Form(True),
     orbit_frames: int | None = Form(None),
     orbit_degrees: float = Form(30.0),
 ) -> Response:
@@ -52,6 +54,8 @@ def gaussian(
                 refine_poses=refine_poses,
                 low_memory=low_memory,
                 seed=seed,
+                declutter=declutter,
+                normalize_color=normalize_color,
                 orbit_frames=orbit_frames,
                 orbit_degrees=orbit_degrees,
             )

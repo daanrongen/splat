@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Protocol
 
@@ -46,6 +48,7 @@ class ManifestRepository(Protocol):
         *,
         kind: ManifestKind | None = None,
         created_by: str | None = None,
+        label: str | None = None,
         limit: int | None = None,
         offset: int = 0,
     ) -> list[Manifest]:
@@ -53,7 +56,17 @@ class ManifestRepository(Protocol):
         matches by substring (e.g. "diffuse" finds every diffuse:* manifest)."""
         ...
 
-    def delete(self, manifest_id: str) -> None:
-        """Remove a manifest's content and metadata from the cache. Does not
-        cascade to manifests that list it as a parent."""
+    def set_label(self, manifest_id: str, label: str) -> Manifest: ...
+
+    def children(self, manifest_id: str) -> list[Manifest]:
+        """Manifests that list this one as a parent."""
+        ...
+
+    def delete(self, manifest_id: str, *, cascade: bool = False) -> None:
+        """Remove a manifest's content and metadata. Refuses when other manifests
+        derive from it unless `cascade`, which removes those too."""
+        ...
+
+    def gc(self) -> list[Path]:
+        """Remove cache files no valid manifest owns; returns what was removed."""
         ...
