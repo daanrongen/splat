@@ -44,17 +44,17 @@ Model weights download on first use. `render` needs [Blender](https://www.blende
 
 **Files that keep their lineage.** `-o` writes the file plus `<file>.manifest.json`. Feeding that file back into any command, in any cache, restores its manifest; a converted file links back to its source. `splat manifest export` copies a manifest with all its ancestors.
 
-**Kinds.**
+**Kinds.** Each kind has a contract that the cache checks whenever a stage stores an output, so a backend that hands off anything else fails loudly instead of leaving the next stage to patch it. Files imported from outside are stored as they are.
 
-| Kind | Produced by | Stored as |
+| Kind | Produced by | Contract |
 |---|---|---|
-| `image` | `diffuse`, `upscale`, `render` | `.png` |
-| `sticker` | `segment` | `.png` (RGBA) |
-| `caption` | `caption` | `.txt` |
-| `embedding` | `embed` | `.npy` |
-| `depth_map` | `depth` | `.npy` (metres, or relative disparity) |
-| `gaussian_cloud` | `gaussian` | `.ply` |
-| `shape_3d` | `mesh` | `.glb`, `.obj`, `.ply`, `.gltf` |
+| `image` | `diffuse`, `upscale`, `render` | RGB or RGBA `.png`, size matches its metadata |
+| `sticker` | `segment` | RGBA `.png` plus its `(x, y, width, height)` box in the source image |
+| `caption` | `caption` | non-empty UTF-8 `.txt` |
+| `embedding` | `embed` | `.npy` whose dtype and shape match its metadata |
+| `depth_map` | `depth` | 2D float32 `.npy` in `metres`, or relative `disparity`, plus focal length when known |
+| `gaussian_cloud` | `gaussian` | `.ply` in the OpenGL convention (+Y up), SH degree 0 to 3, point count matching its metadata, plus the source cameras |
+| `shape_3d` | `mesh` | `.glb`, `.obj`, `.ply` or `.gltf` with typed vertex and face counts |
 
 ## Command reference
 

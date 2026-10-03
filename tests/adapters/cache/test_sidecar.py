@@ -1,5 +1,7 @@
 import json
 
+from tests.image_helpers import tiny_png
+
 from splat.adapters.cache.filesystem import FilesystemManifestRepository, sidecar_path
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import RasterMetadata
@@ -11,7 +13,7 @@ def _produce(cache, manifest_id, content, parent_ids=()):
         kind=ManifestKind.IMAGE,
         content_bytes=content,
         ext="png",
-        metadata=RasterMetadata(output_width=2, output_height=2),
+        metadata=RasterMetadata(output_width=1, output_height=1),
         params={"prompt": manifest_id},
         parent_ids=list(parent_ids),
         created_by="diffuse:test",
@@ -20,9 +22,9 @@ def _produce(cache, manifest_id, content, parent_ids=()):
 
 def test_sidecar_restores_identity_in_a_fresh_cache(tmp_path):
     source = FilesystemManifestRepository(tmp_path / "a")
-    asset = _produce(source, "robot", b"robot-bytes", parent_ids=["prompt-id"])
+    asset = _produce(source, "robot", tiny_png("robot"), parent_ids=["prompt-id"])
     out = tmp_path / "robot.png"
-    out.write_bytes(b"robot-bytes")
+    out.write_bytes(tiny_png("robot"))
     source.write_sidecar(asset.id, out)
 
     restored = FilesystemManifestRepository(tmp_path / "b").put_external(
@@ -33,12 +35,12 @@ def test_sidecar_restores_identity_in_a_fresh_cache(tmp_path):
     assert restored.created_by == "diffuse:test"
     assert restored.params == {"prompt": "robot"}
     assert restored.parent_ids == ["prompt-id"]
-    assert restored.metadata.output_width == 2
+    assert restored.metadata.output_width == 1
 
 
 def test_derived_file_points_back_at_its_source(tmp_path):
     cache = FilesystemManifestRepository(tmp_path / "cache")
-    asset = _produce(cache, "robot", b"robot-bytes")
+    asset = _produce(cache, "robot", tiny_png("robot"))
     converted = tmp_path / "robot.splat"
     converted.write_bytes(b"converted-bytes")
     cache.write_sidecar(asset.id, converted)
@@ -63,8 +65,8 @@ def test_malformed_sidecar_is_ignored(tmp_path):
 
 def test_export_round_trips_the_whole_lineage(tmp_path):
     source = FilesystemManifestRepository(tmp_path / "a")
-    _produce(source, "base", b"base-bytes")
-    _produce(source, "upscaled", b"upscaled-bytes", parent_ids=["base"])
+    _produce(source, "base", tiny_png("base"))
+    _produce(source, "upscaled", tiny_png("upscaled"), parent_ids=["base"])
     out_dir = tmp_path / "export"
 
     written = source.export("upscaled", out_dir)

@@ -508,7 +508,7 @@ def run_mesh(
         kind=ManifestKind.SHAPE_3D,
         content_bytes=content,
         ext=params["format"],
-        metadata=MeshMetadata(extra=metadata),
+        metadata=MeshMetadata(**metadata),
         params=params,
         parent_ids=list(parent_ids),
         created_by=f"mesh:{model_name}",
