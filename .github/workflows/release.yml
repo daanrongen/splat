@@ -1,0 +1,48 @@
+name: Release
+
+# Cut a release with `git tag vX.Y.Z && git push origin vX.Y.Z`; the tag must match pyproject.toml.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches pyproject version
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::$GITHUB_REF_NAME does not match pyproject.toml version $version"
+            exit 1
+          fi
+
+  test:
+    needs: check-version
+    uses: ./.github/workflows/test.yml
+
+  build:
+    needs: test
+    uses: ./.github/workflows/build.yml
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,54 @@
+name: Publish Homebrew formula
+
+# Runs after Release succeeds. (A release created with GITHUB_TOKEN does not
+# fire `release: published`, but it does complete a workflow_run.)
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate the formula
+        run: |
+          url="https://github.com/${{ github.repository }}/archive/refs/tags/$TAG.tar.gz"
+          sha="$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)"
+          python3 scripts/generate_formula.py \
+            --version="${TAG#v}" --repo="${{ github.repository }}" --sha256="$sha" \
+            --out=Formula/splat.rb
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.HOMEBREW_TAP_OWNER }}/${{ vars.HOMEBREW_TAP_REPO }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Push the formula to the tap
+        run: |
+          mkdir -p tap/Formula
+          cp Formula/splat.rb tap/Formula/splat.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/splat.rb
+          if git diff --cached --quiet; then
+            echo "Formula unchanged, nothing to commit."
+            exit 0
+          fi
+          git commit -m "splat $TAG"
+          git push
