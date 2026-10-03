@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error
-from splat.cli._pipeline_io import report, resolve_inputs
+from splat.cli._pipeline_io import prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.embed import EmbedRequest
@@ -26,6 +26,7 @@ def embed(
     """Embed image or text inputs as normalized vector assets."""
     cache = get_manifest_repository()
     try:
+        prepare_output(output)
         if text is not None:
             if input is not None:
                 raise SplatDomainError("Use either image input or --text, not both.")

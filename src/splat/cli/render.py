@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
-from splat.cli._pipeline_io import is_piped, report, resolve_inputs
+from splat.cli._pipeline_io import is_piped, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.render import RenderRequest, handle
@@ -115,6 +115,7 @@ def render(
         look_at=look_at,
     )
     try:
+        prepare_output(output)
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)
         with _progress() as on_progress:
             results = handle(replace(request, inputs=inputs), on_progress=on_progress)

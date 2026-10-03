@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
-from splat.cli._pipeline_io import report, resolve_inputs
+from splat.cli._pipeline_io import prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.diffuse import DiffuseRequest
@@ -48,6 +48,7 @@ def diffuse(
     """Diffuse an image from a text prompt, or edit an existing image (image-to-image)."""
     cache = get_manifest_repository()
     try:
+        prepare_output(output)
         if prompt is None:
             inputs, edit_prompt = [], source
         else:
