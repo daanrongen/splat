@@ -11,7 +11,7 @@ from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import DepthMetadata
 from splat.handlers.mesh import MeshRequest, handle
 from tests.adapters.mesh.test_poisson import _sphere_cloud
-from tests.image_helpers import write_sample_png
+from tests.image_helpers import depth_npy, write_sample_png
 
 
 def _sample_image(tmp_path: Path) -> Path:
@@ -81,7 +81,7 @@ def test_legacy_relative_depth_manifest_reads_as_disparity(tmp_path: Path):
     cache.put(
         "legacykey",
         kind=ManifestKind.DEPTH_MAP,
-        content_bytes=b"",
+        content_bytes=depth_npy(),
         ext="npy",
         metadata=DepthMetadata(extra={"relative": True}),
         parent_ids=[],
@@ -105,7 +105,7 @@ def test_handle_meshes_a_gaussian_cloud_with_poisson(tmp_path: Path, monkeypatch
 
     assert result.created_by == "mesh:poisson"
     assert result.parent_ids == [cloud.id]
-    assert result.metadata.extra["face_count"] > 0
+    assert result.metadata.face_count > 0
     assert result.content_path.read_bytes().startswith(b"#")
 
 

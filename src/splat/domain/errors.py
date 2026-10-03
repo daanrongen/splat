@@ -36,3 +36,7 @@ class ReconstructionBackendError(SplatDomainError):
 
 class ManifestHasChildren(SplatDomainError):
     """A manifest other manifests derive from was asked to be deleted on its own."""
+
+
+class ContractViolation(SplatDomainError):
+    """A stage output does not have its kind's canonical form."""

@@ -16,6 +16,7 @@ from splat.domain.manifest_metadata import (
     ManifestMetadata,
     RasterMetadata,
     StickerMetadata,
+    check_contract,
     metadata_from_dict,
     metadata_to_dict,
 )
@@ -228,6 +229,8 @@ class FilesystemManifestRepository:
         parent_ids: list[str],
         created_by: str,
     ) -> Manifest:
+        if created_by != "external":
+            check_contract(kind, metadata, content_bytes)
         content_file = f"{manifest_id}.{ext.lstrip('.')}"
         self._atomic_write_bytes(self._dir / content_file, content_bytes)
         content_mtime_ns = (self._dir / content_file).stat().st_mtime_ns

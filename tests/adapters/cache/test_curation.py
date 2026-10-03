@@ -1,4 +1,5 @@
 import pytest
+from tests.image_helpers import tiny_png
 
 from splat.adapters.cache.filesystem import FilesystemManifestRepository
 from splat.domain.errors import ManifestHasChildren
@@ -10,7 +11,7 @@ def _put(cache, manifest_id, parent_ids=()):
     return cache.put(
         manifest_id,
         kind=ManifestKind.IMAGE,
-        content_bytes=manifest_id.encode(),
+        content_bytes=tiny_png(manifest_id),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=list(parent_ids),
@@ -61,7 +62,7 @@ def test_sidecar_carries_the_label(tmp_path):
     _put(source, "robot")
     source.set_label("robot", "hero shot")
     out = tmp_path / "robot.png"
-    out.write_bytes(b"robot")
+    out.write_bytes(tiny_png("robot"))
     source.write_sidecar("robot", out)
 
     restored = FilesystemManifestRepository(tmp_path / "b").put_external(

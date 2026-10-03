@@ -4,6 +4,7 @@ from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import RasterMetadata
 from splat.http.app import app
 from splat.registry.wiring import get_manifest_repository
+from tests.image_helpers import tiny_png
 
 client = TestClient(app)
 
@@ -14,7 +15,7 @@ def test_get_asset_returns_content_bytes(tmp_path, monkeypatch):
     asset = cache.put(
         "abc123",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"hello",
+        content_bytes=tiny_png("hello"),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -24,7 +25,7 @@ def test_get_asset_returns_content_bytes(tmp_path, monkeypatch):
     response = client.get(f"/assets/{asset.id}")
 
     assert response.status_code == 200
-    assert response.content == b"hello"
+    assert response.content == tiny_png("hello")
 
 
 def test_get_unknown_asset_returns_422(tmp_path, monkeypatch):

@@ -64,10 +64,10 @@ def mesh(
 
     def _human(assets: list) -> None:
         for asset in assets:
-            extra = asset.metadata.extra
+            mesh = asset.metadata
             console.print(
-                f"[green]mesh[/green] {asset.id}  {extra.get('vertex_count', 0):,} vertices  "
-                f"{extra.get('face_count', 0):,} faces"
+                f"[green]mesh[/green] {asset.id}  {mesh.vertex_count:,} vertices  "
+                f"{mesh.face_count:,} faces"
             )
 
     report(results, _human)

@@ -3,14 +3,16 @@ import json
 import os
 
 import pytest
-from tests.image_helpers import write_sample_png
+from tests.image_helpers import tiny_png, write_sample_png
 
 from splat.adapters.cache.filesystem import FilesystemManifestRepository, ManifestNotFound
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import CaptionMetadata, RasterMetadata
 
+CONTENT = tiny_png("asset")
 
-def _meta(*, content_file: str, content: bytes = b"asset-bytes") -> dict:
+
+def _meta(*, content_file: str, content: bytes = CONTENT) -> dict:
     return {
         "kind": ManifestKind.IMAGE.value,
         "content_file": content_file,
@@ -41,7 +43,7 @@ def test_find_returns_none_when_content_file_is_missing(tmp_path):
 
 def test_find_ignores_incomplete_writes(tmp_path):
     cache = FilesystemManifestRepository(tmp_path)
-    (tmp_path / "content-only.png").write_bytes(b"asset-bytes")
+    (tmp_path / "content-only.png").write_bytes(CONTENT)
     (tmp_path / "meta-only.meta.json.tmp").write_text(json.dumps(_meta(content_file="x.png")))
 
     assert cache.find("content-only") is None
@@ -54,7 +56,7 @@ def test_put_writes_validated_metadata(tmp_path):
     asset = cache.put(
         "asset",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"asset-bytes",
+        content_bytes=CONTENT,
         ext="png",
         metadata=RasterMetadata(),
         params={"prompt": "test"},
@@ -63,9 +65,9 @@ def test_put_writes_validated_metadata(tmp_path):
     )
 
     meta = json.loads((tmp_path / "asset.meta.json").read_text())
-    assert meta["content_size"] == len(b"asset-bytes")
-    assert meta["content_sha256"] == hashlib.sha256(b"asset-bytes").hexdigest()
-    assert asset.content_path.read_bytes() == b"asset-bytes"
+    assert meta["content_size"] == len(CONTENT)
+    assert meta["content_sha256"] == hashlib.sha256(CONTENT).hexdigest()
+    assert asset.content_path.read_bytes() == CONTENT
 
 
 def test_find_returns_none_when_content_digest_mismatches(tmp_path):
@@ -73,7 +75,7 @@ def test_find_returns_none_when_content_digest_mismatches(tmp_path):
     asset = cache.put(
         "asset",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"asset-bytes",
+        content_bytes=CONTENT,
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -90,15 +92,15 @@ def test_put_populates_size_digest_and_timestamp_on_the_manifest(tmp_path):
     asset = cache.put(
         "asset",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"asset-bytes",
+        content_bytes=CONTENT,
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
         created_by="test",
     )
 
-    assert asset.content_size == len(b"asset-bytes")
-    assert asset.content_sha256 == hashlib.sha256(b"asset-bytes").hexdigest()
+    assert asset.content_size == len(CONTENT)
+    assert asset.content_sha256 == hashlib.sha256(CONTENT).hexdigest()
     assert asset.created_at
 
     reloaded = cache.get("asset")
@@ -107,7 +109,7 @@ def test_put_populates_size_digest_and_timestamp_on_the_manifest(tmp_path):
 
 def test_find_falls_back_to_meta_mtime_when_created_at_is_missing(tmp_path):
     cache = FilesystemManifestRepository(tmp_path)
-    content = b"asset-bytes"
+    content = CONTENT
     (tmp_path / "legacy.png").write_bytes(content)
     (tmp_path / "legacy.meta.json").write_text(json.dumps(_meta(content_file="legacy.png")))
 
@@ -131,7 +133,7 @@ def test_put_external_resolves_to_existing_manifest_with_same_bytes(tmp_path):
     produced = cache.put(
         "6c21cef6c26e270e",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"same-bytes",
+        content_bytes=tiny_png("same"),
         ext="png",
         metadata=RasterMetadata(),
         params={"prompt": "a robot", "seed": 42},
@@ -139,7 +141,7 @@ def test_put_external_resolves_to_existing_manifest_with_same_bytes(tmp_path):
         created_by="diffuse:sdxl-turbo-mlx",
     )
     copy_path = tmp_path / "downloaded.png"
-    copy_path.write_bytes(b"same-bytes")
+    copy_path.write_bytes(tiny_png("same"))
 
     resolved = cache.put_external(copy_path, kind=ManifestKind.IMAGE)
 
@@ -189,7 +191,7 @@ def test_find_does_not_rehash_unchanged_content(tmp_path, mocker):
     cache.put(
         "asset",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"asset-bytes",
+        content_bytes=CONTENT,
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -206,7 +208,7 @@ def test_find_rehashes_when_mtime_changes(tmp_path):
     asset = cache.put(
         "asset",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"asset-bytes",
+        content_bytes=CONTENT,
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -250,7 +252,7 @@ def test_list_filters_by_kind_and_created_by_most_recent_first(tmp_path):
     cache.put(
         "a",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"a",
+        content_bytes=tiny_png("a"),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -259,7 +261,7 @@ def test_list_filters_by_kind_and_created_by_most_recent_first(tmp_path):
     cache.put(
         "b",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"b",
+        content_bytes=tiny_png("b"),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -287,7 +289,7 @@ def test_delete_removes_content_and_metadata(tmp_path):
     asset = cache.put(
         "asset",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"asset-bytes",
+        content_bytes=CONTENT,
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],

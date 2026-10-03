@@ -7,6 +7,7 @@ from splat.cli.main import app
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import RasterMetadata
 from splat.registry.wiring import get_manifest_repository
+from tests.image_helpers import tiny_png
 
 runner = CliRunner()
 
@@ -16,7 +17,7 @@ def _put_image(monkeypatch, tmp_path, manifest_id: str, created_by: str = "diffu
     get_manifest_repository().put(
         manifest_id,
         kind=ManifestKind.IMAGE,
-        content_bytes=manifest_id.encode(),
+        content_bytes=tiny_png(manifest_id),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],
@@ -139,7 +140,7 @@ def test_manifest_export_writes_file_and_sidecar(tmp_path, monkeypatch):
     result = runner.invoke(app, ["manifest", "export", "abc123", str(tmp_path / "out")])
 
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "out" / "abc123.png").read_bytes() == b"abc123"
+    assert (tmp_path / "out" / "abc123.png").read_bytes() == tiny_png("abc123")
     assert (tmp_path / "out" / "abc123.png.manifest.json").exists()
 
 
@@ -167,7 +168,7 @@ def test_manifest_get_prints_the_lineage_tree(tmp_path, monkeypatch):
     get_manifest_repository().put(
         "child1",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"child",
+        content_bytes=tiny_png("child"),
         ext="png",
         metadata=RasterMetadata(),
         params={"factor": 2},
@@ -187,7 +188,7 @@ def test_manifest_rm_refuses_without_cascade(tmp_path, monkeypatch):
     get_manifest_repository().put(
         "child1",
         kind=ManifestKind.IMAGE,
-        content_bytes=b"child",
+        content_bytes=tiny_png("child"),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=["parent1"],

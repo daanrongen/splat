@@ -7,7 +7,7 @@ from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import DepthMetadata
 from splat.domain.value_objects import MIT
 from splat.handlers.upscale import UpscaleRequest, handle
-from tests.image_helpers import write_sample_png
+from tests.image_helpers import depth_npy, write_sample_png
 
 
 class FakeUpscaleBackend:
@@ -43,7 +43,7 @@ def test_handle_rejects_non_image_input(mocker, tmp_path, monkeypatch):
     asset = cache.put(
         "depth",
         kind=ManifestKind.DEPTH_MAP,
-        content_bytes=b"",
+        content_bytes=depth_npy(),
         ext="npy",
         metadata=DepthMetadata(),
         parent_ids=[],
