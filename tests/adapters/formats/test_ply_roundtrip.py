@@ -84,3 +84,14 @@ def test_reading_a_non_splat_ply_raises_a_domain_error(tmp_path: Path, content):
 
     with pytest.raises(InvalidGaussianCloud, match=r"broken\.ply"):
         PlyReader().read(path)
+
+
+def test_ply_roundtrip_preserves_source_cameras(tmp_path: Path, synthetic_cloud):
+    cameras = [
+        {"position": [1.0, 2.0, 3.0], "rotation": np.eye(3).tolist(), "intrinsics": [1.0] * 6}
+    ]
+    synthetic_cloud.metadata.source_cameras = cameras
+    out = tmp_path / "scene.ply"
+    PlyWriter().write(synthetic_cloud, out)
+
+    assert PlyReader().read(out).metadata.source_cameras == cameras

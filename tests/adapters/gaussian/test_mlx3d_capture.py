@@ -116,3 +116,20 @@ def test_reconstruct_raises_a_domain_error_when_capture_fails(mocker, tmp_path):
 
     with pytest.raises(SplatDomainError, match="no views registered"):
         _backend().reconstruct([image])
+
+
+def test_reconstruct_keeps_every_registered_camera(mocker, tmp_path, synthetic_cloud):
+    image = tmp_path / "a.png"
+    _write_input_image(image)
+    _mock_run_capture(mocker, tmp_path, synthetic_cloud, {"train": {}})
+    cameras = [_FakeCamera(position=[float(i), 0.0, 0.0], rotation=np.eye(3)) for i in range(3)]
+    mocker.patch("mlx3d.datasets.colmap.load_colmap", return_value=_FakeColmapDataset(cameras))
+
+    cloud = _backend().reconstruct([image])
+
+    assert [c["position"] for c in cloud.metadata.source_cameras] == [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+    ]
+    assert cloud.metadata.capture_camera_count == 3

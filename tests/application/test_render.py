@@ -88,3 +88,24 @@ def test_run_render_reuses_cache_for_same_inputs(tmp_path, synthetic_cloud):
 
     assert first.id == second.id
     assert backend.calls == 1
+
+
+def test_run_render_view_renders_from_that_source_camera(tmp_path, synthetic_cloud):
+    cameras = [
+        {"position": [float(i), 0.0, 0.0], "rotation": np.eye(3).tolist(), "intrinsics": [1.0] * 6}
+        for i in range(2)
+    ]
+    synthetic_cloud.metadata.source_cameras = cameras
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    asset = _gaussian_asset(cache, tmp_path, synthetic_cloud)
+    seen = []
+
+    class RecordingBackend(FakeRenderBackend):
+        def render(self, cloud, output_path, **params):
+            seen.append((cloud.metadata.capture_camera_position, "view" in params))
+            super().render(cloud, output_path, **params)
+
+    backend = RecordingBackend(encode_png(np.zeros((4, 8, 3), dtype=np.uint8)))
+    run_render(backend, cache, model_name="fake", input_asset=asset, params={"view": 1})
+
+    assert seen == [([1.0, 0.0, 0.0], False)]
