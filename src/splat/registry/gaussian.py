@@ -3,6 +3,7 @@ from typing import Literal
 
 from splat.domain.value_objects import ModelLicense
 from splat.ports.reconstruction import ReconstructionBackend
+from splat.registry._lazy import load_backend
 
 Runtime = Literal["mlx", "torch"]
 
@@ -10,25 +11,24 @@ Runtime = Literal["mlx", "torch"]
 @dataclass(frozen=True)
 class GaussianModelDescriptor:
     name: str
-    backend_cls: type[ReconstructionBackend]
+    backend: str
     hf_repo_id: str | None
     license: ModelLicense
     runtime: Runtime
     notes: str = ""
 
+    @property
+    def backend_cls(self) -> type[ReconstructionBackend]:
+        return load_backend(self.backend)
+
 
 def _build_catalog() -> dict[str, GaussianModelDescriptor]:
-    # Imported lazily so a missing/optional adapter dependency can't break
-    # every other command — only `splat models pull/gaussian --model ...`
-    # needs the reconstruction adapters to actually import cleanly.
-    from splat.adapters.gaussian.mlx3d_capture import MLX3DCaptureBackend
-    from splat.adapters.gaussian.sharp import SharpBackend
     from splat.domain.value_objects import APPLE_AMLR, MIT
 
     return {
         "mlx3d-capture": GaussianModelDescriptor(
             name="mlx3d-capture",
-            backend_cls=MLX3DCaptureBackend,
+            backend="splat.adapters.gaussian.mlx3d_capture:MLX3DCaptureBackend",
             hf_repo_id=None,
             license=MIT,
             runtime="mlx",
@@ -39,7 +39,7 @@ def _build_catalog() -> dict[str, GaussianModelDescriptor]:
         ),
         "sharp": GaussianModelDescriptor(
             name="sharp",
-            backend_cls=SharpBackend,
+            backend="splat.adapters.gaussian.sharp:SharpBackend",
             hf_repo_id="apple/Sharp",
             license=APPLE_AMLR,
             runtime="torch",

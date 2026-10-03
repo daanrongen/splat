@@ -5,6 +5,7 @@ from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import ModelLicense
 from splat.ports.embedding import EmbeddingBackend
+from splat.registry._lazy import load_backend
 
 Runtime = Literal["mlx", "coreml", "torch"]
 
@@ -22,7 +23,7 @@ EMBED_IMAGE_CONTRACT = StageContract(
 @dataclass(frozen=True)
 class EmbeddingModelDescriptor:
     name: str
-    backend_cls: type[EmbeddingBackend]
+    backend: str
     hf_repo_id: str
     license: ModelLicense
     runtime: Runtime
@@ -30,15 +31,18 @@ class EmbeddingModelDescriptor:
     normalized: bool
     notes: str = ""
 
+    @property
+    def backend_cls(self) -> type[EmbeddingBackend]:
+        return load_backend(self.backend)
+
 
 def _build_catalog() -> dict[str, EmbeddingModelDescriptor]:
-    from splat.adapters.embed.mobileclip import MobileCLIPOpenCLIPBackend
     from splat.domain.value_objects import APPLE_AMLR
 
     return {
         "mobileclip2-s0": EmbeddingModelDescriptor(
             name="mobileclip2-s0",
-            backend_cls=MobileCLIPOpenCLIPBackend,
+            backend="splat.adapters.embed.mobileclip:MobileCLIPOpenCLIPBackend",
             hf_repo_id="timm/MobileCLIP2-S0-OpenCLIP",
             license=APPLE_AMLR,
             runtime="torch",
