@@ -227,3 +227,40 @@ def test_with_view_makes_a_source_camera_the_capture_pose(synthetic_cloud):
     assert viewed.metadata.capture_camera_position == [0.0, 5.0, 0.0]
     with pytest.raises(InvalidGaussianCloud, match="2 source camera"):
         with_view(synthetic_cloud, 2)
+
+
+def _sh_color(sh_rest: np.ndarray, d: np.ndarray) -> np.ndarray:
+    """Reference 3DGS SH evaluation (bands 1-3, without DC) along unit direction d."""
+    x, y, z = d
+    xx, yy, zz = x * x, y * y, z * z
+    basis = [
+        -0.4886025119029199 * y, 0.4886025119029199 * z, -0.4886025119029199 * x,
+        1.0925484305920792 * x * y, -1.0925484305920792 * y * z,
+        0.31539156525252005 * (2 * zz - xx - yy), -1.0925484305920792 * x * z,
+        0.5462742152960396 * (xx - yy),
+        -0.5900435899266435 * y * (3 * xx - yy), 2.890611442640554 * x * y * z,
+        -0.4570457994644658 * y * (4 * zz - xx - yy),
+        0.3731763325901154 * z * (2 * zz - 3 * xx - 3 * yy),
+        -0.4570457994644658 * x * (4 * zz - xx - yy),
+        1.445305721320277 * z * (xx - yy), -0.5900435899266435 * x * (xx - 3 * yy),
+    ]  # fmt: skip
+    return np.einsum("k,nkc->nc", np.array(basis[: sh_rest.shape[1]]), sh_rest)
+
+
+@pytest.mark.parametrize("degree", [1, 2, 3])
+def test_to_convention_keeps_view_dependent_color(degree):
+    """Colour seen along d in colmap must equal colour seen along the flipped d."""
+    rng = np.random.default_rng(degree)
+    cloud = make_cloud(
+        sh_degree=degree,
+        sh_rest=rng.normal(size=(4, sh_rest_count(degree), 3)).astype(np.float32),
+    )
+    cloud.metadata.coordinate_convention = "colmap"
+    converted = to_convention(cloud, "opengl")
+    flip = np.diag([1.0, -1.0, -1.0])
+
+    for d in rng.normal(size=(5, 3)):
+        d /= np.linalg.norm(d)
+        np.testing.assert_allclose(
+            _sh_color(converted.sh_rest, flip @ d), _sh_color(cloud.sh_rest, d), atol=1e-5
+        )

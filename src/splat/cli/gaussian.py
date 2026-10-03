@@ -127,6 +127,12 @@ def gaussian(
         help="Total azimuth sweep in degrees for --orbit-frames.",
         envvar="SPLAT_GAUSSIAN_ORBIT_DEGREES",
     ),
+    score: bool = typer.Option(
+        False,
+        "--score",
+        help="Render source view 0 with Blender and record PSNR and SSIM against its photo.",
+        envvar="SPLAT_GAUSSIAN_SCORE",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -160,6 +166,7 @@ def gaussian(
             normalize_color=normalize_color,
             orbit_frames=orbit_frames,
             orbit_degrees=orbit_degrees,
+            score=score,
         )
         if verbose:
             results = handle_gaussian(

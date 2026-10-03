@@ -29,6 +29,7 @@ def gaussian(
     normalize_color: bool = Form(True),
     orbit_frames: int | None = Form(None),
     orbit_degrees: float = Form(30.0),
+    score: bool = Form(False),
 ) -> Response:
     cache = get_manifest_repository()
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -58,6 +59,7 @@ def gaussian(
                 normalize_color=normalize_color,
                 orbit_frames=orbit_frames,
                 orbit_degrees=orbit_degrees,
+                score=score,
             )
         )[0]
         cloud = get_reader(result.content_path.suffix).read(result.content_path)

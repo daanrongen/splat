@@ -98,6 +98,8 @@ def get_manifest(manifest_id: str = typer.Argument(...)) -> None:
     console.print(f"sha256:       {m.content_sha256}")
     console.print(f"params:       {m.params}")
     console.print(f"metadata:     {m.metadata}")
+    if quality := getattr(m.metadata, "quality", None):
+        console.print(f"quality:      {quality}")
     console.print(f"children:     {[c.id for c in children]}")
     console.print("lineage:")
     console.print(_tree(lineage))

@@ -43,6 +43,7 @@ from splat.domain.manifest_metadata import (
     SegmentManifestMetadata,
     StickerMetadata,
 )
+from splat.domain.quality import cloud_stats
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 from splat.ports.diffusion import DiffusionBackend
@@ -430,6 +431,7 @@ def run_gaussian(
     # "y" or "z". Converting on the way in gives one canonical stored
     # convention whose metadata is true, and `render` skips its own flip.
     cloud = to_convention(cloud, "opengl")
+    cloud.metadata.quality = cloud_stats(cloud)
     content_bytes = _gaussian_to_ply_bytes(cloud)
 
     return cache.put(
