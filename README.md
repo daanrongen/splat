@@ -179,19 +179,29 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 ## Python SDK
 
-The same operations, returning `Manifest` objects with `.as_image()`, `.as_text()`, `.as_array()` and `.as_gaussian_cloud()`:
+The same operations, returning `Manifest` objects with `.as_image()`, `.as_text()`, `.as_array()` and `.as_gaussian_cloud()`. Stage options are keyword arguments named after their flags (`--focal-35mm` is `focal_35mm=`), and a test keeps them in step with the CLI:
 
 ```python
 import splat
 
 image = splat.diffuse("a small red boat").asset
-cloud = splat.gaussian(image)[0]
-frame = splat.render(cloud, width=1280, height=720)[0].as_image()
+cloud = splat.gaussian(image, score=True)[0]
+print(cloud.metadata.quality)  # psnr, ssim, needle_ratio, ...
+frame = splat.render(cloud, view=0)[0].as_image()
 mesh = splat.mesh(cloud, format="glb")[0]
 splat.export(cloud, "boat.spz")
 ```
 
 Also: `caption`, `embed`, `segment`, `depth`, `upscale`, `info`, `validate`, `Manifest.load("<id>")`.
+
+## Development
+
+```sh
+uv run pytest                                                    # unit and contract tests
+SPLAT_INTEGRATION_TESTS=1 uv run pytest tests/test_model_smoke.py  # every model for real
+```
+
+The smoke tests run each catalogued model once and check its output against its kind's contract; a model added to a catalog fails the suite until it has a smoke case. They download weights on first use and take about 15 minutes on an M1 Pro.
 
 ## Architecture
 

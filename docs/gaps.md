@@ -42,19 +42,18 @@ Remaining work:
 
 | Issue | Gap | Why it matters |
 |---|---|---|
-| #156 | `to_convention` flips positions and rotations but not higher-order SH. | Colmap-frame clouds with `sh_degree > 0` get mirrored view-dependent colour. |
-| #130 | Manifest kinds have no enforced canonical invariants. | Backends can hand off output another stage must patch before using. |
+| #130 | Contracts are enforced at `put`, but `image` has no intrinsics and `depth-anything-v2-coreml` is still relative disparity. | Every image and depth map should carry a camera so 3D stages need no guesses. |
+| #163 | mlx3d-capture training is aborted by the Metal GPU watchdog on an M1 Pro. | The only multi-view backend fails its smoke test there. |
 
 ## Tier 2: Reconstruction Quality
 
 | Issue | Gap | Direction |
 |---|---|---|
-| #135 | SHARP has no intrinsics for images without EXIF and no small-input upscaling. | Estimate focal length (MoGe-2), judge pre-processing against #138. |
 | #136 | `train` is a stub; feed-forward clouds are never refined. | msplat-backed `splat refine` to SH3. |
 | #137 | Few-view input relies on classical SfM. | Depth Anything 3 multi-view backend. |
 | #94 | SfM registers too few views. | Learned pose front-end (DA3, MapAnything, VGGT). |
 | #95 | Single-image clouds can't show unseen sides. | Generative orbit views via video diffusion. |
-| #138 | No quality signal to compare backends. | Held-out-view metrics in cloud metadata. |
+| #138 | Clouds record stats and, with `--score`, PSNR/SSIM against a training view. | Add LPIPS and a true held-out view. |
 
 ## Tier 3: Backends, Formats And Tests
 
@@ -62,7 +61,6 @@ Remaining work:
 |---|---|---|
 | #139, #140, #141, #142 | Stage catalogs lag the state of the art. | MoGe-2/DA3 depth, SAM 3, mflux diffuse and upscale, Qwen3-VL and SigLIP2. |
 | #143 | No OpenUSD export. | `ParticleField3DGaussianSplat` writer behind `-o .usd`. |
-| #88 | Only some catalogued models have a real-inference test. | One opt-in smoke test per model, asserting canonical invariants. |
 
 ## Quality Principles
 
