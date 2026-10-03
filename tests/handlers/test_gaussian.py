@@ -148,3 +148,23 @@ def test_orbit_frames_rejects_a_sweep_of_one(mocker, tmp_path, monkeypatch, synt
 
     with pytest.raises(SplatDomainError, match="at least 2"):
         handle(request)
+
+
+def test_sharp_cache_key_ignores_device_and_other_models_flags(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    backend = FakeReconstructionBackend(synthetic_cloud)
+    mocker.patch("splat.handlers.gaussian.get_reconstruction_backend", return_value=backend)
+    image = get_manifest_repository().put_external(
+        write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE
+    )
+
+    first = handle(GaussianRequest(inputs=[image], model="sharp", device="cpu"))[0]
+    second = handle(
+        GaussianRequest(inputs=[image], model="sharp", device="mps", quality="high", seed=7)
+    )[0]
+
+    assert first.id == second.id
+    assert set(first.params) == {"device", "focal_35mm", "model"}

@@ -154,6 +154,8 @@ def handle(
         params["max_dim"] = request.max_dim
     if request.sh_degree is not None:
         params["sh_degree"] = request.sh_degree
+    if descriptor is not None:
+        params = {k: v for k, v in params.items() if k == "device" or k in descriptor.params}
 
     cloud = run_gaussian(
         backend,
