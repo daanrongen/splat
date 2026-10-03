@@ -267,7 +267,9 @@ def test_gaussian_forwards_orbit_frames(
     cache = get_manifest_repository()
     inputs = [cache.put_external(p, kind=ManifestKind.IMAGE) for p in (image_a, image_b)]
 
-    remote_client.gaussian(GaussianRequest(inputs=inputs, orbit_frames=6, orbit_degrees=40.0))
+    remote_client.gaussian(
+        GaussianRequest(inputs=inputs, model="fake-recon", orbit_frames=6, orbit_degrees=40.0)
+    )
 
     assert (seen[0].orbit_frames, seen[0].orbit_degrees) == (6, 40.0)
 
