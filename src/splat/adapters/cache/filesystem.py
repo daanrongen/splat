@@ -41,6 +41,10 @@ class FilesystemManifestRepository:
     def __init__(self, cache_dir: Path | None = None) -> None:
         self._dir = cache_dir or manifest_cache_dir()
         self._dir.mkdir(parents=True, exist_ok=True)
+        self._sha_index_dir = self._dir / "sha256"
+        if not self._sha_index_dir.exists():
+            self._sha_index_dir.mkdir()
+            self._build_sha_index()
 
     def _meta_path(self, manifest_id: str) -> Path:
         return self._dir / f"{manifest_id}.meta.json"
@@ -62,6 +66,19 @@ class FilesystemManifestRepository:
         except (OSError, json.JSONDecodeError):
             return None
         return meta if isinstance(meta, dict) else None
+
+    def _content_matches(self, content_path: Path, meta: dict[str, Any]) -> bool:
+        try:
+            stat = content_path.stat()
+        except OSError:
+            return False
+        size, sha256 = meta.get("content_size"), meta.get("content_sha256")
+        if size is not None and size != stat.st_size:
+            return False
+        # Unchanged size and mtime means unchanged bytes; skip rehashing large payloads.
+        if sha256 is None or meta.get("content_mtime_ns") == stat.st_mtime_ns:
+            return True
+        return sha256 == hashlib.sha256(content_path.read_bytes()).hexdigest()
 
     def _manifest_from_meta(
         self, manifest_id: str, meta_path: Path, *, verify_content: bool = False
@@ -99,13 +116,7 @@ class FilesystemManifestRepository:
         content_size = meta.get("content_size")
         content_sha256 = meta.get("content_sha256")
         if verify_content:
-            try:
-                content = content_path.read_bytes()
-            except OSError:
-                return None
-            if content_size is not None and content_size != len(content):
-                return None
-            if content_sha256 is not None and content_sha256 != hashlib.sha256(content).hexdigest():
+            if not self._content_matches(content_path, meta):
                 return None
         elif content_size is None:
             try:
@@ -138,24 +149,33 @@ class FilesystemManifestRepository:
             return None
         return self._manifest_from_meta(manifest_id, meta_path, verify_content=True)
 
+    def _sha_index_path(self, content_sha256: str) -> Path:
+        return self._sha_index_dir / content_sha256
+
     def _find_by_content_sha256(self, content_sha256: str) -> Manifest | None:
-        """Resolves bytes to whichever manifest already holds them, preferring
-        one with real provenance (`created_by != "external"`) over an earlier
-        external clone, then the earliest match — so `list`/`get` stay stable
-        across repeated lookups."""
-        candidates = []
-        for meta_path in self._dir.glob("*.meta.json"):
-            meta = self._load_meta(meta_path)
-            if meta is None or meta.get("content_sha256") != content_sha256:
-                continue
-            manifest_id = meta_path.name.removesuffix(".meta.json")
-            manifest = self._manifest_from_meta(manifest_id, meta_path, verify_content=True)
-            if manifest is not None:
-                candidates.append(manifest)
-        if not candidates:
+        try:
+            manifest_id = self._sha_index_path(content_sha256).read_text()
+        except OSError:
             return None
-        candidates.sort(key=lambda m: (m.created_by == "external", m.created_at))
-        return candidates[0]
+        manifest = self.find(manifest_id)
+        if manifest is None or manifest.content_sha256 != content_sha256:
+            return None
+        return manifest
+
+    def _index_content(self, manifest: Manifest) -> None:
+        """Points the digest at the first manifest holding those bytes, upgrading
+        an external clone to one with real provenance when it appears."""
+        current = self._find_by_content_sha256(manifest.content_sha256)
+        if current is None or (
+            current.created_by == "external" and manifest.created_by != "external"
+        ):
+            self._atomic_write_text(self._sha_index_path(manifest.content_sha256), manifest.id)
+
+    def _build_sha_index(self) -> None:
+        manifests = [m for m in self.list() if m.content_sha256]
+        manifests.sort(key=lambda m: m.created_at)
+        for manifest in manifests:
+            self._index_content(manifest)
 
     def get(self, manifest_id: str) -> Manifest:
         manifest = self.find(manifest_id)
@@ -177,6 +197,7 @@ class FilesystemManifestRepository:
     ) -> Manifest:
         content_file = f"{manifest_id}.{ext.lstrip('.')}"
         self._atomic_write_bytes(self._dir / content_file, content_bytes)
+        content_mtime_ns = (self._dir / content_file).stat().st_mtime_ns
 
         existing_meta = self._load_meta(self._meta_path(manifest_id))
         created_at = (existing_meta or {}).get("created_at") or datetime.now(UTC).isoformat()
@@ -186,6 +207,7 @@ class FilesystemManifestRepository:
             "content_file": content_file,
             "content_size": len(content_bytes),
             "content_sha256": hashlib.sha256(content_bytes).hexdigest(),
+            "content_mtime_ns": content_mtime_ns,
             "metadata": metadata_to_dict(metadata),
             "params": params or {},
             "parent_ids": parent_ids,
@@ -196,7 +218,9 @@ class FilesystemManifestRepository:
             self._meta_path(manifest_id),
             json.dumps(meta, sort_keys=True),
         )
-        return self.get(manifest_id)
+        manifest = self.get(manifest_id)
+        self._index_content(manifest)
+        return manifest
 
     def _external_metadata(self, kind: ManifestKind, content_bytes: bytes) -> ManifestMetadata:
         if kind not in _RASTER_KINDS:
@@ -260,3 +284,5 @@ class FilesystemManifestRepository:
         manifest = self.get(manifest_id)
         manifest.content_path.unlink(missing_ok=True)
         self._meta_path(manifest_id).unlink(missing_ok=True)
+        if self._find_by_content_sha256(manifest.content_sha256) is None:
+            self._sha_index_path(manifest.content_sha256).unlink(missing_ok=True)
