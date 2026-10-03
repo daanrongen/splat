@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
-from splat.cli._pipeline_io import is_piped, prepare_output, report, resolve_inputs
+from splat.cli._pipeline_io import export_output, is_piped, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.render import RenderRequest, handle
@@ -124,7 +124,7 @@ def render(
         raise typer.Exit(code=1) from exc
 
     if output is not None and results:
-        output.write_bytes(results[0].content_path.read_bytes())
+        export_output(results[0], output, cache)
 
     def _human(assets: list) -> None:
         for asset in assets:

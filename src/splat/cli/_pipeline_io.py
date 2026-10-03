@@ -6,6 +6,7 @@ piped, or a human summary in an interactive terminal.
 
 import dataclasses
 import json
+import shutil
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -81,3 +82,8 @@ def prepare_output(path: Path | None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         raise SplatDomainError(f"Cannot write to {path}: {exc.strerror}.") from exc
+
+
+def export_output(asset: Manifest, output: Path, cache: ManifestRepository) -> None:
+    shutil.copyfile(asset.content_path, output)
+    cache.write_sidecar(asset.id, output)

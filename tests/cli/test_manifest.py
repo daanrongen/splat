@@ -131,3 +131,22 @@ assert [m for m in sys.modules if m.startswith("splat.handlers.")] == ["splat.ha
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_manifest_export_writes_file_and_sidecar(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "abc123")
+
+    result = runner.invoke(app, ["manifest", "export", "abc123", str(tmp_path / "out")])
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "out" / "abc123.png").read_bytes() == b"abc123"
+    assert (tmp_path / "out" / "abc123.png.manifest.json").exists()
+
+
+def test_manifest_export_unknown_id_exits_nonzero(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+
+    result = runner.invoke(app, ["manifest", "export", "nope", str(tmp_path / "out")])
+
+    assert result.exit_code == 1
+    assert not (tmp_path / "out").exists()

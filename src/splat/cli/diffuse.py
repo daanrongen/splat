@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
-from splat.cli._pipeline_io import prepare_output, report, resolve_inputs
+from splat.cli._pipeline_io import export_output, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.diffuse import DiffuseRequest
@@ -77,7 +77,7 @@ def diffuse(
         warn(result.license_warning)
 
     if output is not None:
-        output.write_bytes(result.asset.content_path.read_bytes())
+        export_output(result.asset, output, cache)
 
     report(
         [result.asset],
