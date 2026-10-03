@@ -228,6 +228,7 @@ def run_depth(
             field_of_view_deg=depth_map.field_of_view_deg,
             width=depth_map.depth.shape[1],
             height=depth_map.depth.shape[0],
+            units=depth_map.units,
             extra=depth_map.metadata,
         ),
         params=params,

@@ -113,3 +113,30 @@ def test_depth_stdin_ndjson_input(mocker, tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     line = json.loads(result.output.strip().splitlines()[-1])
     assert line["parent_ids"] == [asset.id]
+
+
+def test_depth_preview_shows_near_as_bright_for_metric_depth(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=FakeDepthBackend())
+    out_path = tmp_path / "depth.png"
+
+    runner.invoke(app, ["depth", str(_sample_image(tmp_path)), "-o", str(out_path)])
+
+    saved = read_rgb(out_path)[..., 0]
+    assert saved[0, 0] > saved[1, 2]  # FakeDepthBackend: smallest depth (nearest) is [0, 0]
+
+
+def test_depth_preview_shows_near_as_bright_for_disparity(mocker, tmp_path, monkeypatch):
+    class DisparityBackend(FakeDepthBackend):
+        def estimate(self, image_path, **params) -> DepthMap:
+            depth = np.arange(6, dtype=np.float32).reshape(2, 3)[::-1, ::-1].copy()
+            return DepthMap(depth=depth, units="disparity")
+
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.depth.get_depth_backend", return_value=DisparityBackend())
+    out_path = tmp_path / "depth.png"
+
+    runner.invoke(app, ["depth", str(_sample_image(tmp_path)), "-o", str(out_path)])
+
+    saved = read_rgb(out_path)[..., 0]
+    assert saved[0, 0] > saved[1, 2]  # nearest (highest disparity) is [0, 0]

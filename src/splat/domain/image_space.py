@@ -21,11 +21,13 @@ class Sticker:
 
 @dataclass
 class DepthMap:
-    """Per-pixel depth in meters, aligned to the source image's resolution."""
+    """Per-pixel depth aligned to the source image's resolution: metres, or
+    relative disparity (higher = closer) when `units == "disparity"`."""
 
-    depth: np.ndarray  # (H, W) float32, meters
+    depth: np.ndarray  # (H, W) float32
     focal_length_px: float | None = None
     field_of_view_deg: float | None = None
+    units: str = "metres"
     metadata: dict[str, object] = field(default_factory=dict)
 
 

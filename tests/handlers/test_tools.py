@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -51,3 +52,41 @@ def test_handle_rejects_non_depth_input(tmp_path: Path, monkeypatch):
 
     with pytest.raises(SplatDomainError, match="requires a depth map"):
         handle(DisplaceHeightRequest(inputs=[image_asset]))
+
+
+def test_handle_rejects_relative_disparity_depth(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    image_asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
+    np.save(tmp_path / "disparity.npy", np.full((4, 4), 2.0, dtype=np.float32))
+    disparity = cache.put(
+        "disparitykey",
+        kind=ManifestKind.DEPTH_MAP,
+        content_bytes=(tmp_path / "disparity.npy").read_bytes(),
+        ext="npy",
+        metadata=DepthMetadata(focal_length_px=50.0, units="disparity"),
+        parent_ids=[image_asset.id],
+        created_by="depth:depth-anything-v2-coreml",
+    )
+
+    with pytest.raises(SplatDomainError, match="relative disparity"):
+        handle(DisplaceHeightRequest(inputs=[disparity]))
+
+
+def test_legacy_relative_depth_manifest_reads_as_disparity(tmp_path: Path):
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    cache.put(
+        "legacykey",
+        kind=ManifestKind.DEPTH_MAP,
+        content_bytes=b"",
+        ext="npy",
+        metadata=DepthMetadata(extra={"relative": True}),
+        parent_ids=[],
+        created_by="depth:depth-anything-v2-coreml",
+    )
+    meta_path = tmp_path / "cache" / "legacykey.meta.json"
+    raw = json.loads(meta_path.read_text())
+    del raw["metadata"]["units"]
+    meta_path.write_text(json.dumps(raw))
+
+    assert cache.get("legacykey").metadata.units == "disparity"
