@@ -5,10 +5,10 @@ algorithm, license-clean independent of any reference repo; Open3D (MIT)
 provides a maintained CPU implementation.
 """
 
-import multiprocessing
+import json
+import subprocess
+import sys
 import tempfile
-from concurrent.futures import ProcessPoolExecutor
-from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import numpy as np
@@ -69,29 +69,36 @@ class PoissonMeshExporter:
         return len(mesh.vertices), len(mesh.triangles)
 
 
-def _export_in_child(
-    cloud_path: Path, out_path: Path, format: str, params: dict
-) -> tuple[int, int]:
-    from splat.adapters.formats.ply import PlyReader
-
-    return PoissonMeshExporter().export(
-        PlyReader().read(cloud_path), out_path, format=format, **params
-    )
-
-
 def poisson_mesh(cloud: GaussianCloud, *, format: str, **params) -> tuple[bytes, int, int]:
-    """Runs Poisson in a fresh process: Open3D's OpenMP segfaults when it shares
-    one with torch's (#85)."""
+    """Runs Poisson in a fresh interpreter: Open3D's OpenMP segfaults when it
+    shares a process with torch's (#85)."""
     from splat.adapters.formats.ply import PlyWriter
 
+    if format not in SUPPORTED_FORMATS:
+        raise UnsupportedFormat(f"poisson meshing supports {SUPPORTED_FORMATS}, got {format!r}")
     with tempfile.TemporaryDirectory() as tmp_dir:
         cloud_path, out_path = Path(tmp_dir) / "cloud.ply", Path(tmp_dir) / f"mesh.{format}"
         PlyWriter().write(cloud, cloud_path)
-        spawn = multiprocessing.get_context("spawn")
-        try:
-            with ProcessPoolExecutor(max_workers=1, mp_context=spawn) as pool:
-                job = pool.submit(_export_in_child, cloud_path, out_path, format, params)
-                vertices, faces = job.result()
-        except BrokenProcessPool as exc:
-            raise SplatDomainError("Poisson meshing crashed in its worker process.") from exc
+        args = [str(cloud_path), str(out_path), format, json.dumps(params)]
+        done = subprocess.run(
+            [sys.executable, "-m", __name__, *args], capture_output=True, text=True
+        )
+        counts_path = out_path.with_suffix(".json")
+        if done.returncode != 0 or not counts_path.exists():
+            detail = (done.stderr.strip().splitlines() or [f"exit {done.returncode}"])[-1]
+            raise SplatDomainError(f"Poisson meshing failed in its worker process: {detail}")
+        vertices, faces = json.loads(counts_path.read_text())
         return out_path.read_bytes(), vertices, faces
+
+
+if __name__ == "__main__":
+    from splat.adapters.formats.ply import PlyReader
+
+    cloud_arg, out_arg, format_arg, params_arg = sys.argv[1:]
+    counts = PoissonMeshExporter().export(
+        PlyReader().read(Path(cloud_arg)),
+        Path(out_arg),
+        format=format_arg,
+        **json.loads(params_arg),
+    )
+    Path(out_arg).with_suffix(".json").write_text(json.dumps(counts))
