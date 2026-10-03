@@ -88,6 +88,13 @@ def test_diffuse_rejects_image_to_image(mocker, tmp_path):
         )
 
 
+def test_diffuse_rejects_non_default_resolution(mocker, tmp_path):
+    backend = _make_backend(mocker, tmp_path)
+
+    with pytest.raises(SplatDomainError, match="fixed 512x512"):
+        backend.diffuse("a fox", output_path=tmp_path / "out.png", width=768)
+
+
 def test_load_only_downloads_once_per_process(mocker, tmp_path):
     backend = _make_backend(mocker, tmp_path)
     local_dir = backend._local_dir()

@@ -13,14 +13,30 @@ from splat.adapters.diffuse._vendor.mlx_stable_diffusion import (
     StableDiffusionXL,
 )
 from splat.adapters.formats.image import resize, write_png
+from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import ModelLicense
 
-_INIT_IMAGE_SIZE = (512, 512)
+_DEFAULT_SIZE = 512
 _DEFAULT_STRENGTH = 0.7
+# VAE downsamples 8x and the UNet 8x again, so dims must be multiples of 64
+_SIZE_MULTIPLE = 64
 
 
-def _encode_init_image(model: StableDiffusion, image: np.ndarray) -> mx.array:
-    resized = resize(image[..., :3], _INIT_IMAGE_SIZE)
+def _resolve_size(width: int | None, height: int | None) -> tuple[int, int]:
+    width = width if width is not None else _DEFAULT_SIZE
+    height = height if height is not None else _DEFAULT_SIZE
+    if width <= 0 or height <= 0 or width % _SIZE_MULTIPLE or height % _SIZE_MULTIPLE:
+        raise SplatDomainError(
+            f"--width/--height must be positive multiples of {_SIZE_MULTIPLE} "
+            f"(got {width}x{height})."
+        )
+    return width, height
+
+
+def _encode_init_image(
+    model: StableDiffusion, image: np.ndarray, size: tuple[int, int]
+) -> mx.array:
+    resized = resize(image[..., :3], size)  # cv2 size is (W, H)
     normalized = resized.astype(np.float32) / 127.5 - 1.0
     return mx.array(normalized, dtype=model.dtype)
 
@@ -59,16 +75,19 @@ class MLXStableDiffusionBackend:
         cfg_weight: float | None = None,
         image: np.ndarray | None = None,
         strength: float | None = None,
+        width: int | None = None,
+        height: int | None = None,
         **params,
     ) -> Path:
         model = self._load()
         default_steps = 2 if self._sdxl else 50
         default_cfg = 0.0 if self._sdxl else 7.5
         cfg_weight = cfg_weight if cfg_weight is not None else default_cfg
+        width, height = _resolve_size(width, height)
 
         if image is not None:
             latents_iter = model.generate_latents_from_image(
-                _encode_init_image(model, image),
+                _encode_init_image(model, image, (width, height)),
                 prompt,
                 n_images=1,
                 strength=strength if strength is not None else _DEFAULT_STRENGTH,
@@ -84,6 +103,7 @@ class MLXStableDiffusionBackend:
                 num_steps=steps or default_steps,
                 cfg_weight=cfg_weight,
                 negative_text=negative_prompt,
+                latent_size=(height // 8, width // 8),
                 seed=seed,
             )
 

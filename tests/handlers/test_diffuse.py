@@ -74,6 +74,17 @@ def test_handle_edits_an_input_image(mocker, tmp_path, monkeypatch):
     assert backend.last_call["strength"] == 0.4
 
 
+def test_handle_passes_width_and_height_to_backend(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    backend = FakeDiffusionBackend(MIT)
+    mocker.patch("splat.handlers.diffuse.get_diffusion_backend", return_value=backend)
+
+    handle(DiffuseRequest(prompt="a fox", model="fake-diffuser", width=768, height=640))
+
+    assert backend.last_call["width"] == 768
+    assert backend.last_call["height"] == 640
+
+
 def test_handle_rejects_non_image_input(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     mocker.patch(

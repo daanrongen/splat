@@ -16,6 +16,8 @@ class DiffuseRequest:
     steps: int | None = None
     seed: int | None = None
     strength: float | None = None
+    width: int | None = None
+    height: int | None = None
     device: str = "auto"
 
 
@@ -42,6 +44,8 @@ def handle(request: DiffuseRequest) -> DiffuseResult:
             "steps": request.steps,
             "seed": request.seed,
             "strength": request.strength,
+            "width": request.width,
+            "height": request.height,
         },
     )
     return DiffuseResult(asset=asset, license_warning=warning)

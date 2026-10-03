@@ -20,5 +20,7 @@ class DiffusionBackend(Protocol):
         seed: int | None = None,
         image: np.ndarray | None = None,
         strength: float | None = None,
+        width: int | None = None,
+        height: int | None = None,
         **params,
     ) -> Path: ...

@@ -15,6 +15,8 @@ def diffuse(
     steps: int | None = None,
     strength: float | None = None,
     seed: int | None = None,
+    width: int | None = None,
+    height: int | None = None,
     device: str = "auto",
 ) -> list[types.ContentBlock]:
     """Diffuse an image from a text prompt, or edit an existing image (image-to-image)
@@ -33,6 +35,8 @@ def diffuse(
             steps=steps,
             strength=strength,
             seed=seed,
+            width=width,
+            height=height,
             device=device,
         )
     )

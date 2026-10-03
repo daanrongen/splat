@@ -43,7 +43,7 @@ splat models rm sdxl-turbo-mlx
 splat diffuse "a small red toy robot, studio lighting" --model sdxl-turbo-mlx -o robot.png
 ```
 
-Key options: `--model sdxl-turbo-mlx|sd21-coreml`, `--negative`, `--steps`, `--seed`, `--device`, `-o/--output`.
+Key options: `--model sdxl-turbo-mlx|sd21-coreml`, `--negative`, `--steps`, `--seed`, `--width`/`--height` (default 512x512, must be multiples of 64), `--device`, `-o/--output`. `--width`/`--height` only take effect on `sdxl-turbo-mlx`; `sd21-coreml`'s CoreML model is compiled for a fixed 512x512 output and errors if given a different size.
 
 ### segment
 
