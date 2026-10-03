@@ -32,7 +32,7 @@ def export(
         None, "--target-count", help="Point count for --pruning blue-noise."
     ),
 ) -> None:
-    """Write an asset to a file (.ply/.splat/.sog for clouds), with a lineage sidecar."""
+    """Write an asset to a file in the format of its extension, with a lineage sidecar."""
     try:
         prepare_output(output)
         inputs = resolve_inputs(
