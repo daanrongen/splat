@@ -71,3 +71,13 @@ def report(assets: list[Manifest], human: Callable[[list[Manifest]], None]) -> N
             )
     else:
         human(assets)
+
+
+def prepare_output(path: Path | None) -> None:
+    """Create the parent directory up front so a bad -o fails before the compute."""
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise SplatDomainError(f"Cannot write to {path}: {exc.strerror}.") from exc

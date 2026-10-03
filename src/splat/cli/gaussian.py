@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error, warn
-from splat.cli._pipeline_io import is_piped, report, resolve_inputs
+from splat.cli._pipeline_io import is_piped, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.handlers.gaussian import GaussianRequest
@@ -126,6 +126,7 @@ def gaussian(
     """Reconstruct a Gaussian splat from images."""
     cache = get_manifest_repository()
     try:
+        prepare_output(output)
         assets: list[Manifest] = []
         for input_arg in inputs:
             assets.extend(resolve_inputs(input_arg, cache, default_kind=ManifestKind.IMAGE))

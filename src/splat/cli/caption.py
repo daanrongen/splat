@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error
-from splat.cli._pipeline_io import report, resolve_inputs
+from splat.cli._pipeline_io import prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.caption import DEFAULT_CAPTION_PROMPT, CaptionRequest
@@ -28,6 +28,7 @@ def caption(
     """Caption image(s) as UTF-8 text assets."""
     cache = get_manifest_repository()
     try:
+        prepare_output(output)
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         results = get_client().caption(
             CaptionRequest(
