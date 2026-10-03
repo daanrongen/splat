@@ -99,6 +99,7 @@ class FastVLMTransformersBackend:
             "attention_mask": attention_mask,
             "images": self._pixel_values(image_path),
             "max_new_tokens": max_tokens,
+            "eos_token_id": self._tokenizer.eos_token_id,  # <|im_end|>; generate otherwise runs on
         }
         if temperature > 0.0:
             generate_kwargs.update({"do_sample": True, "temperature": temperature})

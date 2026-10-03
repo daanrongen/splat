@@ -12,6 +12,8 @@ from tests.image_helpers import write_sample_png
 
 
 class FakeTokenizer:
+    eos_token_id = 151645
+
     @classmethod
     def from_pretrained(cls, repo_id, *, trust_remote_code):
         return cls(repo_id, trust_remote_code)
@@ -67,6 +69,7 @@ class FakeModel:
     def generate(self, **kwargs):
         assert kwargs["max_new_tokens"] == 12
         assert kwargs["do_sample"] is False
+        assert kwargs["eos_token_id"] == FakeTokenizer.eos_token_id  # stop at the chat-end token
         assert kwargs["images"].shape == (1, 3, 2, 2)
         input_ids = kwargs["inputs"]
         return torch.cat([input_ids, torch.tensor([[10, 11]], dtype=input_ids.dtype)], dim=1)
