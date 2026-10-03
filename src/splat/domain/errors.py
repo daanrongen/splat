@@ -32,3 +32,7 @@ class RenderBackendError(SplatDomainError):
 
 class ReconstructionBackendError(SplatDomainError):
     """A reconstruction backend's weights, device or input were unusable."""
+
+
+class ManifestHasChildren(SplatDomainError):
+    """A manifest other manifests derive from was asked to be deleted on its own."""

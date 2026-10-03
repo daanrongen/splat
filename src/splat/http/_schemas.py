@@ -36,6 +36,7 @@ class EmbedBody(BaseModel):
 class ManifestSummary(BaseModel):
     id: str
     kind: str
+    label: str
     created_by: str
     created_at: str
     content_size: int
@@ -47,6 +48,7 @@ class ManifestSummary(BaseModel):
         return cls(
             id=manifest.id,
             kind=manifest.kind.value,
+            label=manifest.label,
             created_by=manifest.created_by,
             created_at=manifest.created_at,
             content_size=manifest.content_size,

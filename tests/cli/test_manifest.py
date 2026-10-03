@@ -150,3 +150,53 @@ def test_manifest_export_unknown_id_exits_nonzero(tmp_path, monkeypatch):
 
     assert result.exit_code == 1
     assert not (tmp_path / "out").exists()
+
+
+def test_manifest_label_passes_piped_records_through(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "abc123")
+
+    result = runner.invoke(app, ["manifest", "label", "-", "robot"], input='{"id": "abc123"}\n')
+
+    assert result.exit_code == 0, result.output
+    assert '"id": "abc123"' in result.stdout
+    assert get_manifest_repository().get("abc123").label == "robot"
+
+
+def test_manifest_get_prints_the_lineage_tree(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "parent1")
+    get_manifest_repository().put(
+        "child1",
+        kind=ManifestKind.IMAGE,
+        content_bytes=b"child",
+        ext="png",
+        metadata=RasterMetadata(),
+        params={"factor": 2},
+        parent_ids=["parent1"],
+        created_by="upscale:realesrgan-mlx",
+    )
+
+    result = runner.invoke(app, ["manifest", "get", "child1"])
+
+    assert result.exit_code == 0, result.output
+    assert "parent1" in result.stdout
+    assert "BSD-3-Clause" in result.stdout
+
+
+def test_manifest_rm_refuses_without_cascade(tmp_path, monkeypatch):
+    _put_image(monkeypatch, tmp_path, "parent1")
+    get_manifest_repository().put(
+        "child1",
+        kind=ManifestKind.IMAGE,
+        content_bytes=b"child",
+        ext="png",
+        metadata=RasterMetadata(),
+        parent_ids=["parent1"],
+        created_by="test",
+    )
+
+    refused = runner.invoke(app, ["manifest", "rm", "parent1"])
+    cascaded = runner.invoke(app, ["manifest", "rm", "parent1", "--cascade"])
+
+    assert refused.exit_code == 1
+    assert cascaded.exit_code == 0
+    assert get_manifest_repository().list() == []

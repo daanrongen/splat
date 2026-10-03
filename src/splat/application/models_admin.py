@@ -33,6 +33,12 @@ def model_stage(name: str) -> str:
     return next((stage for stage, catalog in _CATALOGS if name in catalog), "-")
 
 
+def model_license(created_by: str) -> str:
+    """SPDX id of the catalogued model behind a `<stage>:<model>` created_by, or ''."""
+    descriptor = _all_catalogs().get(created_by.partition(":")[2])
+    return descriptor.license.spdx_id if descriptor else ""
+
+
 def model_source_label(descriptor: ModelDescriptor) -> str:
     return ", ".join(descriptor.hf_repo_ids) or "local runtime"
 
