@@ -134,11 +134,16 @@ class CoreMLStableDiffusionBackend:
         cfg_weight: float | None = None,
         image: np.ndarray | None = None,
         strength: float | None = None,
+        width: int | None = None,
+        height: int | None = None,
         **params,
     ) -> Path:
         if image is not None:
+            raise SplatDomainError("sd21-coreml does not support image-to-image (no VAE encoder).")
+        if (width is not None and width != 512) or (height is not None and height != 512):
             raise SplatDomainError(
-                "sd21-coreml does not support image-to-image (no VAE encoder)."
+                "sd21-coreml is compiled for a fixed 512x512 output and cannot honor "
+                "--width/--height; use --model sdxl-turbo-mlx for other resolutions."
             )
         self._load()
         steps = steps or 25

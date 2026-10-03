@@ -14,7 +14,6 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from splat.domain.errors import SplatDomainError
 from splat.mcp import caption as caption_tool
 from splat.mcp import depth as depth_tool
 from splat.mcp import diffuse, gaussian
@@ -35,14 +34,14 @@ server = MCPServer("splat", version="0.1.0")
 
 
 def _as_tool_error(fn: Callable[..., Any]) -> Callable[..., Any]:
-    """SplatDomainError -> ToolError, so a domain failure reaches the client
-    as a graceful is_error result rather than crashing the tool call."""
+    """Any exception -> ToolError, so a failure reaches the client with its
+    message as an is_error result rather than a bare 'Error executing tool'."""
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         try:
             return fn(*args, **kwargs)
-        except SplatDomainError as exc:
+        except Exception as exc:
             raise ToolError(str(exc)) from exc
 
     return wrapper

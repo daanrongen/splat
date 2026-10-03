@@ -29,6 +29,18 @@ def diffuse(
         help="Image-to-image noise strength 0-1 (higher = more change). Ignored for text-to-image.",
     ),
     seed: int | None = typer.Option(None, "--seed", envvar="SPLAT_DIFFUSE_SEED"),
+    width: int | None = typer.Option(
+        None,
+        "--width",
+        help="Output width in pixels (multiple of 64, default 512; MLX backend only).",
+        envvar="SPLAT_DIFFUSE_WIDTH",
+    ),
+    height: int | None = typer.Option(
+        None,
+        "--height",
+        help="Output height in pixels (multiple of 64, default 512; MLX backend only).",
+        envvar="SPLAT_DIFFUSE_HEIGHT",
+    ),
     device: str = typer.Option(
         "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_DIFFUSE_DEVICE"
     ),
@@ -51,6 +63,8 @@ def diffuse(
                 steps=steps,
                 strength=strength,
                 seed=seed,
+                width=width,
+                height=height,
                 device=device,
             )
         )

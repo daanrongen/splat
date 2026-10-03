@@ -17,6 +17,8 @@ def diffuse(
     steps: int | None = Form(None),
     strength: float | None = Form(None),
     seed: int | None = Form(None),
+    width: int | None = Form(None),
+    height: int | None = Form(None),
     device: str = Form("auto"),
 ) -> Response:
     inputs = []
@@ -34,6 +36,8 @@ def diffuse(
             steps=steps,
             strength=strength,
             seed=seed,
+            width=width,
+            height=height,
             device=device,
         )
     )
