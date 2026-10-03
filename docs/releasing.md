@@ -1,6 +1,6 @@
 # Releasing
 
-Releases are tag-driven. The tag must match `version` in `pyproject.toml`.
+Releases are tag-driven. Any `vX.Y.Z` tag works: the release workflow bumps `pyproject.toml` and `uv.lock` to match and commits that to `main` as `github-actions[bot]`, so there is nothing to bump by hand.
 
 ```sh
 git tag v0.1.0 && git push origin v0.1.0
@@ -10,10 +10,10 @@ git tag v0.1.0 && git push origin v0.1.0
 | --- | --- | --- |
 | `test.yml` | push, pull request | `uv sync --frozen`, `ruff check`, `ruff format --check`, `pytest` (same as `mise run check`) |
 | `build.yml` | push to `main` | `uv build`, uploads the sdist and wheel as an artifact |
-| `release.yml` | `v*.*.*` tag | checks the tag against `pyproject.toml`, runs test and build, creates the GitHub Release |
+| `release.yml` | `v*.*.*` tag | bumps the version on `main`, runs test and build from that commit, creates the GitHub Release with the sdist, wheel and a source archive |
 | `publish.yml` | `Release` succeeds, or manual dispatch with a tag | renders `Formula/splat.rb` and pushes it to the tap |
 
-The formula installs the tagged source with `uv sync --frozen` into a private venv, so it needs Apple Silicon macOS (mlx, CoreML).
+The formula installs the release's source archive with `uv sync --frozen` into a private venv, so it needs Apple Silicon macOS (mlx, CoreML).
 
 ## One-time setup
 
