@@ -5,22 +5,20 @@ shapes the CLI uses, minus Typer's argument parsing and console/exit-code
 error handling (domain errors raise directly). Every function here routes
 through `registry.wiring.get_client()`, exactly like the CLI, so setting
 `SPLAT_URL` redirects remote-capable calls transparently — the one exception
-is `render()`, which (like the CLI) always executes locally; see
-`ports/client.py`'s docstring for why.
+are `render()`, `mesh()` and `export()`, which (like the CLI) always execute
+locally; see `ports/client.py`'s docstring for why.
 """
 
 from pathlib import Path
 
-from splat.domain.gaussians import GaussianCloud
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.handlers.caption import DEFAULT_CAPTION_PROMPT, CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
+from splat.handlers.export import ExportResult
 from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
-from splat.handlers.tools.compress import CompressRequest
-from splat.handlers.tools.convert import ConvertRequest, ConvertResult
 from splat.handlers.upscale import UpscaleRequest
 from splat.ports.client import InfoSummary, ValidationSummary
 from splat.registry.wiring import get_client, get_manifest_repository
@@ -202,34 +200,43 @@ def render(
     )
 
 
-def tools_convert(
-    input_path: str | Path,
-    output_path: str | Path,
+def mesh(
+    inputs: ManifestLike | list[ManifestLike],
     *,
-    from_format: str | None = None,
-    to_format: str | None = None,
-) -> ConvertResult:
-    return get_client().tools_convert(
-        ConvertRequest(
-            input_path=Path(input_path),
-            output_path=Path(output_path),
-            from_format=from_format,
-            to_format=to_format,
+    model: str | None = None,
+    format: str = "glb",
+    depth: int = 8,
+    opacity_threshold: float = 0.1,
+) -> list[Manifest]:
+    from splat.handlers.mesh import MeshRequest
+    from splat.handlers.mesh import handle as handle_mesh
+
+    resolved = _resolve_all(inputs, default_kind=ManifestKind.GAUSSIAN_CLOUD)
+    return handle_mesh(
+        MeshRequest(
+            inputs=resolved,
+            model=model,
+            format=format,
+            depth=depth,
+            opacity_threshold=opacity_threshold,
         )
     )
 
 
-def tools_compress(
-    input_path: str | Path,
+def export(
+    input: ManifestLike,
     output_path: str | Path,
     *,
-    profile: str = "web-delivery",
+    profile: str | None = None,
     pruning: str = "threshold",
     target_count: int | None = None,
-) -> GaussianCloud:
-    return get_client().tools_compress(
-        CompressRequest(
-            input_path=Path(input_path),
+) -> ExportResult:
+    from splat.handlers.export import ExportRequest
+    from splat.handlers.export import handle as handle_export
+
+    return handle_export(
+        ExportRequest(
+            input=_resolve(input, default_kind=ManifestKind.GAUSSIAN_CLOUD),
             output_path=Path(output_path),
             profile=profile,
             pruning=pruning,

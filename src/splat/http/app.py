@@ -14,16 +14,17 @@ from splat.http import (
     depth,
     diffuse,
     embed,
+    export,
     gaussian,
     info,
     manifest,
+    mesh,
     models,
     render,
     segment,
     upscale,
     validate,
 )
-from splat.http.tools import compress, convert, declutter, extract_surface
 
 _ROUTERS = (
     diffuse,
@@ -34,10 +35,8 @@ _ROUTERS = (
     upscale,
     gaussian,
     render,
-    convert,
-    compress,
-    declutter,
-    extract_surface,
+    mesh,
+    export,
     info,
     validate,
     models,

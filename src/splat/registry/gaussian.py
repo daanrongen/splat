@@ -8,6 +8,17 @@ GAUSSIAN_CATALOG = {
         license=MIT,
         runtime="mlx",
         min_images=3,
+        params=(
+            "quality",
+            "poses",
+            "refine_poses",
+            "low_memory",
+            "seed",
+            "iters",
+            "max_dim",
+            "sh_degree",
+            "normalize_color",
+        ),
         notes=(
             "Local Apple Silicon backend using mlx3d's optimization-based capture "
             "pipeline; requires 3+ photos or frames."
@@ -21,6 +32,7 @@ GAUSSIAN_CATALOG = {
         runtime="torch",
         min_images=1,
         max_images=1,
+        params=("focal_35mm",),
         notes=(
             "Apple SHARP: single-image feed-forward 3DGS in one pass. Metric "
             "absolute scale, OpenCV/COLMAP convention. Research use only."

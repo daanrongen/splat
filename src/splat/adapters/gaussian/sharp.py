@@ -188,6 +188,13 @@ class SharpBackend:
             float(height),
         ]
         cloud.metadata.capture_camera_count = 1
+        cloud.metadata.source_cameras = [
+            {
+                "position": cloud.metadata.capture_camera_position,
+                "rotation": cloud.metadata.capture_camera_rotation,
+                "intrinsics": cloud.metadata.capture_camera_intrinsics,
+            }
+        ]
         return cloud
 
     @staticmethod

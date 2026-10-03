@@ -18,7 +18,8 @@ runner = CliRunner()
 def test_help() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "tools" in result.output
+    assert "mesh" in result.output
+    assert "export" in result.output
     assert "caption" in result.output
     assert "upscale" in result.output
 
@@ -37,32 +38,9 @@ def test_piped_asset_resolution_ignores_non_json_chatter(tmp_path: Path, monkeyp
     assert resolve_inputs("-", cache) == [asset]
 
 
-def test_convert_and_compress_are_not_top_level_commands() -> None:
-    convert = runner.invoke(app, ["convert", "--help"])
-    compress = runner.invoke(app, ["compress", "--help"])
-
-    assert convert.exit_code == 2
-    assert compress.exit_code == 2
-
-
-def test_tools_help_lists_deterministic_transforms() -> None:
-    result = runner.invoke(app, ["tools", "--help"])
-
-    assert result.exit_code == 0
-    assert "convert" in result.output
-    assert "compress" in result.output
-    assert "displace.height" in result.output
-
-
-def test_convert_ply_to_splat(tmp_path: Path, synthetic_cloud) -> None:
-    ply_path = tmp_path / "in.ply"
-    PlyWriter().write(synthetic_cloud, ply_path)
-    out_path = tmp_path / "out.splat"
-
-    result = runner.invoke(app, ["tools", "convert", str(ply_path), str(out_path)])
-
-    assert result.exit_code == 0, result.output
-    assert out_path.exists()
+def test_convert_compress_and_tools_are_not_commands() -> None:
+    for name in ("convert", "compress", "tools"):
+        assert runner.invoke(app, [name, "--help"]).exit_code == 2
 
 
 def test_info(tmp_path: Path, synthetic_cloud) -> None:
@@ -101,19 +79,6 @@ def test_validate(tmp_path: Path, synthetic_cloud) -> None:
     result = runner.invoke(app, ["validate", str(ply_path), "--strict"])
 
     assert result.exit_code == 0, result.output
-
-
-def test_compress(tmp_path: Path, synthetic_cloud) -> None:
-    ply_path = tmp_path / "in.ply"
-    PlyWriter().write(synthetic_cloud, ply_path)
-    out_path = tmp_path / "out.ply"
-
-    result = runner.invoke(
-        app, ["tools", "compress", str(ply_path), str(out_path), "--profile", "archival"]
-    )
-
-    assert result.exit_code == 0, result.output
-    assert out_path.exists()
 
 
 def test_gaussian_unknown_model_errors(tmp_path: Path) -> None:

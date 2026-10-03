@@ -19,6 +19,7 @@ def render(
     distance: float | None = None,
     fov: float | None = None,
     look_at: str | None = None,
+    view: int | None = None,
 ) -> list[types.ContentBlock]:
     """Render a Gaussian splat (path or @<asset-id>) to a PNG and return the image."""
     cache = get_manifest_repository()
@@ -35,6 +36,7 @@ def render(
         distance=distance,
         fov=fov,
         look_at=look_at,
+        view=view,
     )
     result = handle(request)[0]
     return [text_content(f"asset id: {result.id}"), image_content(result)]
