@@ -68,6 +68,7 @@ class Manifest:
     content_size: int = 0  # bytes, of content_path
     content_sha256: str = ""
     created_at: str = ""  # ISO 8601 UTC, set once at first `put`
+    label: str = ""  # user-given name, never part of the cache key
 
     @classmethod
     def load(cls, id: str) -> Manifest:

@@ -20,6 +20,8 @@ class ModelDescriptor:
     dimension: int | None = None
     normalized: bool | None = None
     notes: str = ""
+    # Stage options this backend reads; the rest stay out of its cache key.
+    params: tuple[str, ...] = ()
     backend_kwargs: dict[str, Any] = field(default_factory=dict)
 
     @property

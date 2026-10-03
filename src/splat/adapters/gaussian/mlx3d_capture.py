@@ -119,11 +119,11 @@ class MLX3DCaptureBackend:
     def _attach_camera_pose(
         cloud: GaussianCloud, summary: dict, output_dir: Path, load_colmap
     ) -> None:
-        """Reads the SfM sparse model `run_capture` already wrote and stashes one real
-        camera pose on the cloud's metadata (in the same COLMAP world frame as `means` -
-        composes with zero conversion) instead of letting it disappear with the temp dir.
-        Prefers the pose-refined sparse model when refinement ran, since that's the one
-        consistent with the trained Gaussians.
+        """Reads the SfM sparse model `run_capture` already wrote and keeps every
+        registered camera on the cloud's metadata (in the same COLMAP world frame as
+        `means` - composes with zero conversion) instead of letting them disappear
+        with the temp dir. Prefers the pose-refined sparse model when refinement ran,
+        since that's the one consistent with the trained Gaussians.
         """
         refined_sparse = summary.get("train", {}).get("refined_sparse")
         colmap_root = Path(refined_sparse).parent.parent if refined_sparse else output_dir
@@ -133,15 +133,23 @@ class MLX3DCaptureBackend:
             return
         if not colmap.cameras:
             return
-        cam = colmap.cameras[0]
-        cloud.metadata.capture_camera_position = cam.camera_center.tolist()
-        cloud.metadata.capture_camera_rotation = cam.R.tolist()
-        cloud.metadata.capture_camera_intrinsics = [
-            float(cam.fx),
-            float(cam.fy),
-            float(cam.cx),
-            float(cam.cy),
-            float(cam.width),
-            float(cam.height),
+        cameras = [
+            {
+                "position": cam.camera_center.tolist(),
+                "rotation": cam.R.tolist(),
+                "intrinsics": [
+                    float(cam.fx),
+                    float(cam.fy),
+                    float(cam.cx),
+                    float(cam.cy),
+                    float(cam.width),
+                    float(cam.height),
+                ],
+            }
+            for cam in colmap.cameras
         ]
+        cloud.metadata.source_cameras = cameras
+        cloud.metadata.capture_camera_position = cameras[0]["position"]
+        cloud.metadata.capture_camera_rotation = cameras[0]["rotation"]
+        cloud.metadata.capture_camera_intrinsics = cameras[0]["intrinsics"]
         cloud.metadata.capture_camera_count = len(colmap.cameras)

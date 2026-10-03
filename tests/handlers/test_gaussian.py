@@ -175,3 +175,42 @@ def test_declutter_drops_an_isolated_floater(mocker, tmp_path, monkeypatch, synt
 
     assert cleaned.metadata.point_count == kept.metadata.point_count - 1
     assert cleaned.params["declutter"] is True
+
+
+def test_sharp_cache_key_ignores_device_and_other_models_flags(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    backend = FakeReconstructionBackend(synthetic_cloud)
+    mocker.patch("splat.handlers.gaussian.get_reconstruction_backend", return_value=backend)
+    image = get_manifest_repository().put_external(
+        write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE
+    )
+
+    first = handle(GaussianRequest(inputs=[image], model="sharp", device="cpu"))[0]
+    second = handle(
+        GaussianRequest(inputs=[image], model="sharp", device="mps", quality="high", seed=7)
+    )[0]
+
+    assert first.id == second.id
+    assert set(first.params) == {"device", "focal_35mm", "model"}
+
+
+def test_declutter_survives_the_per_model_param_filter(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    mocker.patch(
+        "splat.handlers.gaussian.get_reconstruction_backend",
+        return_value=FakeReconstructionBackend(synthetic_cloud),
+    )
+    image = get_manifest_repository().put_external(
+        write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE
+    )
+
+    result = handle(GaussianRequest(inputs=[image], model="sharp", declutter=True))[0]
+
+    assert result.params["declutter"] is True
+    assert "normalize_color" not in result.params

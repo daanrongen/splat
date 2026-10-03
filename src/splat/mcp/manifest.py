@@ -8,6 +8,7 @@ def _to_dict(manifest: Manifest) -> dict:
     return {
         "id": manifest.id,
         "kind": manifest.kind.value,
+        "label": manifest.label,
         "created_by": manifest.created_by,
         "created_at": manifest.created_at,
         "content_size": manifest.content_size,
@@ -30,11 +31,17 @@ def list_manifests(
 
 
 def get(manifest_id: str) -> dict:
-    """Get one cached manifest by id, with full typed metadata and stage params."""
-    return _to_dict(manifest_handler.get(manifest_id))
+    """Get one cached manifest by id, with full typed metadata, stage params and children."""
+    children = [child.id for child in manifest_handler.children(manifest_id)]
+    return {**_to_dict(manifest_handler.get(manifest_id)), "children": children}
 
 
-def delete(manifest_id: str) -> dict:
-    """Delete a cached manifest's content and metadata from the local cache."""
-    manifest_handler.delete(manifest_id)
+def delete(manifest_id: str, cascade: bool = False) -> dict:
+    """Delete a cached manifest; refuses if others derive from it unless cascade."""
+    manifest_handler.delete(manifest_id, cascade=cascade)
     return {"removed": manifest_id}
+
+
+def label(manifest_id: str, text: str) -> dict:
+    """Name a cached manifest so it is easy to find again; '' clears the label."""
+    return _to_dict(manifest_handler.label(manifest_id, text))

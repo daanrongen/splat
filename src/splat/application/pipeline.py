@@ -26,7 +26,12 @@ from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
-from splat.domain.gaussians import GaussianCloud, normalize_gaussian_cloud, to_convention
+from splat.domain.gaussians import (
+    GaussianCloud,
+    normalize_gaussian_cloud,
+    to_convention,
+    with_view,
+)
 from splat.domain.image_space import Shape3D
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
@@ -53,6 +58,8 @@ from splat.registry.wiring import get_reader
 def compute_cache_key(
     *, stage: str, model: str, params: dict, parent_ids: tuple[str, ...] = ()
 ) -> str:
+    # Where a stage runs doesn't change what it produces.
+    params = {k: v for k, v in params.items() if k != "device"}
     payload = json.dumps(
         {"stage": stage, "model": model, "params": params, "parents": sorted(parent_ids)},
         sort_keys=True,
@@ -456,9 +463,12 @@ def run_render(
     # manifest, so `splat render scene.sog` has to work as well as `splat info`
     # already does on the same file.
     cloud = get_reader(input_asset.content_path.suffix).read(input_asset.content_path)
+    render_params = {k: v for k, v in params.items() if k != "view"}
+    if params.get("view") is not None:
+        cloud = with_view(cloud, params["view"])
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir) / "render.png"
-        RenderUseCase(backend).execute(cloud, tmp_path, on_progress=on_progress, **params)
+        RenderUseCase(backend).execute(cloud, tmp_path, on_progress=on_progress, **render_params)
         content_bytes = tmp_path.read_bytes()
 
     output = decode_rgb_or_rgba(content_bytes)

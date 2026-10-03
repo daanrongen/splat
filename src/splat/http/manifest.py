@@ -22,6 +22,6 @@ def get_manifest(manifest_id: str) -> ManifestDetail:
 
 
 @router.delete("/manifests/{manifest_id}")
-def delete_manifest(manifest_id: str) -> dict:
-    manifest_handler.delete(manifest_id)
+def delete_manifest(manifest_id: str, cascade: bool = False) -> dict:
+    manifest_handler.delete(manifest_id, cascade=cascade)
     return {"removed": manifest_id}

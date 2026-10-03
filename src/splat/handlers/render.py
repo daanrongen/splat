@@ -22,6 +22,7 @@ class RenderRequest:
     distance: float | None = None
     fov: float | None = None
     look_at: str | None = None
+    view: int | None = None
 
 
 def handle(
@@ -42,6 +43,8 @@ def handle(
         "fov": request.fov,
         "look_at": request.look_at,
     }
+    if request.view is not None:
+        params["view"] = request.view
     return [
         run_render(
             backend,

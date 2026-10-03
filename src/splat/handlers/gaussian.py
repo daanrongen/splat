@@ -159,6 +159,9 @@ def handle(
         params["max_dim"] = request.max_dim
     if request.sh_degree is not None:
         params["sh_degree"] = request.sh_degree
+    if descriptor is not None:
+        stage_wide = ("device", "declutter")
+        params = {k: v for k, v in params.items() if k in stage_wide or k in descriptor.params}
 
     cloud = run_gaussian(
         backend,

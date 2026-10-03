@@ -62,6 +62,7 @@ server.add_tool(_as_tool_error(models_tool.rm), name="models_rm")
 server.add_tool(_as_tool_error(manifest_tool.list_manifests), name="manifest_list")
 server.add_tool(_as_tool_error(manifest_tool.get), name="manifest_get")
 server.add_tool(_as_tool_error(manifest_tool.delete), name="manifest_delete")
+server.add_tool(_as_tool_error(manifest_tool.label), name="manifest_label")
 
 
 def run_stdio() -> None:

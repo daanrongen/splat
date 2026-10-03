@@ -21,6 +21,7 @@ def render(
     distance: float | None = Form(None),
     fov: float | None = Form(None),
     look_at: str | None = Form(None),
+    view: int | None = Form(None),
 ) -> Response:
     cache = get_manifest_repository()
     with saved_upload(cloud) as path:
@@ -37,6 +38,7 @@ def render(
         distance=distance,
         fov=fov,
         look_at=look_at,
+        view=view,
     )
     result = handle(request)[0]
     return Response(
