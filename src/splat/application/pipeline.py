@@ -460,7 +460,7 @@ def run_render(
         return hit
 
     # Via the registry, not PlyReader: RENDER_CONTRACT accepts any splat_3d
-    # manifest, so `splat render scene.sog` has to work as well as `splat info`
+    # manifest, so `splat render scene.spz` has to work as well as `splat info`
     # already does on the same file.
     cloud = get_reader(input_asset.content_path.suffix).read(input_asset.content_path)
     render_params = {k: v for k, v in params.items() if k != "view"}
