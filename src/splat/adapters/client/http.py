@@ -339,6 +339,9 @@ class RemoteSplatClient:
             form["max_dim"] = request.max_dim
         if request.sh_degree is not None:
             form["sh_degree"] = request.sh_degree
+        if request.orbit_frames is not None:
+            form["orbit_frames"] = request.orbit_frames
+            form["orbit_degrees"] = request.orbit_degrees
         response = self._client.post("/gaussian", files=files, data=form)
         _raise_for_domain_error(response)
         with tempfile.TemporaryDirectory() as tmp_dir:

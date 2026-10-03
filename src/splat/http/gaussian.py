@@ -25,6 +25,8 @@ def gaussian(
     refine_poses: str = Form("auto"),
     low_memory: bool = Form(False),
     seed: int = Form(0),
+    orbit_frames: int | None = Form(None),
+    orbit_degrees: float = Form(30.0),
 ) -> Response:
     cache = get_manifest_repository()
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -50,6 +52,8 @@ def gaussian(
                 refine_poses=refine_poses,
                 low_memory=low_memory,
                 seed=seed,
+                orbit_frames=orbit_frames,
+                orbit_degrees=orbit_degrees,
             )
         )[0]
         cloud = get_reader(result.content_path.suffix).read(result.content_path)
