@@ -212,3 +212,10 @@ def test_models_prune_reports_clean_cache(mocker):
 
     assert result.exit_code == 0, result.output
     assert "nothing to prune" in result.output
+
+
+def test_version_flag_prints_the_package_version():
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.output.strip().count(".") == 2
