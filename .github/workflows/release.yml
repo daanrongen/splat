@@ -76,7 +76,7 @@ jobs:
       - name: Source archive for the Homebrew formula
         run: |
           version="${GITHUB_REF_NAME#v}"
-          git archive --prefix="splat-$version/" -o "dist/splat-$version.tar.gz" HEAD
+          git archive --prefix="splat-$version/" -o "dist/splat-$version-src.tar.gz" HEAD
 
       - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --target "${{ needs.bump.outputs.sha }}"
         env:
