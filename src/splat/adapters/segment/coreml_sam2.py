@@ -16,6 +16,7 @@ from pathlib import Path
 import coremltools as ct
 import numpy as np
 from huggingface_hub import snapshot_download
+from PIL import Image
 
 from splat.adapters.formats.image import read_rgb, resize
 from splat.domain.image_space import Sticker
@@ -127,7 +128,8 @@ class CoreMLSam2Backend:
         original_size = (original.shape[1], original.shape[0])
         resized = resize(original, _INPUT_SIZE)
 
-        embeddings = self._image_encoder.predict({"image": resized})
+        # CoreML imageType inputs must be PIL images, not arrays
+        embeddings = self._image_encoder.predict({"image": Image.fromarray(resized)})
 
         grid = _build_point_grid(points_per_side, original_size[0], original_size[1])
         scale = np.array([_INPUT_SIZE[0] / original_size[0], _INPUT_SIZE[1] / original_size[1]])
