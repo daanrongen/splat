@@ -145,8 +145,10 @@ class MLX3DCaptureBackend:
                     float(cam.width),
                     float(cam.height),
                 ],
+                # Inputs are staged as 000.png, 001.png, ... in order.
+                "input": int(Path(name).stem),
             }
-            for cam in colmap.cameras
+            for cam, name in zip(colmap.cameras, colmap.image_names, strict=True)
         ]
         cloud.metadata.source_cameras = cameras
         cloud.metadata.capture_camera_position = cameras[0]["position"]

@@ -193,6 +193,7 @@ class SharpBackend:
                 "position": cloud.metadata.capture_camera_position,
                 "rotation": cloud.metadata.capture_camera_rotation,
                 "intrinsics": cloud.metadata.capture_camera_intrinsics,
+                "input": 0,
             }
         ]
         return cloud

@@ -1,8 +1,9 @@
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
+from splat.adapters.formats.image import read_rgb, resize
 from splat.application.pipeline import run_gaussian, run_render
 from splat.domain.contracts import Requirement, StageContract, validate_inputs
 from splat.domain.errors import SplatDomainError
@@ -61,6 +62,52 @@ class GaussianRequest:
     normalize_color: bool = True
     orbit_frames: int | None = None
     orbit_degrees: float = 30.0
+    score: bool = False
+
+
+_RENDER_DEFAULTS = {
+    "samples": 32,
+    "engine": "cycles",
+    "background": "black",
+    "elevation": None,
+    "distance": None,
+    "fov": None,
+    "look_at": None,
+}
+
+
+def score(cloud_asset: Manifest, inputs: list[Manifest]) -> Manifest:
+    """Renders source view 0 and records PSNR and SSIM against the photo it was
+    taken from in the cloud's `quality`; the render is cached as its child."""
+    from splat.domain.quality import image_scores
+
+    camera = (cloud_asset.metadata.source_cameras or [None])[0]
+    if camera is None:
+        raise SplatDomainError(f"{cloud_asset.id} has no source camera to score against.")
+    width, height = (int(v) for v in camera["intrinsics"][4:6])
+    cache = get_manifest_repository()
+    render = run_render(
+        get_render_backend(),
+        cache,
+        model_name="blender",
+        input_asset=cloud_asset,
+        params={**_RENDER_DEFAULTS, "width": width, "height": height, "azimuth": None, "view": 0},
+    )
+    reference = resize(read_rgb(inputs[camera.get("input", 0)].content_path), (width, height))
+    quality = {
+        **(cloud_asset.metadata.quality or {}),
+        **image_scores(read_rgb(render.content_path), reference),
+    }
+    return cache.put(
+        cloud_asset.id,
+        kind=cloud_asset.kind,
+        content_bytes=cloud_asset.content_path.read_bytes(),
+        ext=cloud_asset.content_path.suffix,
+        metadata=replace(cloud_asset.metadata, quality=quality),
+        params=cloud_asset.params,
+        parent_ids=cloud_asset.parent_ids,
+        created_by=cloud_asset.created_by,
+    )
 
 
 def _render_orbit(
@@ -82,18 +129,7 @@ def _render_orbit(
             cache,
             model_name="blender",
             input_asset=cloud_asset,
-            params={
-                "width": 1280,
-                "height": 720,
-                "samples": 32,
-                "engine": "cycles",
-                "background": "black",
-                "azimuth": float(azimuth),
-                "elevation": None,
-                "distance": None,
-                "fov": None,
-                "look_at": None,
-            },
+            params={**_RENDER_DEFAULTS, "width": 1280, "height": 720, "azimuth": float(azimuth)},
         )
         for azimuth in offsets
     ]
@@ -171,6 +207,8 @@ def handle(
         params=params,
         on_progress=on_progress,
     )
+    if request.score and "psnr" not in (cloud.metadata.quality or {}):
+        cloud = score(cloud, request.inputs)
     results = [cloud]
     if request.orbit_frames is not None:
         results.extend(

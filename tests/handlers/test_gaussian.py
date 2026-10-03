@@ -214,3 +214,38 @@ def test_declutter_survives_the_per_model_param_filter(
 
     assert result.params["declutter"] is True
     assert "normalize_color" not in result.params
+
+
+def test_score_records_psnr_against_the_cameras_own_input(
+    mocker, tmp_path, monkeypatch, synthetic_cloud
+):
+    from splat.adapters.formats.image import write_png
+
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    synthetic_cloud.metadata.source_cameras = [
+        {"position": [0, 0, 0], "rotation": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+         "intrinsics": [2, 2, 1, 1, 2, 2], "input": 1}
+    ]  # fmt: skip
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    mocker.patch(
+        "splat.handlers.gaussian.get_reconstruction_backend",
+        return_value=FakeReconstructionBackend(synthetic_cloud),
+    )
+    render_backend = FakeRenderBackend()
+    mocker.patch("splat.handlers.gaussian.get_render_backend", return_value=render_backend)
+    cache = get_manifest_repository()
+    black = cache.put_external(
+        write_sample_png(tmp_path / "a.png", (2, 2)), kind=ManifestKind.IMAGE
+    )
+    white_path = tmp_path / "b.png"
+    write_png(white_path, sample_rgb((2, 2), (255, 255, 255)))
+    white = cache.put_external(white_path, kind=ManifestKind.IMAGE)
+
+    cloud = handle(GaussianRequest(inputs=[black, white], model="fake-recon", score=True))[0]
+
+    # The fake renders black, so only the white input (camera 1's) scores 0 dB.
+    assert cloud.metadata.quality["psnr"] == 0.0
+    assert "needle_ratio" in cloud.metadata.quality
+    assert render_backend.calls[0]["width"] == 2
+    assert cache.get(cloud.id).metadata.quality["psnr"] == 0.0
+    assert cache.children(cloud.id)[0].kind == ManifestKind.IMAGE

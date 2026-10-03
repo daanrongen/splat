@@ -327,6 +327,7 @@ class RemoteSplatClient:
             "seed": request.seed,
             "declutter": request.declutter,
             "normalize_color": request.normalize_color,
+            "score": request.score,
         }
         if request.iters is not None:
             form["iters"] = request.iters

@@ -42,8 +42,9 @@ class GaussianCloudMetadata:
     capture_camera_rotation: list[list[float]] | None = None  # (3,3) world-to-camera, COLMAP/OpenCV
     capture_camera_intrinsics: list[float] | None = None  # [fx, fy, cx, cy, width, height]
     capture_camera_count: int | None = None  # total cameras the reconstruction backend registered
-    # Every registered camera as {position, rotation, intrinsics}, same conventions as above.
+    # Every registered camera as {position, rotation, intrinsics, input}, same conventions as above.
     source_cameras: list[dict] | None = None
+    quality: dict | None = None  # see domain/quality.py
 
 
 @dataclass
