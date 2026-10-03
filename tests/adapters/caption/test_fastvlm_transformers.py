@@ -3,7 +3,10 @@ import types
 
 import torch
 
-from splat.adapters.caption.fastvlm_transformers import FastVLMTransformersBackend
+from splat.adapters.caption.fastvlm_transformers import (
+    FastVLMTransformersBackend,
+    _clean_caption,
+)
 from splat.domain.value_objects import APPLE_AMLR
 from tests.image_helpers import write_sample_png
 
@@ -88,3 +91,13 @@ def test_fastvlm_transformers_backend_generates_caption(monkeypatch, tmp_path):
     )
 
     assert result == "A small scene."
+
+
+def test_clean_caption_drops_chat_template_scaffolding():
+    raw = "A red robot toy.\n<end of detailed answer>\nAnswer: A red robot toy.\nAnswer: A"
+
+    assert _clean_caption(raw) == "A red robot toy."
+
+
+def test_clean_caption_strips_leading_answer_prefix():
+    assert _clean_caption("Answer: A fox.") == "A fox."
