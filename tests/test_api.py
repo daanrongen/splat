@@ -177,3 +177,19 @@ def test_info_and_validate_delegate(fake_client, tmp_path):
     assert splat.validate(tmp_path / "a.ply", strict=True) == "validate-result"
     assert fake_client.calls[0] == ("info", tmp_path / "a.ply")
     assert fake_client.calls[1] == ("validate", (tmp_path / "a.ply", True))
+
+
+@pytest.mark.parametrize(
+    "stage",
+    ["diffuse", "caption", "embed", "segment", "depth", "upscale", "gaussian", "render", "mesh"],
+)
+def test_sdk_exposes_every_request_option(stage):
+    import dataclasses
+    import importlib
+    import inspect
+
+    handler = importlib.import_module(f"splat.handlers.{stage}")
+    request = getattr(handler, f"{stage.capitalize()}Request")
+    options = {f.name for f in dataclasses.fields(request)} - {"inputs"}
+
+    assert options <= set(inspect.signature(getattr(splat, stage)).parameters)

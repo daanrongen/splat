@@ -52,6 +52,8 @@ def diffuse(
     steps: int | None = None,
     strength: float | None = None,
     seed: int | None = None,
+    width: int | None = None,
+    height: int | None = None,
     device: str = "auto",
 ) -> DiffuseResult:
     return get_client().diffuse(
@@ -63,6 +65,8 @@ def diffuse(
             steps=steps,
             strength=strength,
             seed=seed,
+            width=width,
+            height=height,
             device=device,
         )
     )
@@ -145,6 +149,11 @@ def gaussian(
     refine_poses: str = "auto",
     low_memory: bool = False,
     seed: int = 0,
+    focal_35mm: float = 30.0,
+    declutter: bool = False,
+    normalize_color: bool = True,
+    orbit_frames: int | None = None,
+    orbit_degrees: float = 30.0,
     score: bool = False,
 ) -> list[Manifest]:
     return get_client().gaussian(
@@ -160,6 +169,11 @@ def gaussian(
             refine_poses=refine_poses,
             low_memory=low_memory,
             seed=seed,
+            focal_35mm=focal_35mm,
+            declutter=declutter,
+            normalize_color=normalize_color,
+            orbit_frames=orbit_frames,
+            orbit_degrees=orbit_degrees,
             score=score,
         )
     )
@@ -179,6 +193,7 @@ def render(
     distance: float | None = None,
     fov: float | None = None,
     look_at: str | None = None,
+    view: int | None = None,
 ) -> list[Manifest]:
     from splat.handlers.render import RenderRequest
     from splat.handlers.render import handle as handle_render
@@ -198,6 +213,7 @@ def render(
             distance=distance,
             fov=fov,
             look_at=look_at,
+            view=view,
         )
     )
 
