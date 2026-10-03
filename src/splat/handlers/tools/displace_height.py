@@ -29,6 +29,11 @@ def _displace_height_one(
             "displace.height requires a depth map - pipe through `splat depth` first, "
             "e.g. `splat depth image.png | splat tools displace.height -o out.glb`."
         )
+    if asset.metadata.units != "metres":
+        raise SplatDomainError(
+            f"displace.height requires metric depth in metres, but {asset.id} is relative "
+            f"{asset.metadata.units} ({asset.created_by}); use a metric model such as depth-pro."
+        )
     if not asset.parent_ids:
         raise SplatDomainError(
             f"Depth asset {asset.id} has no source image to texture the mesh with."

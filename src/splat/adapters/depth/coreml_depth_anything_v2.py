@@ -71,9 +71,6 @@ class CoreMLDepthAnythingV2Backend:
             depth=depth,
             focal_length_px=None,
             field_of_view_deg=None,
-            metadata={
-                "source_model": self._hf_repo_id,
-                "relative": True,
-                "convention": "disparity (higher value = closer)",
-            },
+            units="disparity",
+            metadata={"source_model": self._hf_repo_id},
         )

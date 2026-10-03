@@ -17,7 +17,7 @@ def depth(
         ..., help="Image path, @<asset-id>, or '-' to read piped asset records."
     ),
     output: Path | None = typer.Option(
-        None, "-o", "--output", help="Render a viewable (normalized) depth PNG here."
+        None, "-o", "--output", help="Render a viewable depth PNG here (near = bright)."
     ),
     model: str = typer.Option("depth-pro", "--model", envvar="SPLAT_DEPTH_MODEL"),
     device: str = typer.Option(
@@ -37,6 +37,8 @@ def depth(
         depth_array = np.load(results[0].content_path)
         span = max(float(depth_array.max() - depth_array.min()), 1e-6)
         normalized = (depth_array - depth_array.min()) / span
+        if results[0].metadata.units == "metres":
+            normalized = 1.0 - normalized  # near = bright, matching disparity maps
         write_png(output, (normalized * 255).astype(np.uint8))
 
     def _human(assets: list) -> None:

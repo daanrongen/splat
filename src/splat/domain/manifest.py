@@ -40,7 +40,7 @@ KIND_TAGS: dict[ManifestKind, frozenset[str]] = {
     ManifestKind.STICKER: frozenset({"raster", "rgba", "colorlike"}),
     ManifestKind.CAPTION: frozenset({"text"}),
     ManifestKind.EMBEDDING: frozenset({"vector"}),
-    ManifestKind.DEPTH_MAP: frozenset({"raster", "single_channel", "metric"}),
+    ManifestKind.DEPTH_MAP: frozenset({"raster", "single_channel"}),
     ManifestKind.SHAPE_3D: frozenset({"mesh_3d"}),
     ManifestKind.GAUSSIAN_CLOUD: frozenset({"splat_3d"}),
     ManifestKind.FAN_OUT: frozenset(),

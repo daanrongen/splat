@@ -63,7 +63,7 @@ def test_estimate_returns_relative_depth_map(mocker, tmp_path):
     assert result.depth.dtype == np.float32
     assert result.focal_length_px is None
     assert result.field_of_view_deg is None
-    assert result.metadata["relative"] is True
+    assert result.units == "disparity"
     assert result.metadata["source_model"] == "apple/coreml-depth-anything-v2-small"
     assert models[0].compute_units == ct.ComputeUnit.CPU_ONLY
 

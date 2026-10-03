@@ -65,6 +65,7 @@ class DepthMetadata:
     field_of_view_deg: float | None = None
     width: int | None = None
     height: int | None = None
+    units: str = "metres"  # "metres" (near = low) or "disparity" (near = high, relative)
     extra: dict = field(default_factory=dict)
 
 
@@ -102,6 +103,8 @@ def metadata_to_dict(metadata: ManifestMetadata) -> dict:
 
 def metadata_from_dict(kind: ManifestKind, data: dict) -> ManifestMetadata:
     cls = KIND_METADATA_CLS[kind]
+    if cls is DepthMetadata and "units" not in data and data.get("extra", {}).get("relative"):
+        data = {**data, "units": "disparity"}  # maps cached before `units` existed
     if cls is GaussianCloudMetadata and data.get("license") is not None:
         data = {**data, "license": ModelLicense(**data["license"])}
     return cls(**data)
