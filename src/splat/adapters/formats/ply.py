@@ -19,9 +19,9 @@ import json
 from pathlib import Path
 
 import numpy as np
-from plyfile import PlyData, PlyElement
+from plyfile import PlyData, PlyElement, PlyParseError
 
-from splat.domain.errors import UnsupportedSHDegree
+from splat.domain.errors import InvalidGaussianCloud, UnsupportedSHDegree
 from splat.domain.gaussians import (
     MAX_SH_DEGREE,
     GaussianCloud,
@@ -41,8 +41,11 @@ class PlyReader:
     name = "ply"
 
     def read(self, path: Path) -> GaussianCloud:
-        ply = PlyData.read(str(path))
-        vertex = ply["vertex"]
+        try:
+            ply = PlyData.read(str(path))
+            vertex = ply["vertex"]
+        except (PlyParseError, KeyError) as exc:
+            raise InvalidGaussianCloud(f"{path.name} is not a Gaussian splat PLY: {exc}") from exc
         names = vertex.data.dtype.names
         comments = dict(c.split(" ", 1) for c in ply.comments if " " in c)
         n = vertex["x"].shape[0]

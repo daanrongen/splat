@@ -1,12 +1,7 @@
-from dataclasses import dataclass
-from importlib import import_module
-from typing import Any, Literal
-
 from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
-from splat.domain.value_objects import ModelLicense
-
-Runtime = Literal["mlx", "coreml", "torch"]
+from splat.domain.value_objects import APACHE_2_0, APPLE_ASCL
+from splat.registry.catalog import ModelDescriptor
 
 DEPTH_CONTRACT = StageContract(
     stage="depth",
@@ -14,40 +9,19 @@ DEPTH_CONTRACT = StageContract(
     produces=ManifestKind.DEPTH_MAP,
 )
 
-
-@dataclass(frozen=True)
-class DepthModelDescriptor:
-    name: str
-    backend: str
-    hf_repo_id: str
-    license: ModelLicense
-    runtime: Runtime
-
-    @property
-    def backend_cls(self) -> type[Any]:
-        module_name, class_name = self.backend.rsplit(":", 1)
-        return getattr(import_module(module_name), class_name)
-
-
-def _build_catalog() -> dict[str, DepthModelDescriptor]:
-    from splat.domain.value_objects import APACHE_2_0, APPLE_ASCL
-
-    return {
-        "depth-pro": DepthModelDescriptor(
-            name="depth-pro",
-            backend="splat.adapters.depth.depth_pro:DepthProBackend",
-            hf_repo_id="apple/DepthPro-hf",
-            license=APPLE_ASCL,
-            runtime="torch",
-        ),
-        "depth-anything-v2-coreml": DepthModelDescriptor(
-            name="depth-anything-v2-coreml",
-            backend="splat.adapters.depth.coreml_depth_anything_v2:CoreMLDepthAnythingV2Backend",
-            hf_repo_id="apple/coreml-depth-anything-v2-small",
-            license=APACHE_2_0,
-            runtime="coreml",
-        ),
-    }
-
-
-DEPTH_CATALOG: dict[str, DepthModelDescriptor] = _build_catalog()
+DEPTH_CATALOG = {
+    "depth-pro": ModelDescriptor(
+        name="depth-pro",
+        backend="splat.adapters.depth.depth_pro:DepthProBackend",
+        hf_repo_ids=("apple/DepthPro-hf",),
+        license=APPLE_ASCL,
+        runtime="torch",
+    ),
+    "depth-anything-v2-coreml": ModelDescriptor(
+        name="depth-anything-v2-coreml",
+        backend="splat.adapters.depth.coreml_depth_anything_v2:CoreMLDepthAnythingV2Backend",
+        hf_repo_ids=("apple/coreml-depth-anything-v2-small",),
+        license=APACHE_2_0,
+        runtime="coreml",
+    ),
+}

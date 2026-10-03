@@ -9,6 +9,7 @@ a local stdio process; only where its tools execute can be remote.
 
 import functools
 from collections.abc import Callable
+from importlib.metadata import version
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -21,6 +22,7 @@ from splat.mcp import embed as embed_tool
 from splat.mcp import inspect as inspect_tool
 from splat.mcp import manifest as manifest_tool
 from splat.mcp import models as models_tool
+from splat.mcp import render as render_tool
 from splat.mcp import segment as segment_tool
 from splat.mcp import upscale as upscale_tool
 from splat.mcp.tools import compress as tools_compress
@@ -30,7 +32,7 @@ from splat.mcp.tools import displace_height as tools_displace_height
 from splat.mcp.tools import extract_surface as tools_extract_surface
 from splat.mcp.tools import normalize_color as tools_normalize_color
 
-server = MCPServer("splat", version="0.1.0")
+server = MCPServer("splat", version=version("splat"))
 
 
 def _as_tool_error(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -54,6 +56,7 @@ server.add_tool(_as_tool_error(segment_tool.segment), name="segment")
 server.add_tool(_as_tool_error(depth_tool.depth), name="depth")
 server.add_tool(_as_tool_error(upscale_tool.upscale), name="upscale")
 server.add_tool(_as_tool_error(gaussian.gaussian), name="gaussian")
+server.add_tool(_as_tool_error(render_tool.render), name="render")
 server.add_tool(_as_tool_error(tools_convert.convert), name="tools_convert")
 server.add_tool(_as_tool_error(tools_compress.compress), name="tools_compress")
 server.add_tool(_as_tool_error(tools_declutter.declutter), name="tools_declutter")

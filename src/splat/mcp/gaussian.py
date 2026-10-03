@@ -23,6 +23,8 @@ def gaussian(
     refine_poses: str = "auto",
     low_memory: bool = False,
     seed: int = 0,
+    orbit_frames: int | None = None,
+    orbit_degrees: float = 30.0,
 ) -> list[types.ContentBlock]:
     """Reconstruct a Gaussian splat from image paths or @asset ids."""
     cache = get_manifest_repository()
@@ -41,6 +43,8 @@ def gaussian(
             refine_poses=refine_poses,
             low_memory=low_memory,
             seed=seed,
+            orbit_frames=orbit_frames,
+            orbit_degrees=orbit_degrees,
         )
     )[0]
     content: list[types.ContentBlock] = [

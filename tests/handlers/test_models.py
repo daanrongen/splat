@@ -80,7 +80,7 @@ def test_info_reports_upscale_model_sources():
     descriptor = models_handler.info("realesrgan-mlx")
 
     assert descriptor.name == "realesrgan-mlx"
-    assert "mlx-community/Real-ESRGAN-x4plus" in descriptor.hf_repo_id
+    assert "mlx-community/Real-ESRGAN-x4plus" in descriptor.hf_repo_ids
 
 
 def test_info_reports_embedding_model_descriptor():

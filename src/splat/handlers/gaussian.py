@@ -15,14 +15,6 @@ from splat.registry.wiring import (
 )
 
 
-def _backend_factory_is_mocked() -> bool:
-    """Tests and third-party extensions sometimes patch the factory with a
-    backend that has not been added to the catalog. Production catalog models
-    still validate from descriptor metadata before importing the adapter."""
-
-    return get_reconstruction_backend.__class__.__module__ == "unittest.mock"
-
-
 def _single_image_models() -> list[str]:
     """Cataloged backends that reconstruct from one image. Derived rather than
     hardcoded so the hint below cannot go stale the way it did when `sharp`
@@ -112,7 +104,7 @@ def handle(
 
     descriptor = GAUSSIAN_CATALOG.get(request.model)
     backend = None
-    if descriptor is None or _backend_factory_is_mocked():
+    if descriptor is None:
         backend = get_reconstruction_backend(
             request.model, model_source=get_model_source(), device=request.device
         )
