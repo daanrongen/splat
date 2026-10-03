@@ -8,7 +8,12 @@ boundary `tools.displace_height` draws for the same reason.
 
 from splat.domain.errors import WrongManifestKind
 from splat.domain.manifest import Manifest, ManifestKind
-from splat.registry.wiring import get_manifest_repository
+
+
+def _manifest_repository():
+    from splat.adapters.cache.filesystem import FilesystemManifestRepository
+
+    return FilesystemManifestRepository()
 
 
 def _parse_kind(kind: str | None) -> ManifestKind | None:
@@ -22,7 +27,7 @@ def _parse_kind(kind: str | None) -> ManifestKind | None:
 
 
 def get(manifest_id: str) -> Manifest:
-    return get_manifest_repository().get(manifest_id)
+    return _manifest_repository().get(manifest_id)
 
 
 def list_manifests(
@@ -32,10 +37,10 @@ def list_manifests(
     limit: int | None = None,
     offset: int = 0,
 ) -> list[Manifest]:
-    return get_manifest_repository().list(
+    return _manifest_repository().list(
         kind=_parse_kind(kind), created_by=created_by, limit=limit, offset=offset
     )
 
 
 def delete(manifest_id: str) -> None:
-    get_manifest_repository().delete(manifest_id)
+    _manifest_repository().delete(manifest_id)

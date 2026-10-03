@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from splat.adapters.formats.image import decode_rgb_or_rgba
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
@@ -65,7 +64,9 @@ class FilesystemManifestRepository:
             return None
         return meta if isinstance(meta, dict) else None
 
-    def _manifest_from_meta(self, manifest_id: str, meta_path: Path) -> Manifest | None:
+    def _manifest_from_meta(
+        self, manifest_id: str, meta_path: Path, *, verify_content: bool = False
+    ) -> Manifest | None:
         meta = self._load_meta(meta_path)
         if meta is None:
             return None
@@ -97,17 +98,22 @@ class FilesystemManifestRepository:
             return None
 
         content_path = self._dir / content_file
-        try:
-            content = content_path.read_bytes()
-        except OSError:
-            return None
-
         content_size = meta.get("content_size")
-        if content_size is not None and content_size != len(content):
-            return None
         content_sha256 = meta.get("content_sha256")
-        if content_sha256 is not None and content_sha256 != hashlib.sha256(content).hexdigest():
-            return None
+        if verify_content:
+            try:
+                content = content_path.read_bytes()
+            except OSError:
+                return None
+            if content_size is not None and content_size != len(content):
+                return None
+            if content_sha256 is not None and content_sha256 != hashlib.sha256(content).hexdigest():
+                return None
+        elif content_size is None:
+            try:
+                content_size = content_path.stat().st_size
+            except OSError:
+                return None
 
         # Cache entries written before `created_at` existed fall back to the
         # metadata file's own mtime rather than losing the manifest.
@@ -123,8 +129,8 @@ class FilesystemManifestRepository:
             params=params,
             parent_ids=parent_ids,
             created_by=created_by,
-            content_size=content_size if content_size is not None else len(content),
-            content_sha256=content_sha256 or hashlib.sha256(content).hexdigest(),
+            content_size=content_size,
+            content_sha256=content_sha256 or "",
             created_at=created_at,
         )
 
@@ -132,7 +138,7 @@ class FilesystemManifestRepository:
         meta_path = self._meta_path(manifest_id)
         if not meta_path.exists():
             return None
-        return self._manifest_from_meta(manifest_id, meta_path)
+        return self._manifest_from_meta(manifest_id, meta_path, verify_content=True)
 
     def _find_by_content_sha256(self, content_sha256: str) -> Manifest | None:
         """Resolves bytes to whichever manifest already holds them, preferring
@@ -145,7 +151,7 @@ class FilesystemManifestRepository:
             if meta is None or meta.get("content_sha256") != content_sha256:
                 continue
             manifest_id = meta_path.name.removesuffix(".meta.json")
-            manifest = self._manifest_from_meta(manifest_id, meta_path)
+            manifest = self._manifest_from_meta(manifest_id, meta_path, verify_content=True)
             if manifest is not None:
                 candidates.append(manifest)
         if not candidates:
@@ -197,6 +203,8 @@ class FilesystemManifestRepository:
     def _external_metadata(self, kind: ManifestKind, content_bytes: bytes) -> ManifestMetadata:
         if kind not in _RASTER_KINDS:
             return KIND_METADATA_CLS[kind]()
+        from splat.adapters.formats.image import decode_rgb_or_rgba
+
         image = decode_rgb_or_rgba(content_bytes)
         dims = {"output_width": image.shape[1], "output_height": image.shape[0]}
         if kind is ManifestKind.STICKER:

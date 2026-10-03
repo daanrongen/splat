@@ -1,11 +1,10 @@
 from dataclasses import dataclass
-from typing import Literal
+from importlib import import_module
+from typing import Any, Literal
 
 from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import BSD_3_CLAUSE, ModelLicense
-from splat.ports.upscaling import UpscalingBackend
-from splat.registry._lazy import load_backend
 
 Runtime = Literal["mlx", "coreml", "torch"]
 
@@ -30,8 +29,9 @@ class UpscaleModelDescriptor:
         return ", ".join(self.hf_repo_ids[factor] for factor in self.supported_factors)
 
     @property
-    def backend_cls(self) -> type[UpscalingBackend]:
-        return load_backend(self.backend)
+    def backend_cls(self) -> type[Any]:
+        module_name, class_name = self.backend.rsplit(":", 1)
+        return getattr(import_module(module_name), class_name)
 
 
 def _build_catalog() -> dict[str, UpscaleModelDescriptor]:

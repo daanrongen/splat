@@ -4,6 +4,11 @@ import pytest
 from splat.domain.gaussians import GaussianCloud
 
 
+@pytest.fixture(autouse=True)
+def isolate_manifest_cache(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "manifest-cache"))
+
+
 @pytest.fixture
 def synthetic_cloud() -> GaussianCloud:
     rng = np.random.default_rng(42)

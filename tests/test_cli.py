@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from io import StringIO
 from pathlib import Path
 
@@ -151,6 +153,28 @@ def test_models_info() -> None:
     result = runner.invoke(app, ["models", "info", "mlx3d-capture"])
     assert result.exit_code == 0, result.output
     assert "MIT" in result.output
+
+
+def test_models_command_path_does_not_import_heavy_backends():
+    code = """
+import click
+import sys
+import typer
+import splat.cli.main
+
+cmd = typer.main.get_command(splat.cli.main.app)
+cmd.get_command(click.Context(cmd), "models")
+for name in ("torch", "coremltools", "mlx", "transformers", "trimesh", "cv2"):
+    assert name not in sys.modules, name
+assert "splat.application.pipeline" not in sys.modules
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_models_prune_reports_without_deleting(mocker):
