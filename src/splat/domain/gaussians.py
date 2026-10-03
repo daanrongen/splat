@@ -177,8 +177,28 @@ def to_convention(cloud: GaussianCloud, target: str) -> GaussianCloud:
         cloud,
         means=(cloud.means @ flip).astype(np.float32),
         rotations=_flip_quaternions(cloud.rotations, flip),
+        sh_rest=_flip_sh(cloud.sh_rest, flip),
         metadata=metadata,
     )
+
+
+# (x, y, z) exponent parity of each real SH basis function in 3DGS order, bands 1-3.
+_SH_PARITY = np.array(
+    [
+        (0, 1, 0), (0, 0, 1), (1, 0, 0),
+        (1, 1, 0), (0, 1, 1), (0, 0, 0), (1, 0, 1), (0, 0, 0),
+        (0, 1, 0), (1, 1, 1), (0, 1, 0), (0, 0, 1), (1, 0, 0), (0, 0, 1), (1, 0, 0),
+    ]
+)  # fmt: skip
+
+
+def _flip_sh(sh_rest: np.ndarray | None, flip: np.ndarray) -> np.ndarray | None:
+    """A basis function of the flipped direction is the original times -1 per
+    flipped axis it is odd in."""
+    if sh_rest is None:
+        return None
+    signs = np.prod(np.diag(flip) ** _SH_PARITY[: sh_rest.shape[1]], axis=1)
+    return (sh_rest * signs[None, :, None]).astype(np.float32)
 
 
 def _flip_position(position: list[float], flip: np.ndarray) -> list[float]:
