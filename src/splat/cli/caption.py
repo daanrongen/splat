@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error
-from splat.cli._pipeline_io import prepare_output, report, resolve_inputs
+from splat.cli._pipeline_io import export_output, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.caption import DEFAULT_CAPTION_PROMPT, CaptionRequest
@@ -45,7 +45,7 @@ def caption(
         raise typer.Exit(code=1) from exc
 
     if output is not None and results:
-        output.write_text(results[0].content_path.read_text(encoding="utf-8"), encoding="utf-8")
+        export_output(results[0], output, cache)
 
     def _human(assets: list) -> None:
         for asset in assets:

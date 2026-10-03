@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import typer
 
 from splat.cli import _table as table
@@ -50,6 +52,21 @@ def get_manifest(manifest_id: str = typer.Argument(...)) -> None:
     console.print(f"parent_ids:   {m.parent_ids}")
     console.print(f"params:       {m.params}")
     console.print(f"metadata:     {m.metadata}")
+
+
+@manifest_app.command("export")
+def export(
+    manifest_id: str = typer.Argument(...),
+    out_dir: Path = typer.Argument(..., help="Directory to write the files and sidecars into."),
+) -> None:
+    """Copy a manifest and its cached ancestors, each with a .manifest.json sidecar."""
+    try:
+        written = manifest_handler.export(manifest_id, out_dir)
+    except SplatDomainError as exc:
+        error(str(exc))
+        raise typer.Exit(code=1) from exc
+    for path in written:
+        console.print(f"[green]exported[/green] {path}")
 
 
 @manifest_app.command("rm")
