@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from PIL import Image
 
 from splat.adapters.gaussian.sharp import SharpBackend, _focal_px, _resolve_device
 from splat.domain.errors import ReconstructionBackendError
@@ -57,6 +58,30 @@ def test_focal_px_matches_the_reference_35mm_conversion(tmp_path):
     expected = 30.0 * np.sqrt(512**2 + 512**2) / np.sqrt(36**2 + 24**2)
 
     assert _focal_px(tmp_path / "x.png", 512, 512, 30.0) == pytest.approx(expected)
+
+
+def _jpeg(path, focal_35mm=None):
+    exif = Image.Exif()
+    if focal_35mm is not None:
+        exif.get_ifd(0x8769)[0xA405] = focal_35mm
+    Image.new("RGB", (8, 8)).save(path, exif=exif.tobytes())
+    return path
+
+
+def test_focal_px_prefers_the_exif_35mm_focal_length(tmp_path):
+    photo = _jpeg(tmp_path / "phone.jpg", focal_35mm=24)
+
+    assert _focal_px(photo, 512, 512, 30.0) == pytest.approx(
+        _focal_px(tmp_path / "x.png", 512, 512, 24.0)
+    )
+
+
+def test_focal_px_falls_back_when_exif_has_no_focal_length(tmp_path):
+    photo = _jpeg(tmp_path / "scan.jpg")
+
+    assert _focal_px(photo, 512, 512, 30.0) == pytest.approx(
+        _focal_px(tmp_path / "x.png", 512, 512, 30.0)
+    )
 
 
 def test_catalog_entry_is_non_commercial_and_single_image():

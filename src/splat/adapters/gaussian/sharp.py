@@ -37,6 +37,9 @@ _INTERNAL_SIZE = 1536
 # the reference CLI's fallback. Diffused PNGs never have it.
 _DEFAULT_FOCAL_35MM = 30.0
 
+_EXIF_IFD = 0x8769
+_FOCAL_LENGTH_IN_35MM_FILM = 0xA405
+
 # sigmoid(16.1) rounds to 1.0 in float32, so Apple's `save_ply` writes +inf
 # opacity logits for saturated Gaussians (11,856 of 1,179,648 on a real
 # prediction) and GaussianCloud rejects the file. Clamping just inside the
@@ -60,8 +63,21 @@ def _resolve_device(device: str) -> str:
     return "cpu"
 
 
+def _exif_focal_35mm(image_path: Path) -> float | None:
+    from PIL import Image
+
+    try:
+        with Image.open(image_path) as image:
+            value = image.getexif().get_ifd(_EXIF_IFD).get(_FOCAL_LENGTH_IN_35MM_FILM)
+    except OSError:
+        return None
+    return float(value) if value else None
+
+
 def _focal_px(image_path: Path, width: int, height: int, focal_35mm: float) -> float:
-    """35mm-equivalent focal length in pixels for this frame's diagonal."""
+    """35mm-equivalent focal length in pixels for this frame's diagonal, from
+    EXIF when the image has it and `focal_35mm` otherwise."""
+    focal_35mm = _exif_focal_35mm(image_path) or focal_35mm
     return focal_35mm * math.sqrt(width**2 + height**2) / math.sqrt(36**2 + 24**2)
 
 
