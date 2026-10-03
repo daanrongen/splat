@@ -71,7 +71,7 @@ short-circuit without recomputing masks.
 
 ```sh
 splat depth landscape.png --model depth-pro \
-  | splat tools displace.height - -o relief.glb
+  | splat mesh - -o relief.glb
 ```
 
 `depth-pro` is the metric-depth path and is the correct backend for geometry.
@@ -81,7 +81,7 @@ be consumed as metric depth.
 Output:
 
 - `depth` produces a lossless `.npy` `depth_map` manifest;
-- `tools displace.height` resolves the source image through provenance and
+- `mesh` (heightfield) resolves the source image through provenance and
   writes a `shape_3d` manifest.
 
 ## Image To Gaussian Splat
@@ -112,26 +112,20 @@ splat gaussian frame-*.png --model mlx3d-capture --quality balanced -o scene.ply
 video frames of one physical scene. Several independently generated prompts do
 not satisfy that requirement.
 
-## Gaussian Tools
+## Gaussian Files And Meshes
 
 ```sh
-splat tools declutter scene.ply scene.clean.ply
-splat tools convert scene.clean.ply scene.sog
-splat tools compress scene.clean.ply scene.web.sog --profile web-delivery
-splat tools extract.surface scene.clean.ply scene.glb
+splat gaussian frame-*.png --model mlx3d-capture --declutter -o scene.ply
+splat export scene.ply -o scene.spz
+splat export scene.ply -o scene.web.splat --profile web-delivery
+splat mesh scene.ply -o scene.glb
 ```
 
-Tool roles:
-
-| Tool | Input | Output | Purpose |
+| Command | Input | Output | Purpose |
 |---|---|---|---|
-| `convert` | Gaussian file | Gaussian file | Rewrite between registered formats. |
-| `compress` | Gaussian file | Gaussian file | Prune/quantize for delivery profile. |
-| `declutter` | Gaussian file | Gaussian file | Remove isolated floater Gaussians. |
-| `extract.surface` | Gaussian file | Mesh file | Poisson surface extraction. |
-
-`convert`, `compress`, and `declutter` operate through the `GaussianCloud` hub.
-`extract.surface` is heavier and should be run with progress/timeout support.
+| `export` | any manifest | file + sidecar | Write in the format of the extension; `--profile` compresses clouds. |
+| `gaussian --declutter` | images | `gaussian_cloud` | Remove isolated floater Gaussians after reconstruction. |
+| `mesh` | `gaussian_cloud` | `shape_3d` | Poisson surface extraction, in its own worker process. |
 
 ## Render Back To Image
 
@@ -172,7 +166,7 @@ does not import model backends.
 3. Use `splat manifest get <id>` to inspect provenance and metadata.
 4. Use `splat info` for Gaussian geometry statistics.
 5. Use `splat render` to visually inspect a cloud.
-6. Use deterministic tools to clean or package the cloud.
+6. Use `splat export` to package the cloud, or `splat mesh` for a surface.
 
 When output looks wrong, inspect metadata before rerunning heavy stages. Parent
 ids, model name, effective parameters, depth semantics, camera count, coordinate

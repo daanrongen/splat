@@ -1,293 +1,195 @@
 # splat
 
-`splat` is a local image-to-3D asset pipeline for Apple Silicon. It generates,
-reads, transforms, reconstructs, renders, and serves visual assets through one
-typed manifest graph.
-
-The core idea is simple:
-
-```text
-text prompt -> image -> depth / caption / embedding / sticker
-image       -> gaussian_cloud -> render -> image
-gaussian_cloud -> convert / compress / declutter / extract.surface
-depth_map + source image -> shape_3d
-```
-
-Every pipeline stage reads and writes a `Manifest`. Every splat file tool reads
-and writes a `GaussianCloud`. Those two hub types keep the project from turning
-into an N-by-N pile of one-off converters.
-
-## Install
+`splat` is a local-first asset pipeline for Apple Silicon. Prompts, photos and captures go in; images, depth maps, captions, embeddings, Gaussian splats and meshes come out. Every stage reads and writes one typed, cached `Manifest`, so any command's output pipes into the next and every file keeps its lineage.
 
 ```sh
-git clone https://github.com/daanrongen/splat.git
-cd splat
-mise install
-uv sync
-uv run splat --help
+splat diffuse "a small red toy robot, studio lighting" \
+  | splat gaussian - \
+  | splat manifest label - robot \
+  | splat render - -o robot.png
 ```
 
-Released builds can also be installed with Homebrew:
+```text
+prompt ─ diffuse ─▶ image ─┬─ caption ─▶ caption
+                           ├─ embed ───▶ embedding
+                           ├─ segment ─▶ sticker
+                           ├─ upscale ─▶ image
+                           ├─ depth ───▶ depth_map ─ mesh ─▶ shape_3d
+                           └─ gaussian ▶ gaussian_cloud ─┬─ render ─▶ image
+                                                         └─ mesh ───▶ shape_3d
+any manifest ─ export ─▶ file + .manifest.json sidecar
+```
+
+## Install
 
 ```sh
 brew install daanrongen/splat/splat
 ```
 
-Model weights are downloaded on demand into the local cache. To inspect or pull
-them explicitly:
+From source:
 
 ```sh
-splat models list
-splat models info sharp
-splat models pull sharp
-splat models rm sharp
+git clone https://github.com/daanrongen/splat.git && cd splat
+mise install && uv sync
+uv run splat --help
 ```
 
-## Command Taxonomy
+Model weights download on first use. `render` needs [Blender](https://www.blender.org) on `PATH` (or `SPLAT_BLENDER_BIN`).
 
-`splat` deliberately separates expensive model work from cheap deterministic
-work and cache inspection.
+## How it works
 
-| Surface | Commands | Contract |
+**Manifests.** Each stage output is a manifest: content in its kind's format plus typed metadata, params, parent ids, the producing model and its license. Ids are invocation keys (stage, model, semantic params, parents), so re-running anything is a cache hit. External files are content-addressed.
+
+**Inputs.** Every stage takes a file path, `@<manifest-id>`, or `-` for NDJSON records piped from another command. When stdout is piped, commands print one NDJSON record per output; in a terminal they print a summary.
+
+**Files that keep their lineage.** `-o` writes the file plus `<file>.manifest.json`. Feeding that file back into any command, in any cache, restores its manifest; a converted file links back to its source. `splat manifest export` copies a manifest with all its ancestors.
+
+**Kinds.**
+
+| Kind | Produced by | Stored as |
 |---|---|---|
-| Model-backed stages | `diffuse`, `caption`, `embed`, `segment`, `upscale`, `depth`, `gaussian`, `render` | May load model/runtime backends and use substantial compute. |
-| Deterministic tools | `tools convert`, `tools compress`, `tools declutter`, `tools normalize.color`, `tools displace.height`, `tools extract.surface` | Fixed transforms for a given input and option set. No model selection. |
-| Inspection/admin | `info`, `validate`, `manifest`, `models`, `env` | Should be fast and should not import ML runtimes unless explicitly needed. |
-| Services | `http`, `mcp` | Expose the same handler layer over HTTP or MCP stdio. |
+| `image` | `diffuse`, `upscale`, `render` | `.png` |
+| `sticker` | `segment` | `.png` (RGBA) |
+| `caption` | `caption` | `.txt` |
+| `embedding` | `embed` | `.npy` |
+| `depth_map` | `depth` | `.npy` (metres, or relative disparity) |
+| `gaussian_cloud` | `gaussian` | `.ply` |
+| `shape_3d` | `mesh` | `.glb`, `.obj`, `.ply`, `.gltf` |
 
-Cold-start is part of the architecture. Commands such as
-`splat manifest list` and `splat manifest get <id>` read local metadata only and
-must not import Torch, CoreML, MLX, Transformers, Open3D, Trimesh, or OpenCV.
+## Command reference
 
-## Manifests
+Most options can also come from a `SPLAT_*` environment variable (`splat env` lists them). Precedence: flag, then environment, then default. `--device` takes `auto`, `cpu` or `mps`.
 
-A `Manifest` is the pipeline currency:
+### Stages
 
-- `id`
-- `kind`
-- `content_path`
-- typed `metadata`
-- `params`
-- `parent_ids`
-- `created_by`
-- `content_size`
-- `content_sha256`
-- `created_at`
+**`splat diffuse SOURCE [PROMPT]`** generates an image from a text prompt, or edits an image (path or `@id`) with PROMPT as the instruction.
 
-Pipeline-produced manifests are invocation-addressed: the id is derived from
-stage, model, parameters, and parent manifest ids. External files are
-content-addressed: registering the same bytes resolves to the same cached
-content when possible.
+| Option | Default | |
+|---|---|---|
+| `--model` | `sdxl-turbo-mlx` | see [Models](#models) |
+| `--negative` | | negative prompt |
+| `--steps` | model default | denoising steps |
+| `--strength` | | image-to-image change, 0 to 1 |
+| `--seed` | | |
+| `--width`, `--height` | 512 | multiples of 64, MLX backend only |
+| `--device`, `-o` | | |
 
-The cache defaults to:
+**`splat caption INPUT`** writes a one-sentence caption: `--model` (`fastvlm-0.5b`), `--prompt`, `--max-tokens` (80), `--temperature` (0.0), `--device`, `-o`.
 
-```text
-$XDG_CACHE_HOME/splat/
-|-- models/     # converted or downloaded model artifacts
-`-- manifests/  # cached content + .meta.json records
-```
+**`splat embed [INPUT] [--text TEXT]`** embeds images or a text query as a normalized vector: `--model` (`mobileclip2-s0`), `--device`, `-o` (`.npy`).
 
-Manifest commands always operate on the local cache:
+**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam-mlx`), `--max-stickers` (20), `--device`, `-o DIR`.
 
-```sh
-splat manifest list
-splat manifest list --kind image --created-by diffuse
-splat manifest get <id>
-splat manifest rm <id>
-splat manifest clear --kind image --yes
-```
+**`splat depth INPUT`** estimates per-pixel depth: `--model` (`depth-pro`, metric), `--device`, `-o` (a viewable PNG, near is bright).
 
-Inputs accepted by pipeline stages:
+**`splat upscale INPUT`** super-resolves images or stickers: `--factor` (2 or 4, default 4), `--model` (`realesrgan-mlx`), `--tile` (0 disables tiling), `-o`.
 
-- a filesystem path
-- `@<manifest-id>`
-- `-` for NDJSON manifests from stdin
+**`splat gaussian INPUTS...`** reconstructs a Gaussian splat. `sharp` takes one image; `mlx3d-capture` takes 3 or more overlapping photos of one scene.
 
-Manifest-producing commands print NDJSON when stdout is piped, so stages can be
-chained directly:
+| Option | Default | |
+|---|---|---|
+| `--model` | `sharp` | `sharp`, `mlx3d-capture` |
+| `--focal-35mm` | 30 | `sharp`: focal length for images without EXIF |
+| `--quality`, `--iters`, `--max-dim`, `--sh-degree` | `fast` | `mlx3d-capture` training |
+| `--poses`, `--refine-poses` | `auto` | `mlx3d-capture` pose estimation |
+| `--normalize-color` / `--no-normalize-color` | on | `mlx3d-capture`: even out exposure across views |
+| `--low-mem`, `--seed` | | `mlx3d-capture` |
+| `--declutter` | off | drop isolated floater Gaussians |
+| `--min-registered` | | fail if fewer than this fraction of inputs registered |
+| `--orbit-frames`, `--orbit-degrees` | 30° | also render N synthetic views across the sweep |
+| `--verbose`, `--device`, `-o` | | `-o` format follows the extension |
 
-```sh
-splat diffuse "a small red toy robot, studio lighting" \
-  | splat gaussian - --model sharp \
-  | splat render - -o robot.png
-```
+**`splat render INPUT`** renders a splat to a PNG with Blender.
 
-## Asset Kinds
+| Option | Default | |
+|---|---|---|
+| `--engine` | `cycles` | `cycles` (accurate) or `eevee` (fast preview) |
+| `--width`, `--height`, `--samples` | 1280, 720, 32 | |
+| `--background` | `black` | `transparent`, `black`, `white`, `grey` or a hex colour |
+| `--view N` | | render from source camera N of the cloud |
+| `--azimuth`, `--elevation` | 25°, 20° | orbit camera instead of the capture pose |
+| `--distance`, `--fov`, `--look-at x,y,z` | fit to cloud | |
+| `-o` | | |
 
-`ManifestKind` is intentionally flat. Capability tags express what each kind can
-do without creating a rigid class hierarchy.
+**`splat mesh INPUT`** turns a metric depth map (`heightfield`, textured by its source image) or a Gaussian cloud (`poisson`) into a mesh. The backend follows the input kind unless `--model` says otherwise. Options: `--to` (`glb`, `obj`, `ply`, `gltf`; default from `-o`, else `glb`), `--depth` (Poisson octree depth, 9), `--opacity-threshold` (0.1), `-o`.
 
-| Kind | Tags | Common producers | Storage |
+### Files
+
+**`splat export INPUT -o FILE`** writes any asset to a file in the format of its extension, with a lineage sidecar. Gaussian clouds convert between `.ply` (lossless), `.spz` (Niantic, about 7x smaller, keeps SH) and `.splat` (antimatter15 web format, SH dropped). `--profile web-delivery|archival` compresses a cloud first; `--pruning blue-noise --target-count N` thins it to N points.
+
+**`splat info PATH`** prints point count, SH degree, bounds, size and cloud metadata. **`splat validate PATH [--strict]`** checks a splat's invariants and exits non-zero on failure.
+
+### Manifests
+
+| Command | |
+|---|---|
+| `splat manifest list [--kind] [--created-by] [--label] [--limit]` | most recent first, with label, prompt and size |
+| `splat manifest get ID` | full detail, children, and the lineage tree with each model's license |
+| `splat manifest label ID\|- TEXT` | name manifests; piped records pass through |
+| `splat manifest export ID DIR` | copy a manifest and its ancestors, each with a sidecar |
+| `splat manifest rm ID [--cascade]` | refuses while other manifests derive from it, unless `--cascade` |
+| `splat manifest clear [--kind] [--created-by] [-y]` | delete a selection |
+| `splat manifest gc` | remove cache files no valid manifest owns |
+
+### Models
+
+| Command | |
+|---|---|
+| `splat models list` | every catalogued model, its stage, runtime, license and whether it's cached |
+| `splat models info NAME` | license, source repo, input counts and notes |
+| `splat models pull NAME` / `rm NAME` | download or remove weights |
+| `splat models prune [--yes]` | report, or delete, cached weights no model uses |
+
+| Stage | Model | Runtime | License |
 |---|---|---|---|
-| `image` | `raster`, `rgb`, `colorlike` | `diffuse`, `upscale`, `render`, `tools normalize.color` | `.png` |
-| `sticker` | `raster`, `rgba`, `colorlike` | `segment` | `.png` |
-| `caption` | `text` | `caption` | `.txt` |
-| `embedding` | `vector` | `embed` | `.npy` |
-| `depth_map` | `raster`, `single_channel` | `depth` | `.npy` |
-| `shape_3d` | `mesh_3d` | `tools displace.height`, `tools extract.surface` | `.glb`, `.obj`, `.ply` |
-| `gaussian_cloud` | `splat_3d` | `gaussian` | `.ply` |
+| `diffuse` | `sdxl-turbo-mlx` | MLX | Stability AI non-commercial |
+| `diffuse` | `sd21-coreml` | Core ML | OpenRAIL-M |
+| `caption` | `fastvlm-0.5b` | torch | Apple ML Research (research only) |
+| `embed` | `mobileclip2-s0` | torch | Apple ML Research (research only) |
+| `segment` | `sam-mlx` | MLX | Apache-2.0 |
+| `segment` | `sam2-coreml` | Core ML | Apache-2.0 |
+| `depth` | `depth-pro` | torch | Apple ASCL |
+| `depth` | `depth-anything-v2-coreml` | Core ML | Apache-2.0 (relative disparity) |
+| `upscale` | `realesrgan-mlx` | MLX | BSD-3-Clause |
+| `gaussian` | `sharp` | torch | Apple ML Research (research only) |
+| `gaussian` | `mlx3d-capture` | MLX | MIT |
 
-Every stage declares a `StageContract` over kinds or tags. For example,
-`caption`, `embed`, `depth`, `segment`, and `gaussian` can all accept any
-`colorlike` input.
+### Services and settings
 
-## Common Workflows
+**`splat mcp`** runs an MCP server over stdio. Tools: `diffuse`, `caption`, `embed`, `segment`, `depth`, `upscale`, `gaussian`, `render` (returns the image), `mesh`, `export`, `info`, `validate`, `models_list`, `models_info`, `models_pull`, `models_rm`, `manifest_list`, `manifest_get`, `manifest_label`, `manifest_delete`.
 
-### Text To Rendered Gaussian Splat
+**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, with no authentication, so bind it only to trusted interfaces. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
 
-```sh
-splat diffuse "beautiful romantic Turner painting of a landscape" \
-  | splat gaussian - --model sharp -o scene.ply
+**`SPLAT_URL=http://host:8000`** makes the model-backed stages in the CLI, SDK and MCP server run on that `splat http` server. `render`, `mesh` and `export` always run locally.
 
-splat render scene.ply -o scene.png --width 1280 --height 720
-```
+**`splat env [--export]`** prints every `SPLAT_*` setting with its resolved value and source, or a `.env` template. Settings that aren't command options:
 
-`sharp` is the default single-image Gaussian backend. It is fast enough for the
-headline chain and records that its output has metric scale.
+| Variable | |
+|---|---|
+| `SPLAT_MANIFEST_CACHE_DIR` | manifest cache, default `$XDG_CACHE_HOME/splat/manifests` |
+| `SPLAT_MODEL_CACHE_DIR` | model cache, default `$XDG_CACHE_HOME/splat/models` |
+| `SPLAT_URL` | remote `splat http` server |
+| `SPLAT_BLENDER_BIN` | Blender executable |
+| `SPLAT_RENDER_TIMEOUT` | render timeout in seconds, 0 disables it |
 
-Use `mlx3d-capture` when you have 3 or more real overlapping views of one
-physical scene:
+`splat --version` prints the version.
 
-```sh
-splat gaussian frame-*.png --model mlx3d-capture --quality balanced -o scene.ply
-```
+## Python SDK
 
-Prompting a diffusion model for "front", "side", and "back" views does not make
-multi-view-consistent input. Use real views today; future multi-view generation
-belongs in a dedicated `views` stage.
-
-### Image To Depth To Mesh
-
-```sh
-splat depth photo.png --model depth-pro \
-  | splat tools displace.height - -o relief.glb
-```
-
-`depth-pro` produces metric depth with a focal-length estimate. Relative
-disparity backends are useful for visualization and ranking, but should not be
-treated as metric geometry input.
-
-### Gaussian File Delivery
-
-```sh
-splat tools declutter scene.ply scene.clean.ply
-splat tools convert scene.clean.ply scene.sog
-splat tools compress scene.clean.ply scene.web.sog --profile web-delivery
-```
-
-`.ply` is the canonical lossless interchange format. `.splat` is the classic
-32-byte-per-point web-viewer format. `.sog` is a compact, spatially sorted,
-image-codec-compressed bundle intended for delivery.
-
-### Caption And Embed
-
-```sh
-splat caption photo.png -o caption.txt
-splat embed photo.png -o image.embedding.npy
-splat embed --text "red toy robot" -o text.embedding.npy
-```
-
-Embeddings are normalized vectors. Captions and embeddings are regular manifests
-and can be chained with the rest of the graph.
-
-## Backends
-
-Backends are loaded lazily. A catalog entry is pure metadata until a
-model-backed command actually runs.
-
-| Stage | Models | Notes |
-|---|---|---|
-| `diffuse` | `sdxl-turbo-mlx`, `sd21-coreml` | Text/image to raster image. |
-| `caption` | `fastvlm-0.5b` | Image/sticker to text. |
-| `embed` | `mobileclip2-s0` | Image/text to normalized vector. |
-| `segment` | `sam-mlx`, `sam2-coreml` | Image/sticker to RGBA stickers. |
-| `depth` | `depth-pro`, `depth-anything-v2-coreml` | Metric depth or relative disparity, depending on backend. |
-| `upscale` | `realesrgan-mlx` | 2x or 4x raster upscaling. |
-| `gaussian` | `sharp`, `mlx3d-capture` | Single-image feed-forward or multi-view optimization. |
-| `render` | `blender` | Local Blender-backed rendering. |
-
-Licenses are part of catalog metadata. Non-commercial or research-only models
-are reported in `splat models list` and warned at invocation time.
-
-## Remote And Programmatic Use
-
-Run a trusted local HTTP server:
-
-```sh
-splat http --host 127.0.0.1:8000
-```
-
-Route remote-capable CLI and SDK calls through it:
-
-```sh
-SPLAT_URL=http://macbook:8000 splat diffuse "dog" -o dog.png
-```
-
-There is no authentication in v1. Bind only to trusted interfaces or put
-authentication in front of the server.
-
-Python SDK:
+The same operations, returning `Manifest` objects with `.as_image()`, `.as_text()`, `.as_array()` and `.as_gaussian_cloud()`:
 
 ```python
 import splat
 
 image = splat.diffuse("a small red boat").asset
-cloud = splat.gaussian(image, model="sharp")[0]
-render = splat.render(cloud, width=1280, height=720)[0]
-pixels = render.as_image()
+cloud = splat.gaussian(image)[0]
+frame = splat.render(cloud, width=1280, height=720)[0].as_image()
+mesh = splat.mesh(cloud, format="glb")[0]
+splat.export(cloud, "boat.spz")
 ```
 
-MCP:
-
-```sh
-splat mcp
-```
-
-## Environment
-
-Every option that can be defaulted from the environment declares its own
-`SPLAT_*` variable. Inspect the effective values:
-
-```sh
-splat env
-splat env --export > .env.example
-```
-
-Precedence is:
-
-```text
-CLI flag > environment > built-in default
-```
-
-Important non-option settings:
-
-| Variable | Purpose |
-|---|---|
-| `SPLAT_MODEL_CACHE_DIR` | Model artifact cache. |
-| `SPLAT_MANIFEST_CACHE_DIR` | Manifest cache. |
-| `SPLAT_URL` | Remote HTTP server base URL. |
-| `SPLAT_BLENDER_BIN` | Blender executable path. |
-| `SPLAT_RENDER_TIMEOUT` | Render subprocess timeout in seconds. |
+Also: `caption`, `embed`, `segment`, `depth`, `upscale`, `info`, `validate`, `Manifest.load("<id>")`.
 
 ## Architecture
 
-The dependency rule is ports-and-adapters:
-
-```text
-cli/http/mcp/sdk -> handlers -> application -> ports/domain
-registry -> ports/domain
-adapters -> ports/domain
-```
-
-The important boundaries:
-
-- `domain/` defines stable data and invariants.
-- `ports/` defines backend, repository, file IO, and client protocols.
-- `application/` performs cache-aware orchestration.
-- `registry/` stores pure catalog metadata and lazy factories.
-- `adapters/` own ML runtimes, file formats, external processes, cache, and clients.
-- `handlers/` are transport-neutral request handlers.
-- `cli/`, `http/`, `mcp/`, and `api.py` are driving adapters.
-
-See [docs/architecture.md](docs/architecture.md) for the detailed contributor
-architecture and [docs/README.md](docs/README.md) for the documentation map.
+Ports and adapters: `cli/`, `http/`, `mcp/` and `api.py` drive transport-neutral `handlers/`, which run cache-aware `application/` code against `ports/` and `domain/`; `adapters/` own the ML runtimes, file formats, cache and external processes, and `registry/` holds the lazy model catalog. See [docs/architecture.md](docs/architecture.md) and [docs/README.md](docs/README.md).
