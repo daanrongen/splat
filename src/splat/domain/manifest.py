@@ -32,6 +32,7 @@ class ManifestKind(StrEnum):
     DEPTH_MAP = "depth_map"  # per-pixel metric depth, cached losslessly (.npy)
     SHAPE_3D = "shape_3d"  # mesh or point cloud
     GAUSSIAN_CLOUD = "gaussian_cloud"  # canonical GaussianCloud cached as lossless .ply
+    FAN_OUT = "fan_out"  # empty marker listing the children of a fan-out stage
 
 
 KIND_TAGS: dict[ManifestKind, frozenset[str]] = {
@@ -42,6 +43,7 @@ KIND_TAGS: dict[ManifestKind, frozenset[str]] = {
     ManifestKind.DEPTH_MAP: frozenset({"raster", "single_channel", "metric"}),
     ManifestKind.SHAPE_3D: frozenset({"mesh_3d"}),
     ManifestKind.GAUSSIAN_CLOUD: frozenset({"splat_3d"}),
+    ManifestKind.FAN_OUT: frozenset(),
 }
 
 

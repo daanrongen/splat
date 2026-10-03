@@ -36,13 +36,7 @@ class StickerMetadata:
 
 @dataclass
 class SegmentManifestMetadata:
-    """The zero-byte fan-out marker `run_segment` caches at the parent key.
-
-    It reuses `ManifestKind.STICKER` so a rerun's cache lookup finds it, but
-    it isn't a real sticker — the cache adapter recognizes it by its
-    `.manifest` extension and reconstructs this shape instead of
-    `StickerMetadata` (see `adapters/cache/filesystem.py`).
-    """
+    """The empty `fan_out` marker `run_segment` caches at the parent key."""
 
     children: list[str]
 
@@ -98,22 +92,15 @@ KIND_METADATA_CLS: dict[ManifestKind, type] = {
     ManifestKind.DEPTH_MAP: DepthMetadata,
     ManifestKind.SHAPE_3D: MeshMetadata,
     ManifestKind.GAUSSIAN_CLOUD: GaussianCloudMetadata,
+    ManifestKind.FAN_OUT: SegmentManifestMetadata,
 }
-
-# The zero-byte segment fan-out marker reuses ManifestKind.STICKER but isn't a
-# real sticker — the cache adapter recognizes it by file extension, not kind.
-MANIFEST_MARKER_EXT = "manifest"
 
 
 def metadata_to_dict(metadata: ManifestMetadata) -> dict:
     return dataclasses.asdict(metadata)
 
 
-def metadata_from_dict(
-    kind: ManifestKind, data: dict, *, is_manifest_marker: bool = False
-) -> ManifestMetadata:
-    if is_manifest_marker:
-        return SegmentManifestMetadata(**data)
+def metadata_from_dict(kind: ManifestKind, data: dict) -> ManifestMetadata:
     cls = KIND_METADATA_CLS[kind]
     if cls is GaussianCloudMetadata and data.get("license") is not None:
         data = {**data, "license": ModelLicense(**data["license"])}

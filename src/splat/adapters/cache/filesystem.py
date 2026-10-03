@@ -10,7 +10,6 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
     KIND_METADATA_CLS,
-    MANIFEST_MARKER_EXT,
     ManifestMetadata,
     RasterMetadata,
     StickerMetadata,
@@ -91,9 +90,8 @@ class FilesystemManifestRepository:
         if not isinstance(created_by, str):
             return None
 
-        is_marker = Path(content_file).suffix == f".{MANIFEST_MARKER_EXT}"
         try:
-            metadata = metadata_from_dict(kind, raw_metadata, is_manifest_marker=is_marker)
+            metadata = metadata_from_dict(kind, raw_metadata)
         except TypeError:
             return None
 
