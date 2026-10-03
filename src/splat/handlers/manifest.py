@@ -2,8 +2,7 @@
 handlers, this isn't part of the SplatClient/SPLAT_URL contract: a manifest
 already lives wherever it was produced (mirrored locally on every
 manifest-producing remote call, see RemoteSplatClient._store_asset), so
-`splat manifest ...` always reads the local cache directly — the same
-boundary `tools.displace_height` draws for the same reason.
+`splat manifest ...` always reads the local cache directly.
 """
 
 from pathlib import Path

@@ -17,6 +17,7 @@ GAUSSIAN_CATALOG = {
             "iters",
             "max_dim",
             "sh_degree",
+            "normalize_color",
         ),
         notes=(
             "Local Apple Silicon backend using mlx3d's optimization-based capture "

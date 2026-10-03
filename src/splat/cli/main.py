@@ -39,7 +39,12 @@ LazyTyperGroup.lazy_commands = {
     "train": LazyCommandSpec(
         "splat.cli.train", "train", "command", "Train or refine per-scene Gaussian splats."
     ),
-    "tools": LazyCommandSpec("splat.cli.tools", "tools_app", "typer", "Deterministic transforms."),
+    "mesh": LazyCommandSpec(
+        "splat.cli.mesh", "mesh", "command", "Mesh depth maps or Gaussian splats."
+    ),
+    "export": LazyCommandSpec(
+        "splat.cli.export", "export", "command", "Write an asset to a file format."
+    ),
     "info": LazyCommandSpec("splat.cli.info", "info", "command", "Inspect a Gaussian splat file."),
     "validate": LazyCommandSpec(
         "splat.cli.validate", "validate", "command", "Validate a Gaussian splat file."
@@ -57,8 +62,8 @@ LazyTyperGroup.lazy_commands = {
 
 app = typer.Typer(
     help=(
-        "splat runs backends with a swappable model/engine catalog (--model) at top "
-        "level; single fixed-algorithm operations with no catalog live under `splat tools`."
+        "splat turns prompts, images and captures into typed, cached assets: every "
+        "stage reads and writes manifests, so any command's output pipes into the next."
     ),
     no_args_is_help=True,
     cls=LazyTyperGroup,
@@ -79,7 +84,7 @@ def _main(
         False, "--version", callback=_print_version, is_eager=True, help="Show the version."
     ),
 ) -> None:
-    """splat runs model-backed stages, deterministic tools, and local cache admin."""
+    """splat runs pipeline stages, exports assets, and administers the local cache."""
 
 
 if __name__ == "__main__":

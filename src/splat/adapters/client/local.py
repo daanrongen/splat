@@ -7,9 +7,6 @@ from splat.application.models_admin import model_source_label, model_stage
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 
 if TYPE_CHECKING:
-    from splat.application.tools.convert import ConvertResult
-    from splat.application.tools.extract_surface import ExtractSurfaceResult
-    from splat.domain.gaussians import GaussianCloud
     from splat.domain.manifest import Manifest
     from splat.handlers.caption import CaptionRequest
     from splat.handlers.depth import DepthRequest
@@ -17,10 +14,6 @@ if TYPE_CHECKING:
     from splat.handlers.embed import EmbedRequest
     from splat.handlers.gaussian import GaussianRequest
     from splat.handlers.segment import SegmentRequest
-    from splat.handlers.tools.compress import CompressRequest
-    from splat.handlers.tools.convert import ConvertRequest
-    from splat.handlers.tools.declutter import DeclutterRequest
-    from splat.handlers.tools.extract_surface import ExtractSurfaceRequest
     from splat.handlers.upscale import UpscaleRequest
 
 
@@ -62,26 +55,6 @@ class LocalSplatClient:
         from splat.handlers.gaussian import handle as handle_gaussian
 
         return handle_gaussian(request)
-
-    def tools_convert(self, request: ConvertRequest) -> ConvertResult:
-        from splat.handlers.tools.convert import handle as handle_convert
-
-        return handle_convert(request)
-
-    def tools_compress(self, request: CompressRequest) -> GaussianCloud:
-        from splat.handlers.tools.compress import handle as handle_compress
-
-        return handle_compress(request)
-
-    def tools_declutter(self, request: DeclutterRequest) -> GaussianCloud:
-        from splat.handlers.tools.declutter import handle as handle_declutter
-
-        return handle_declutter(request)
-
-    def tools_extract_surface(self, request: ExtractSurfaceRequest) -> ExtractSurfaceResult:
-        from splat.handlers.tools.extract_surface import handle as handle_extract_surface
-
-        return handle_extract_surface(request)
 
     def info(self, path: Path) -> InfoSummary:
         from splat.handlers.inspect import info as handle_info

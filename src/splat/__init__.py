@@ -3,7 +3,9 @@ See `splat.api` for the wrapped functions and `splat.domain.manifest.Manifest`
 for the `.as_image()`/`.as_gaussian_cloud()`/... decoding helpers.
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import version
+
+__version__ = version("splat")
 
 _API_EXPORTS = {
     "caption",
@@ -14,8 +16,8 @@ _API_EXPORTS = {
     "info",
     "render",
     "segment",
-    "tools_compress",
-    "tools_convert",
+    "export",
+    "mesh",
     "upscale",
     "validate",
 }
@@ -46,12 +48,12 @@ __all__ = [
     "depth",
     "diffuse",
     "embed",
+    "export",
     "gaussian",
     "info",
+    "mesh",
     "render",
     "segment",
-    "tools_compress",
-    "tools_convert",
     "upscale",
     "validate",
 ]

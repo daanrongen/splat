@@ -79,8 +79,8 @@ def test_settings_are_derived_from_the_cli_not_duplicated():
 
     assert ("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL") in rows
     assert ("render", "--engine", "SPLAT_RENDER_ENGINE") in rows
-    assert ("tools extract.surface", "--depth", "SPLAT_EXTRACT_SURFACE_DEPTH") in rows
-    assert ("tools displace.height", "--to", "SPLAT_DISPLACE_HEIGHT_TO") in rows
+    assert ("mesh", "--depth", "SPLAT_MESH_DEPTH") in rows
+    assert ("export", "--profile", "SPLAT_EXPORT_PROFILE") in rows
 
 
 def test_every_declared_env_var_is_read_by_its_command():

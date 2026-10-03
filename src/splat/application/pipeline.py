@@ -24,7 +24,6 @@ from splat.application.embed import EmbedUseCase
 from splat.application.reconstruct import ReconstructUseCase
 from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
-from splat.application.tools import displace_height, normalize_color
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import (
@@ -33,7 +32,7 @@ from splat.domain.gaussians import (
     to_convention,
     with_view,
 )
-from splat.domain.image_space import DepthMap, Shape3D
+from splat.domain.image_space import Shape3D
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
     CaptionMetadata,
@@ -162,48 +161,6 @@ def run_segment(
         created_by=f"segment:{model_name}",
     )
     return children
-
-
-def run_normalize_color(
-    cache: ManifestRepository,
-    *,
-    input_assets: list[Manifest],
-    params: dict,
-) -> list[Manifest]:
-    """Corrects per-view exposure/white-balance drift across `input_assets` as
-    one cohort - unlike every other stage here, one output's cache key
-    depends on every other image in the batch (`cohort_ids`), not just its
-    own source, since correction is computed jointly across the whole set."""
-    cohort_ids = tuple(asset.id for asset in input_assets)
-    keys = [
-        compute_cache_key(
-            stage="tools.normalize.color",
-            model="ensemble-gain",
-            params={**params, "target_id": asset.id},
-            parent_ids=cohort_ids,
-        )
-        for asset in input_assets
-    ]
-    hits = [cache.find(key) for key in keys]
-    if all(hit is not None for hit in hits):
-        return hits
-
-    images = [read_rgb_or_rgba(asset.content_path) for asset in input_assets]
-    corrected = normalize_color.execute(images)
-
-    return [
-        cache.put(
-            key,
-            kind=ManifestKind.IMAGE,
-            content_bytes=encode_png(image),
-            ext="png",
-            metadata=RasterMetadata(output_width=image.shape[1], output_height=image.shape[0]),
-            params=params,
-            parent_ids=[asset.id],
-            created_by="tools:normalize.color",
-        )
-        for asset, key, image in zip(input_assets, keys, corrected, strict=True)
-    ]
 
 
 def run_depth(
@@ -410,7 +367,7 @@ def run_upscale(
     )
 
 
-def _shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
+def shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
     if shape.uv is not None and shape.texture is not None:
         mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=shape.texture)
@@ -445,13 +402,17 @@ def run_gaussian(
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
-    execute_params = {key: value for key, value in params.items() if key != "device"}
+    execute_params = {k: v for k, v in params.items() if k not in ("device", "declutter")}
     cloud = ReconstructUseCase(backend).execute(
         [asset.content_path for asset in input_assets],
         device=params.get("device", "auto"),
         on_progress=on_progress,
         **execute_params,
     )
+    if params.get("declutter"):
+        from splat.adapters.cleanup.density_declutter import DensityDeclutterer
+
+        cloud = DensityDeclutterer().declutter(cloud)
     # SfM and most feed-forward reconstruction have no absolute scale, so the
     # default is to normalize; a backend predicting metres says so and keeps it.
     if not backend.provides_metric_scale:
@@ -523,35 +484,30 @@ def run_render(
     )
 
 
-def run_displace_height(
+def run_mesh(
     cache: ManifestRepository,
     *,
-    image_asset: Manifest,
-    depth_asset: Manifest,
-    depth_map: DepthMap,
+    model_name: str,
+    parent_ids: tuple[str, ...],
     params: dict,
-    export_format: str = "glb",
+    build: Callable[[], tuple[bytes, dict]],
 ) -> Manifest:
-    parent_ids = (image_asset.id, depth_asset.id)
-    invocation = {"format": export_format, **params}
+    """Caches a `shape_3d` from whichever mesher `build` runs; it returns the
+    encoded mesh in `params["format"]` plus its metadata."""
     cache_key = compute_cache_key(
-        stage="tools",
-        model="displace.height",
-        params=invocation,
-        parent_ids=parent_ids,
+        stage="mesh", model=model_name, params=params, parent_ids=parent_ids
     )
     if (hit := cache.find(cache_key)) is not None:
         return hit
 
-    shape = displace_height.execute(image_asset.content_path, depth_map, **params)
-
+    content, metadata = build()
     return cache.put(
         cache_key,
         kind=ManifestKind.SHAPE_3D,
-        content_bytes=_shape_to_mesh_bytes(shape, export_format),
-        ext=export_format,
-        metadata=MeshMetadata(extra=shape.metadata),
-        params=invocation,
+        content_bytes=content,
+        ext=params["format"],
+        metadata=MeshMetadata(extra=metadata),
+        params=params,
         parent_ids=list(parent_ids),
-        created_by="tools:displace.height",
+        created_by=f"mesh:{model_name}",
     )

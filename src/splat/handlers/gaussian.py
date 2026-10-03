@@ -57,6 +57,8 @@ class GaussianRequest:
     low_memory: bool = False
     seed: int = 0
     focal_35mm: float = 30.0
+    declutter: bool = False
+    normalize_color: bool = True
     orbit_frames: int | None = None
     orbit_degrees: float = 30.0
 
@@ -147,7 +149,10 @@ def handle(
         "low_memory": request.low_memory,
         "seed": request.seed,
         "focal_35mm": request.focal_35mm,
+        "normalize_color": request.normalize_color,
     }
+    if request.declutter:
+        params["declutter"] = True
     if request.iters is not None:
         params["iters"] = request.iters
     if request.max_dim is not None:
@@ -155,7 +160,8 @@ def handle(
     if request.sh_degree is not None:
         params["sh_degree"] = request.sh_degree
     if descriptor is not None:
-        params = {k: v for k, v in params.items() if k == "device" or k in descriptor.params}
+        stage_wide = ("device", "declutter")
+        params = {k: v for k, v in params.items() if k in stage_wide or k in descriptor.params}
 
     cloud = run_gaussian(
         backend,
