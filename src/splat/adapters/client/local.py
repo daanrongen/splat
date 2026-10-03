@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from splat.application.models_admin import image_count_range, model_source_label, model_stage
+from splat.application.models_admin import model_source_label, model_stage
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 
 if TYPE_CHECKING:
@@ -115,7 +115,7 @@ class LocalSplatClient:
             ModelSummary(
                 name=descriptor.name,
                 stage=model_stage(descriptor.name),
-                runtime=getattr(descriptor, "runtime", "-"),
+                runtime=descriptor.runtime,
                 license=descriptor.license.spdx_id,
                 commercial=descriptor.license.is_commercial,
                 cached=cached,
@@ -132,17 +132,16 @@ class LocalSplatClient:
         from splat.handlers import models as models_handler
 
         descriptor = models_handler.info(name)
-        min_images, max_images = image_count_range(descriptor)
         return ModelInfo(
             name=descriptor.name,
-            runtime=getattr(descriptor, "runtime", "-"),
+            runtime=descriptor.runtime,
             source=model_source_label(descriptor),
             license=str(descriptor.license),
-            min_images=min_images,
-            max_images=max_images,
-            dimension=getattr(descriptor, "dimension", None),
-            normalized=getattr(descriptor, "normalized", None),
-            notes=getattr(descriptor, "notes", ""),
+            min_images=descriptor.min_images,
+            max_images=descriptor.max_images,
+            dimension=descriptor.dimension,
+            normalized=descriptor.normalized,
+            notes=descriptor.notes,
         )
 
     def models_rm(self, name: str) -> None:
