@@ -146,7 +146,7 @@ def run_segment(
     # A zero-byte marker asset recording the fan-out, so a rerun short-circuits.
     cache.put(
         cache_key,
-        kind=ManifestKind.STICKER,
+        kind=ManifestKind.FAN_OUT,
         content_bytes=b"",
         ext="manifest",
         metadata=SegmentManifestMetadata(children=[c.id for c in children]),

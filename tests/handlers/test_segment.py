@@ -1,10 +1,14 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
+from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import Sticker
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import MIT
+from splat.handlers.depth import DepthRequest
+from splat.handlers.depth import handle as depth_handle
 from splat.handlers.segment import SegmentRequest, handle
 from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
@@ -40,3 +44,32 @@ def test_handle_fans_out_stickers(mocker, tmp_path, monkeypatch):
     assert result[0].parent_ids == [asset.id]
     assert result[0].metadata.width == 2
     assert result[0].metadata.height == 2
+
+
+def _segment_once(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch(
+        "splat.handlers.segment.get_segmentation_backend",
+        return_value=FakeSegmentationBackend(),
+    )
+    cache = get_manifest_repository()
+    asset = cache.put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
+    handle(SegmentRequest(inputs=[asset], model="fake-sam"))
+    return cache
+
+
+def test_fan_out_marker_is_not_listed_as_a_sticker(mocker, tmp_path, monkeypatch):
+    cache = _segment_once(mocker, tmp_path, monkeypatch)
+
+    assert len(cache.list(kind=ManifestKind.STICKER)) == 1
+
+
+def test_fan_out_marker_is_rejected_as_depth_input(mocker, tmp_path, monkeypatch):
+    cache = _segment_once(mocker, tmp_path, monkeypatch)
+    marker = next(m for m in cache.list() if m.content_path.stat().st_size == 0)
+    depth_backend = mocker.patch("splat.handlers.depth.get_depth_backend")
+
+    with pytest.raises(SplatDomainError):
+        depth_handle(DepthRequest(inputs=[marker]))
+
+    depth_backend.assert_not_called()
