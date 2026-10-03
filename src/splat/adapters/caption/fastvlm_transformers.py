@@ -5,6 +5,14 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import ModelLicense
 
 _IMAGE_TOKEN_INDEX = -200
+_STOP_MARKERS = ("<end of detailed answer>", "\nAnswer:")
+
+
+def _clean_caption(text: str) -> str:
+    text = text.strip().removeprefix("Answer:")
+    for marker in _STOP_MARKERS:
+        text = text.split(marker, 1)[0]
+    return text.strip()
 
 
 def _resolve_device(device: str) -> str:
@@ -101,7 +109,7 @@ class FastVLMTransformersBackend:
             output_ids = self._model.generate(**generate_kwargs)
 
         generated_ids = output_ids[0, input_ids.shape[1] :]
-        text = self._tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
-        if text:
-            return text
-        return self._tokenizer.decode(output_ids[0], skip_special_tokens=True).strip()
+        text = _clean_caption(self._tokenizer.decode(generated_ids, skip_special_tokens=True))
+        return text or _clean_caption(
+            self._tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        )
