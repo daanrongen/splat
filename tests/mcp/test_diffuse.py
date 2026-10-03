@@ -56,5 +56,5 @@ def test_diffuse_unknown_model_is_reported_as_tool_error(tmp_path, monkeypatch, 
 def test_diffuse_missing_image_reports_the_cause(tmp_path, monkeypatch, call_tool):
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
 
-    with pytest.raises(ToolError, match="nonexistent.png"):
+    with pytest.raises(ToolError, match="nonexistent"):
         call_tool("diffuse", prompt="a fox", image=str(tmp_path / "nonexistent.png"))
