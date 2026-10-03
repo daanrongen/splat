@@ -6,6 +6,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import RasterMetadata
 from splat.registry.wiring import get_manifest_repository
+from tests.image_helpers import tiny_png
 
 
 def _put_image(monkeypatch, tmp_path, manifest_id: str, created_by: str = "diffuse:sdxl") -> None:
@@ -13,7 +14,7 @@ def _put_image(monkeypatch, tmp_path, manifest_id: str, created_by: str = "diffu
     get_manifest_repository().put(
         manifest_id,
         kind=ManifestKind.IMAGE,
-        content_bytes=manifest_id.encode(),
+        content_bytes=tiny_png(manifest_id),
         ext="png",
         metadata=RasterMetadata(),
         parent_ids=[],

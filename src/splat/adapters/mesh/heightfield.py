@@ -59,5 +59,5 @@ def heightfield_mesh(
         faces=faces,
         uv=uv,
         texture=image.astype(np.uint8),
-        metadata={"vertex_count": len(vertices), "face_count": len(faces)},
+        metadata={"vertex_count": len(vertices), "face_count": len(faces), "textured": True},
     )

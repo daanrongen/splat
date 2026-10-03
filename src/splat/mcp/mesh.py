@@ -26,11 +26,10 @@ def mesh(
         opacity_threshold=opacity_threshold,
     )
     result = handle(request)[0]
-    extra = result.metadata.extra
+    mesh = result.metadata
     return [
         text_content(
-            f"asset id: {result.id} ({extra.get('vertex_count', 0):,} vertices, "
-            f"{extra.get('face_count', 0):,} faces)"
+            f"asset id: {result.id} ({mesh.vertex_count:,} vertices, {mesh.face_count:,} faces)"
         ),
         resource_content(result),
     ]

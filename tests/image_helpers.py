@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -32,3 +33,14 @@ def write_sample_png(path: Path, size: tuple[int, int] = (2, 2)) -> Path:
 
 def sample_png_bytes(size: tuple[int, int] = (2, 2)) -> bytes:
     return encode_png(sample_rgb(size))
+
+
+def tiny_png(tag: str) -> bytes:
+    """A valid 1x1 RGB PNG whose bytes differ per tag."""
+    return encode_png(sample_rgb((1, 1), tuple(tag.encode().ljust(3, b"\0")[:3])))
+
+
+def depth_npy(size: tuple[int, int] = (2, 2)) -> bytes:
+    buf = BytesIO()
+    np.save(buf, np.ones(size[::-1], dtype=np.float32))
+    return buf.getvalue()
