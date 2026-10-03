@@ -26,7 +26,7 @@ jobs:
 
       - name: Generate the formula
         run: |
-          url="https://github.com/${{ github.repository }}/archive/refs/tags/$TAG.tar.gz"
+          url="https://github.com/${{ github.repository }}/releases/download/$TAG/splat-${TAG#v}.tar.gz"
           sha="$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)"
           python3 scripts/generate_formula.py \
             --version="${TAG#v}" --repo="${{ github.repository }}" --sha256="$sha" \

@@ -1,6 +1,8 @@
 name: Release
 
-# Cut a release with `git tag vX.Y.Z && git push origin vX.Y.Z`; the tag must match pyproject.toml.
+# Cut a release with `git tag vX.Y.Z && git push origin vX.Y.Z`. `bump` sets the version in
+# pyproject.toml and uv.lock from the tag and commits it to main; everything downstream builds
+# from that commit (one ahead of the tag), so `splat --version` always matches the tag.
 on:
   push:
     tags: ["v*.*.*"]
@@ -9,40 +11,73 @@ permissions:
   contents: read
 
 jobs:
-  check-version:
+  bump:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.bump.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Tag matches pyproject version
+      - name: Tag is vX.Y.Z
         run: |
-          version="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)"
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::$GITHUB_REF_NAME does not match pyproject.toml version $version"
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::$GITHUB_REF_NAME is not a semver tag (expected vX.Y.Z)"
             exit 1
           fi
 
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Bump pyproject.toml and uv.lock, commit to main
+        id: bump
+        run: |
+          uv version --no-sync "${GITHUB_REF_NAME#v}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock
+          if git diff --cached --quiet; then
+            echo "already at $GITHUB_REF_NAME"
+          else
+            git commit -m "chore(release): $GITHUB_REF_NAME"
+            git push origin HEAD:main
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   test:
-    needs: check-version
+    needs: bump
     uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
 
   build:
-    needs: test
+    needs: [bump, test]
     uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
 
   github-release:
-    needs: build
+    needs: [bump, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
 
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
 
-      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+      - name: Source archive for the Homebrew formula
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          git archive --prefix="splat-$version/" -o "dist/splat-$version.tar.gz" HEAD
+
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --target "${{ needs.bump.outputs.sha }}"
         env:
           GH_TOKEN: ${{ github.token }}
