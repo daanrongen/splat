@@ -1,8 +1,8 @@
 """Apple-local Gaussian reconstruction via mlx3d's capture pipeline.
 
 This backend is optimization-based rather than feed-forward: mlx3d estimates
-poses, trains a 3DGS scene, and exports a standard Gaussian PLY. It is the
-local runnable default because it works on Apple Silicon through MLX/Metal.
+poses, trains a 3DGS scene, and exports a standard Gaussian PLY. It runs
+entirely on Apple Silicon through MLX/Metal.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from splat.adapters.formats.ply import PlyReader
+from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
 from splat.domain.value_objects import ModelLicense
 
@@ -76,9 +77,12 @@ class MLX3DCaptureBackend:
                 seed=seed,
                 overwrite=True,
             )
-            summary = run_capture(
-                str(input_dir), str(output_dir), config, log=on_progress or (lambda _msg: None)
-            )
+            try:
+                summary = run_capture(
+                    str(input_dir), str(output_dir), config, log=on_progress or (lambda _msg: None)
+                )
+            except RuntimeError as exc:
+                raise SplatDomainError(f"mlx3d capture failed: {exc}") from exc
             cloud = PlyReader().read(Path(summary["splat"]))
             cloud.metadata.source_model = self.name
             # SfM triangulates in the COLMAP frame; the PLY carries no comment

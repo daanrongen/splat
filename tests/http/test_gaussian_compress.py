@@ -41,7 +41,7 @@ def test_gaussian_returns_output_bytes(mocker, tmp_path, synthetic_cloud):
             ("images", ("a.png", _sample_png_bytes(), "image/png")),
             ("images", ("b.png", _sample_png_bytes(), "image/png")),
         ],
-        data={"to": "ply"},
+        data={"to": "ply", "model": "fake-recon"},
     )
 
     assert response.status_code == 200, response.text

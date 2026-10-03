@@ -235,7 +235,7 @@ def test_gaussian_stores_remote_asset(
     asset_a = cache.put_external(image_a, kind=ManifestKind.IMAGE)
     asset_b = cache.put_external(image_b, kind=ManifestKind.IMAGE)
 
-    results = remote_client.gaussian(GaussianRequest(inputs=[asset_a, asset_b]))
+    results = remote_client.gaussian(GaussianRequest(inputs=[asset_a, asset_b], model="fake-recon"))
 
     assert len(results) == 1
     assert results[0].kind == ManifestKind.GAUSSIAN_CLOUD

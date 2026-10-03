@@ -1,9 +1,7 @@
 """Monocular metric depth estimation via Apple's DepthPro (`apple/DepthPro-hf`).
 
-No MLX port of DepthPro exists yet, so this is the one adapter in the
-project that still uses PyTorch — on `torch.device("mps")` it's still fully
-Apple Silicon GPU-accelerated, just not through MLX. Revisit if/when an MLX
-port appears.
+No MLX port of DepthPro exists yet, so this runs PyTorch on
+`torch.device("mps")`.
 """
 
 from pathlib import Path

@@ -22,3 +22,5 @@ mise.local.toml
 
 # audit/debug playground
 .splat/
+
+torchinductor_*/

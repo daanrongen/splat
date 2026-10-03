@@ -1,12 +1,7 @@
-from dataclasses import dataclass
-from importlib import import_module
-from typing import Any, Literal
-
 from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
-from splat.domain.value_objects import ModelLicense
-
-Runtime = Literal["mlx", "coreml", "torch"]
+from splat.domain.value_objects import OPENRAIL_M, SAI_NC_COMMUNITY
+from splat.registry.catalog import ModelDescriptor
 
 DIFFUSE_CONTRACT = StageContract(
     stage="diffuse",
@@ -16,43 +11,21 @@ DIFFUSE_CONTRACT = StageContract(
     produces=ManifestKind.IMAGE,
 )
 
-
-@dataclass(frozen=True)
-class DiffusionModelDescriptor:
-    name: str
-    backend: str
-    hf_repo_id: str
-    sdxl: bool
-    license: ModelLicense
-    runtime: Runtime
-
-    @property
-    def backend_cls(self) -> type[Any]:
-        module_name, class_name = self.backend.rsplit(":", 1)
-        return getattr(import_module(module_name), class_name)
-
-
-def _build_catalog() -> dict[str, DiffusionModelDescriptor]:
-    from splat.domain.value_objects import OPENRAIL_M, SAI_NC_COMMUNITY
-
-    return {
-        "sdxl-turbo-mlx": DiffusionModelDescriptor(
-            name="sdxl-turbo-mlx",
-            backend="splat.adapters.diffuse.mlx_stable_diffusion:MLXStableDiffusionBackend",
-            hf_repo_id="stabilityai/sdxl-turbo",
-            sdxl=True,
-            license=SAI_NC_COMMUNITY,
-            runtime="mlx",
-        ),
-        "sd21-coreml": DiffusionModelDescriptor(
-            name="sd21-coreml",
-            backend="splat.adapters.diffuse.coreml_stable_diffusion:CoreMLStableDiffusionBackend",
-            hf_repo_id="apple/coreml-stable-diffusion-2-1-base",
-            sdxl=False,
-            license=OPENRAIL_M,
-            runtime="coreml",
-        ),
-    }
-
-
-DIFFUSION_CATALOG: dict[str, DiffusionModelDescriptor] = _build_catalog()
+DIFFUSION_CATALOG = {
+    "sdxl-turbo-mlx": ModelDescriptor(
+        name="sdxl-turbo-mlx",
+        backend="splat.adapters.diffuse.mlx_stable_diffusion:MLXStableDiffusionBackend",
+        hf_repo_ids=("stabilityai/sdxl-turbo",),
+        license=SAI_NC_COMMUNITY,
+        runtime="mlx",
+        backend_kwargs={"sdxl": True},
+    ),
+    "sd21-coreml": ModelDescriptor(
+        name="sd21-coreml",
+        backend="splat.adapters.diffuse.coreml_stable_diffusion:CoreMLStableDiffusionBackend",
+        hf_repo_ids=("apple/coreml-stable-diffusion-2-1-base",),
+        license=OPENRAIL_M,
+        runtime="coreml",
+        backend_kwargs={"sdxl": False},
+    ),
+}
