@@ -50,3 +50,5 @@ def test_render_output_option_writes_file(mocker, tmp_path, monkeypatch, synthet
 
     assert result.exit_code == 0, result.output
     assert output_path.read_bytes() == _FAKE_PNG
+    sidecar = json.loads((tmp_path / "out.png.manifest.json").read_text())
+    assert sidecar["created_by"] == "render:fake-render"

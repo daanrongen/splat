@@ -16,6 +16,7 @@ def _export_gaussian(asset: Manifest, output: Path) -> list[str]:
     writer = get_writer(output.suffix)
     warnings = writer.supports(cloud)
     writer.write(cloud, output)
+    get_manifest_repository().write_sidecar(asset.id, output)
     return warnings
 
 

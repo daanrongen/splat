@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 
 import pytest
 from tests.image_helpers import write_sample_png
@@ -181,6 +182,67 @@ def test_put_external_prefers_pipeline_provenance_over_an_earlier_external_clone
     resolved = cache.put_external(second_copy, kind=ManifestKind.IMAGE)
 
     assert resolved.id == produced.id
+
+
+def test_find_does_not_rehash_unchanged_content(tmp_path, mocker):
+    cache = FilesystemManifestRepository(tmp_path)
+    cache.put(
+        "asset",
+        kind=ManifestKind.IMAGE,
+        content_bytes=b"asset-bytes",
+        ext="png",
+        metadata=RasterMetadata(),
+        parent_ids=[],
+        created_by="test",
+    )
+    sha256 = mocker.spy(hashlib, "sha256")
+
+    assert cache.get("asset").id == "asset"
+    sha256.assert_not_called()
+
+
+def test_find_rehashes_when_mtime_changes(tmp_path):
+    cache = FilesystemManifestRepository(tmp_path)
+    asset = cache.put(
+        "asset",
+        kind=ManifestKind.IMAGE,
+        content_bytes=b"asset-bytes",
+        ext="png",
+        metadata=RasterMetadata(),
+        parent_ids=[],
+        created_by="test",
+    )
+    asset.content_path.write_bytes(b"asset-bytez")
+    os.utime(asset.content_path, ns=(1, 1))
+
+    assert cache.find("asset") is None
+
+
+def test_put_external_resolves_bytes_cached_before_the_index_existed(tmp_path):
+    content = b"same-bytes"
+    (tmp_path / "legacy.png").write_bytes(content)
+    meta = {**_meta(content_file="legacy.png", content=content), "created_by": "diffuse:x"}
+    (tmp_path / "legacy.meta.json").write_text(json.dumps(meta))
+    copy_path = tmp_path / "copy.png"
+    copy_path.write_bytes(content)
+
+    resolved = FilesystemManifestRepository(tmp_path).put_external(
+        copy_path, kind=ManifestKind.IMAGE
+    )
+
+    assert resolved.id == "legacy"
+
+
+def test_put_external_after_delete_creates_a_fresh_manifest(tmp_path):
+    cache = FilesystemManifestRepository(tmp_path)
+    source = write_sample_png(tmp_path / "photo.png", (2, 2))
+    first = cache.put_external(source, kind=ManifestKind.IMAGE)
+    cache.delete(first.id)
+
+    second = cache.put_external(source, kind=ManifestKind.IMAGE)
+
+    assert second.content_path.exists()
+    assert [m.id for m in cache.list()] == [second.id]
 
 
 def test_list_filters_by_kind_and_created_by_most_recent_first(tmp_path):

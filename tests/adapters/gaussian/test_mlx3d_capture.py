@@ -1,9 +1,11 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from splat.adapters.formats.ply import PlyWriter
 from splat.adapters.gaussian.mlx3d_capture import MLX3DCaptureBackend
+from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import MIT
 
 
@@ -105,3 +107,12 @@ def test_reconstruct_leaves_pose_none_when_no_cameras_registered(mocker, tmp_pat
     cloud = _backend().reconstruct([image])
 
     assert cloud.metadata.capture_camera_position is None
+
+
+def test_reconstruct_raises_a_domain_error_when_capture_fails(mocker, tmp_path):
+    image = tmp_path / "a.png"
+    _write_input_image(image)
+    mocker.patch("mlx3d.capture.run_capture", side_effect=RuntimeError("no views registered"))
+
+    with pytest.raises(SplatDomainError, match="no views registered"):
+        _backend().reconstruct([image])

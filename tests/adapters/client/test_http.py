@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,7 @@ from splat.handlers.tools.compress import CompressRequest
 from splat.handlers.tools.convert import ConvertRequest
 from splat.handlers.tools.declutter import DeclutterRequest
 from splat.handlers.upscale import UpscaleRequest
+from splat.http import gaussian as gaussian_route
 from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import sample_png_bytes, write_sample_png
 
@@ -235,12 +237,41 @@ def test_gaussian_stores_remote_asset(
     asset_a = cache.put_external(image_a, kind=ManifestKind.IMAGE)
     asset_b = cache.put_external(image_b, kind=ManifestKind.IMAGE)
 
-    results = remote_client.gaussian(GaussianRequest(inputs=[asset_a, asset_b]))
+    results = remote_client.gaussian(GaussianRequest(inputs=[asset_a, asset_b], model="fake-recon"))
 
     assert len(results) == 1
     assert results[0].kind == ManifestKind.GAUSSIAN_CLOUD
     assert results[0].metadata.point_count == synthetic_cloud.point_count
     assert results[0].parent_ids == [asset_a.id, asset_b.id]
+
+
+def test_gaussian_forwards_orbit_frames(
+    mocker, tmp_path, monkeypatch, synthetic_cloud, remote_client
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    mocker.patch(
+        "splat.handlers.gaussian.get_reconstruction_backend",
+        return_value=FakeReconstructionBackend(synthetic_cloud),
+    )
+    seen = []
+    real_handle = gaussian_route.handle
+
+    def spy(request):
+        seen.append(request)
+        return real_handle(replace(request, orbit_frames=None))
+
+    mocker.patch.object(gaussian_route, "handle", side_effect=spy)
+    image_a, image_b = _sample_image(tmp_path), tmp_path / "b.png"
+    write_sample_png(image_b, (2, 2))
+    cache = get_manifest_repository()
+    inputs = [cache.put_external(p, kind=ManifestKind.IMAGE) for p in (image_a, image_b)]
+
+    remote_client.gaussian(
+        GaussianRequest(inputs=inputs, model="fake-recon", orbit_frames=6, orbit_degrees=40.0)
+    )
+
+    assert (seen[0].orbit_frames, seen[0].orbit_degrees) == (6, 40.0)
 
 
 def test_tools_convert_writes_local_output(tmp_path, synthetic_cloud, remote_client):

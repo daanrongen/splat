@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from splat.domain.errors import UnsupportedFormat
-from splat.domain.value_objects import ModelLicense
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
 
@@ -25,6 +24,7 @@ from splat.ports.render import RenderBackend
 from splat.ports.segmentation import SegmentationBackend
 from splat.ports.splat_io import SplatReader, SplatWriter
 from splat.ports.upscaling import UpscalingBackend
+from splat.registry.catalog import ModelDescriptor, lookup
 from splat.registry.gaussian import GAUSSIAN_CATALOG
 
 
@@ -79,12 +79,7 @@ def get_client() -> "SplatClient":
 def get_reconstruction_backend(
     name: str, *, model_source: ModelSource, device: str = "auto"
 ) -> ReconstructionBackend:
-    try:
-        descriptor = GAUSSIAN_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(GAUSSIAN_CATALOG))
-        raise UnsupportedFormat(f"Unknown model {name!r}. Available: {available}") from exc
-
+    descriptor = lookup(GAUSSIAN_CATALOG, name)
     weights_path: Path | None = None
     if descriptor.hf_repo_id is not None:
         weights_path = model_source.pull(descriptor.hf_repo_id)
@@ -93,43 +88,25 @@ def get_reconstruction_backend(
     )
 
 
-def model_license(name: str) -> ModelLicense:
-    return GAUSSIAN_CATALOG[name].license
+def _hf_backend(descriptor: ModelDescriptor, device: str):
+    return descriptor.backend_cls(
+        hf_repo_id=descriptor.hf_repo_id,
+        license=descriptor.license,
+        device=device,
+        **descriptor.backend_kwargs,
+    )
 
 
 def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBackend:
     from splat.registry.diffuse import DIFFUSION_CATALOG
 
-    try:
-        descriptor = DIFFUSION_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(DIFFUSION_CATALOG))
-        raise UnsupportedFormat(
-            f"Unknown diffusion model {name!r}. Available: {available}"
-        ) from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id,
-        sdxl=descriptor.sdxl,
-        license=descriptor.license,
-        device=device,
-    )
+    return _hf_backend(lookup(DIFFUSION_CATALOG, name, "diffusion "), device)
 
 
 def get_segmentation_backend(name: str, *, device: str = "auto") -> SegmentationBackend:
     from splat.registry.segment import SEGMENTATION_CATALOG
 
-    try:
-        descriptor = SEGMENTATION_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(SEGMENTATION_CATALOG))
-        raise UnsupportedFormat(
-            f"Unknown segmentation model {name!r}. Available: {available}"
-        ) from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
-    )
+    return _hf_backend(lookup(SEGMENTATION_CATALOG, name, "segmentation "), device)
 
 
 def get_render_backend(name: str = "blender") -> RenderBackend:
@@ -143,54 +120,23 @@ def get_render_backend(name: str = "blender") -> RenderBackend:
 def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:
     from splat.registry.depth import DEPTH_CATALOG
 
-    try:
-        descriptor = DEPTH_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(DEPTH_CATALOG))
-        raise UnsupportedFormat(f"Unknown depth model {name!r}. Available: {available}") from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
-    )
+    return _hf_backend(lookup(DEPTH_CATALOG, name, "depth "), device)
 
 
 def get_caption_backend(name: str, *, device: str = "auto") -> CaptioningBackend:
     from splat.registry.caption import CAPTION_CATALOG
 
-    try:
-        descriptor = CAPTION_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(CAPTION_CATALOG))
-        raise UnsupportedFormat(f"Unknown caption model {name!r}. Available: {available}") from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
-    )
+    return _hf_backend(lookup(CAPTION_CATALOG, name, "caption "), device)
 
 
 def get_embedding_backend(name: str, *, device: str = "auto") -> EmbeddingBackend:
     from splat.registry.embed import EMBEDDING_CATALOG
 
-    try:
-        descriptor = EMBEDDING_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(EMBEDDING_CATALOG))
-        raise UnsupportedFormat(
-            f"Unknown embedding model {name!r}. Available: {available}"
-        ) from exc
-
-    return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id, license=descriptor.license, device=device
-    )
+    return _hf_backend(lookup(EMBEDDING_CATALOG, name, "embedding "), device)
 
 
 def get_upscale_backend(name: str) -> UpscalingBackend:
     from splat.registry.upscale import UPSCALE_CATALOG
 
-    try:
-        descriptor = UPSCALE_CATALOG[name]
-    except KeyError as exc:
-        available = ", ".join(sorted(UPSCALE_CATALOG))
-        raise UnsupportedFormat(f"Unknown upscale model {name!r}. Available: {available}") from exc
-
+    descriptor = lookup(UPSCALE_CATALOG, name, "upscale ")
     return descriptor.backend_cls(license=descriptor.license)

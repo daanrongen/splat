@@ -1,8 +1,10 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from splat.adapters.formats.ply import PlyReader, PlyWriter
+from splat.domain.errors import InvalidGaussianCloud
 
 
 def test_ply_roundtrip_is_lossless(tmp_path: Path, synthetic_cloud):
@@ -73,3 +75,12 @@ def test_ply_degree_zero_roundtrip(tmp_path: Path):
     loaded = PlyReader().read(out)
     assert loaded.sh_degree == 0
     assert loaded.sh_rest is None
+
+
+@pytest.mark.parametrize("content", [b"not a ply", b"ply\nformat ascii 1.0\nend_header\n"])
+def test_reading_a_non_splat_ply_raises_a_domain_error(tmp_path: Path, content):
+    path = tmp_path / "broken.ply"
+    path.write_bytes(content)
+
+    with pytest.raises(InvalidGaussianCloud, match=r"broken\.ply"):
+        PlyReader().read(path)

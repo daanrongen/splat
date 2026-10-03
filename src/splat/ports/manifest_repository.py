@@ -29,8 +29,16 @@ class ManifestRepository(Protocol):
     ) -> Manifest: ...
 
     def put_external(self, path: Path, *, kind: ManifestKind) -> Manifest:
-        """Adopt an existing file (not produced by any stage) into the cache,
-        e.g. a raw photo passed directly as a command's positional input."""
+        """Adopt an existing file into the cache, e.g. a raw photo passed as a
+        command's input. A matching `.manifest.json` sidecar restores its identity."""
+        ...
+
+    def write_sidecar(self, manifest_id: str, path: Path) -> None:
+        """Write `<path>.manifest.json` so the file carries its lineage out of the cache."""
+        ...
+
+    def export(self, manifest_id: str, out_dir: Path) -> list[Path]:
+        """Copy a manifest and every cached ancestor, each with its sidecar, into out_dir."""
         ...
 
     def list(

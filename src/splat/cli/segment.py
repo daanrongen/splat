@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 
 from splat.cli._console import console, error
-from splat.cli._pipeline_io import report, resolve_inputs
+from splat.cli._pipeline_io import export_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.handlers.segment import SegmentRequest
@@ -37,9 +37,7 @@ def segment(
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
         for i, sticker_asset in enumerate(all_stickers):
-            (output_dir / f"sticker_{i:03d}.png").write_bytes(
-                sticker_asset.content_path.read_bytes()
-            )
+            export_output(sticker_asset, output_dir / f"sticker_{i:03d}.png", cache)
 
     def _human(assets: list) -> None:
         console.print(f"[green]segmented[/green] {len(assets)} stickers")

@@ -41,6 +41,7 @@ def depth(
         if results[0].metadata.units == "metres":
             normalized = 1.0 - normalized  # near = bright, matching disparity maps
         write_png(output, (normalized * 255).astype(np.uint8))
+        cache.write_sidecar(results[0].id, output)
 
     def _human(assets: list) -> None:
         for asset in assets:

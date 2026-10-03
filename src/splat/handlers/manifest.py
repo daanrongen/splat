@@ -6,6 +6,8 @@ manifest-producing remote call, see RemoteSplatClient._store_asset), so
 boundary `tools.displace_height` draws for the same reason.
 """
 
+from pathlib import Path
+
 from splat.domain.errors import WrongManifestKind
 from splat.domain.manifest import Manifest, ManifestKind
 
@@ -44,3 +46,9 @@ def list_manifests(
 
 def delete(manifest_id: str) -> None:
     _manifest_repository().delete(manifest_id)
+
+
+def export(manifest_id: str, out_dir: Path) -> list[Path]:
+    repository = _manifest_repository()
+    repository.get(manifest_id)
+    return repository.export(manifest_id, out_dir)
