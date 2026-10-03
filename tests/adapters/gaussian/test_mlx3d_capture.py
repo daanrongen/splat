@@ -22,6 +22,7 @@ class _FakeCamera:
 class _FakeColmapDataset:
     def __init__(self, cameras):
         self.cameras = cameras
+        self.image_names = [f"{i:03d}.png" for i in range(len(cameras))]
 
 
 def _write_input_image(path: Path) -> None:
@@ -153,4 +154,5 @@ def test_reconstruct_keeps_every_registered_camera(mocker, tmp_path, synthetic_c
         [1.0, 0.0, 0.0],
         [2.0, 0.0, 0.0],
     ]
+    assert [c["input"] for c in cloud.metadata.source_cameras] == [0, 1, 2]
     assert cloud.metadata.capture_camera_count == 3

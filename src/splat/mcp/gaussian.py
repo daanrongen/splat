@@ -27,6 +27,7 @@ def gaussian(
     normalize_color: bool = True,
     orbit_frames: int | None = None,
     orbit_degrees: float = 30.0,
+    score: bool = False,
 ) -> list[types.ContentBlock]:
     """Reconstruct a Gaussian splat from image paths or @asset ids."""
     cache = get_manifest_repository()
@@ -49,6 +50,7 @@ def gaussian(
             normalize_color=normalize_color,
             orbit_frames=orbit_frames,
             orbit_degrees=orbit_degrees,
+            score=score,
         )
     )[0]
     content: list[types.ContentBlock] = [

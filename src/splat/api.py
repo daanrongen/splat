@@ -145,6 +145,7 @@ def gaussian(
     refine_poses: str = "auto",
     low_memory: bool = False,
     seed: int = 0,
+    score: bool = False,
 ) -> list[Manifest]:
     return get_client().gaussian(
         GaussianRequest(
@@ -159,6 +160,7 @@ def gaussian(
             refine_poses=refine_poses,
             low_memory=low_memory,
             seed=seed,
+            score=score,
         )
     )
 

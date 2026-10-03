@@ -95,9 +95,12 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 | `--normalize-color` / `--no-normalize-color` | on | `mlx3d-capture`: even out exposure across views |
 | `--low-mem`, `--seed` | | `mlx3d-capture` |
 | `--declutter` | off | drop isolated floater Gaussians |
+| `--score` | off | render source view 0 with Blender and record PSNR and SSIM against its photo |
 | `--min-registered` | | fail if fewer than this fraction of inputs registered |
 | `--orbit-frames`, `--orbit-degrees` | 30° | also render N synthetic views across the sweep |
 | `--verbose`, `--device`, `-o` | | `-o` format follows the extension |
+
+Every cloud records a `quality` report in its metadata (opacity histogram, near-transparent, needle and out-of-view ratios), which `splat manifest get` prints.
 
 **`splat render INPUT`** renders a splat to a PNG with Blender.
 
