@@ -11,10 +11,31 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from splat.adapters.formats.image import read_rgb
 from splat.adapters.formats.ply import PlyReader
+from splat.domain.color import normalize_exposure
 from splat.domain.errors import SplatDomainError
 from splat.domain.gaussians import GaussianCloud
 from splat.domain.value_objects import ModelLicense
+
+
+def _stage_inputs(images: list[Path], input_dir: Path, *, normalize_color: bool) -> None:
+    """Copies the capture into `input_dir`, first evening out per-view exposure
+    drift so it doesn't bake into the Gaussians' colour."""
+    targets = [input_dir / f"{i:03d}{image.suffix or '.png'}" for i, image in enumerate(images)]
+    if not normalize_color:
+        for image, target in zip(images, targets, strict=True):
+            target.write_bytes(image.read_bytes())
+        return
+
+    from PIL import Image
+
+    corrected = normalize_exposure([read_rgb(image) for image in images])
+    for image, target, rgb in zip(images, targets, corrected, strict=True):
+        # SfM reads focal length from EXIF, so it travels with the corrected pixels.
+        with Image.open(image) as original:
+            exif = original.getexif()
+        Image.fromarray(rgb).save(target, exif=exif, quality=95)
 
 
 class MLX3DCaptureBackend:
@@ -43,6 +64,7 @@ class MLX3DCaptureBackend:
         refine_poses: str = "auto",
         low_memory: bool = False,
         seed: int = 0,
+        normalize_color: bool = True,
         on_progress: Callable[[str], None] | None = None,
         **params,
     ) -> GaussianCloud:
@@ -59,9 +81,7 @@ class MLX3DCaptureBackend:
             tmp_path = Path(tmp_dir)
             input_dir = tmp_path / "images"
             input_dir.mkdir()
-            for i, image in enumerate(images):
-                suffix = image.suffix or ".png"
-                (input_dir / f"{i:03d}{suffix}").write_bytes(image.read_bytes())
+            _stage_inputs(images, input_dir, normalize_color=normalize_color)
 
             output_dir = tmp_path / "capture"
             config = CaptureConfig(

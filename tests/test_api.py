@@ -49,14 +49,6 @@ class _FakeClient:
         self.calls.append(("gaussian", request))
         return ["gaussian-result"]
 
-    def tools_convert(self, request):
-        self.calls.append(("tools_convert", request))
-        return "convert-result"
-
-    def tools_compress(self, request):
-        self.calls.append(("tools_compress", request))
-        return "compress-result"
-
     def info(self, path):
         self.calls.append(("info", path))
         return "info-result"
@@ -168,21 +160,16 @@ def test_render_bypasses_client_and_calls_handler_directly(mocker, fake_client):
     assert not fake_client.calls  # render never goes through get_client()
 
 
-def test_tools_compress_builds_request(fake_client, tmp_path):
-    result = splat.tools_compress(tmp_path / "in.ply", tmp_path / "out.ply", profile="archival")
+def test_export_and_mesh_run_locally(tmp_path, monkeypatch, synthetic_cloud):
+    from splat.adapters.formats.ply import PlyWriter
 
-    assert result == "compress-result"
-    _, request = fake_client.calls[0]
-    assert request.profile == "archival"
-    assert request.input_path == tmp_path / "in.ply"
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    PlyWriter().write(synthetic_cloud, tmp_path / "in.ply")
 
+    result = splat.export(tmp_path / "in.ply", tmp_path / "out.splat", profile="archival")
 
-def test_tools_convert_builds_request(fake_client, tmp_path):
-    result = splat.tools_convert(tmp_path / "in.ply", tmp_path / "out.splat")
-
-    assert result == "convert-result"
-    _, request = fake_client.calls[0]
-    assert request.output_path == tmp_path / "out.splat"
+    assert result.path.exists()
+    assert result.point_count == synthetic_cloud.point_count
 
 
 def test_info_and_validate_delegate(fake_client, tmp_path):

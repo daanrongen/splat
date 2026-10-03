@@ -1,6 +1,4 @@
-"""Assembles the `splat mcp` server, mirroring the CLI command taxonomy.
-Backends with a swappable model catalog are top-level MCP tools, while
-single fixed-algorithm operations with no catalog use the `tools_*` prefix.
+"""Assembles the `splat mcp` server, one tool per CLI command.
 Every remote-capable tool goes through registry.wiring.get_client(), same as
 cli/*.py, so SPLAT_URL transparently redirects tool calls to a remote
 `splat http` server exactly like the CLI. `splat mcp` itself is still always
@@ -19,18 +17,14 @@ from splat.mcp import caption as caption_tool
 from splat.mcp import depth as depth_tool
 from splat.mcp import diffuse, gaussian
 from splat.mcp import embed as embed_tool
+from splat.mcp import export as export_tool
 from splat.mcp import inspect as inspect_tool
 from splat.mcp import manifest as manifest_tool
+from splat.mcp import mesh as mesh_tool
 from splat.mcp import models as models_tool
 from splat.mcp import render as render_tool
 from splat.mcp import segment as segment_tool
 from splat.mcp import upscale as upscale_tool
-from splat.mcp.tools import compress as tools_compress
-from splat.mcp.tools import convert as tools_convert
-from splat.mcp.tools import declutter as tools_declutter
-from splat.mcp.tools import displace_height as tools_displace_height
-from splat.mcp.tools import extract_surface as tools_extract_surface
-from splat.mcp.tools import normalize_color as tools_normalize_color
 
 server = MCPServer("splat", version=version("splat"))
 
@@ -57,18 +51,14 @@ server.add_tool(_as_tool_error(depth_tool.depth), name="depth")
 server.add_tool(_as_tool_error(upscale_tool.upscale), name="upscale")
 server.add_tool(_as_tool_error(gaussian.gaussian), name="gaussian")
 server.add_tool(_as_tool_error(render_tool.render), name="render")
-server.add_tool(_as_tool_error(tools_convert.convert), name="tools_convert")
-server.add_tool(_as_tool_error(tools_compress.compress), name="tools_compress")
-server.add_tool(_as_tool_error(tools_declutter.declutter), name="tools_declutter")
-server.add_tool(_as_tool_error(tools_extract_surface.extract_surface), name="tools_extract_surface")
+server.add_tool(_as_tool_error(mesh_tool.mesh), name="mesh")
+server.add_tool(_as_tool_error(export_tool.export), name="export")
 server.add_tool(_as_tool_error(inspect_tool.info), name="info")
 server.add_tool(_as_tool_error(inspect_tool.validate), name="validate")
 server.add_tool(_as_tool_error(models_tool.list_models), name="models_list")
 server.add_tool(_as_tool_error(models_tool.pull), name="models_pull")
 server.add_tool(_as_tool_error(models_tool.info), name="models_info")
 server.add_tool(_as_tool_error(models_tool.rm), name="models_rm")
-server.add_tool(_as_tool_error(tools_displace_height.displace_height), name="tools_displace_height")
-server.add_tool(_as_tool_error(tools_normalize_color.normalize_color), name="tools_normalize_color")
 server.add_tool(_as_tool_error(manifest_tool.list_manifests), name="manifest_list")
 server.add_tool(_as_tool_error(manifest_tool.get), name="manifest_get")
 server.add_tool(_as_tool_error(manifest_tool.delete), name="manifest_delete")

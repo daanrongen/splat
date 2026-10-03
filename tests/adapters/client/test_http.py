@@ -16,9 +16,6 @@ from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
-from splat.handlers.tools.compress import CompressRequest
-from splat.handlers.tools.convert import ConvertRequest
-from splat.handlers.tools.declutter import DeclutterRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.http import gaussian as gaussian_route
 from splat.registry.wiring import get_manifest_repository
@@ -272,43 +269,6 @@ def test_gaussian_forwards_orbit_frames(
     )
 
     assert (seen[0].orbit_frames, seen[0].orbit_degrees) == (6, 40.0)
-
-
-def test_tools_convert_writes_local_output(tmp_path, synthetic_cloud, remote_client):
-    ply_path = tmp_path / "in.ply"
-    PlyWriter().write(synthetic_cloud, ply_path)
-    splat_path = tmp_path / "out.splat"
-
-    result = remote_client.tools_convert(
-        ConvertRequest(input_path=ply_path, output_path=splat_path)
-    )
-
-    assert splat_path.exists()
-    assert result.cloud.point_count == synthetic_cloud.point_count
-
-
-def test_tools_compress_writes_local_output(tmp_path, synthetic_cloud, remote_client):
-    ply_path = tmp_path / "in.ply"
-    PlyWriter().write(synthetic_cloud, ply_path)
-    out_path = tmp_path / "out.ply"
-
-    cloud = remote_client.tools_compress(CompressRequest(input_path=ply_path, output_path=out_path))
-
-    assert out_path.exists()
-    assert cloud.point_count <= synthetic_cloud.point_count
-
-
-def test_tools_declutter_writes_local_output(tmp_path, synthetic_cloud, remote_client):
-    ply_path = tmp_path / "in.ply"
-    PlyWriter().write(synthetic_cloud, ply_path)
-    out_path = tmp_path / "out.ply"
-
-    cloud = remote_client.tools_declutter(
-        DeclutterRequest(input_path=ply_path, output_path=out_path)
-    )
-
-    assert out_path.exists()
-    assert cloud.point_count <= synthetic_cloud.point_count
 
 
 def test_info_returns_summary(tmp_path, synthetic_cloud, remote_client):

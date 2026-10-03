@@ -148,3 +148,30 @@ def test_orbit_frames_rejects_a_sweep_of_one(mocker, tmp_path, monkeypatch, synt
 
     with pytest.raises(SplatDomainError, match="at least 2"):
         handle(request)
+
+
+def test_declutter_drops_an_isolated_floater(mocker, tmp_path, monkeypatch, synthetic_cloud):
+    from dataclasses import replace
+
+    import numpy as np
+
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    means = synthetic_cloud.means.copy()
+    means[0] = [1000.0, 1000.0, 1000.0]
+    cloud = replace(synthetic_cloud, means=means.astype(np.float32))
+    mocker.patch("splat.handlers.gaussian.get_model_source", return_value=object())
+    mocker.patch(
+        "splat.handlers.gaussian.get_reconstruction_backend",
+        return_value=FakeReconstructionBackend(cloud),
+    )
+    cache = get_manifest_repository()
+    images = [
+        cache.put_external(write_sample_png(tmp_path / f"{n}.png", (2, 2)), kind=ManifestKind.IMAGE)
+        for n in "ab"
+    ]
+
+    kept = handle(GaussianRequest(inputs=images, model="fake-recon"))[0]
+    cleaned = handle(GaussianRequest(inputs=images, model="fake-recon", declutter=True))[0]
+
+    assert cleaned.metadata.point_count == kept.metadata.point_count - 1
+    assert cleaned.params["declutter"] is True

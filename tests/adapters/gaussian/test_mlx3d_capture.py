@@ -116,3 +116,24 @@ def test_reconstruct_raises_a_domain_error_when_capture_fails(mocker, tmp_path):
 
     with pytest.raises(SplatDomainError, match="no views registered"):
         _backend().reconstruct([image])
+
+
+def test_stage_inputs_evens_out_exposure_and_keeps_exif(tmp_path):
+    from PIL import Image
+
+    from splat.adapters.gaussian.mlx3d_capture import _stage_inputs
+
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[0xA405] = 24
+    dark, bright = tmp_path / "dark.jpg", tmp_path / "bright.jpg"
+    Image.new("RGB", (8, 8), (60, 60, 60)).save(dark, exif=exif.tobytes())
+    Image.new("RGB", (8, 8), (180, 180, 180)).save(bright, exif=exif.tobytes())
+    staged = tmp_path / "staged"
+    staged.mkdir()
+
+    _stage_inputs([dark, bright], staged, normalize_color=True)
+
+    means = [np.asarray(Image.open(p)).mean() for p in sorted(staged.iterdir())]
+    assert abs(means[0] - means[1]) < 5
+    with Image.open(staged / "000.jpg") as image:
+        assert image.getexif().get_ifd(0x8769).get(0xA405) == 24

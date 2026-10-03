@@ -23,6 +23,8 @@ def gaussian(
     refine_poses: str = "auto",
     low_memory: bool = False,
     seed: int = 0,
+    declutter: bool = False,
+    normalize_color: bool = True,
     orbit_frames: int | None = None,
     orbit_degrees: float = 30.0,
 ) -> list[types.ContentBlock]:
@@ -43,6 +45,8 @@ def gaussian(
             refine_poses=refine_poses,
             low_memory=low_memory,
             seed=seed,
+            declutter=declutter,
+            normalize_color=normalize_color,
             orbit_frames=orbit_frames,
             orbit_degrees=orbit_degrees,
         )

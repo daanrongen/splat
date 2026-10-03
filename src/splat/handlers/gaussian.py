@@ -57,6 +57,8 @@ class GaussianRequest:
     low_memory: bool = False
     seed: int = 0
     focal_35mm: float = 30.0
+    declutter: bool = False
+    normalize_color: bool = True
     orbit_frames: int | None = None
     orbit_degrees: float = 30.0
 
@@ -147,7 +149,10 @@ def handle(
         "low_memory": request.low_memory,
         "seed": request.seed,
         "focal_35mm": request.focal_35mm,
+        "normalize_color": request.normalize_color,
     }
+    if request.declutter:
+        params["declutter"] = True
     if request.iters is not None:
         params["iters"] = request.iters
     if request.max_dim is not None:

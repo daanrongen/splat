@@ -5,6 +5,10 @@ algorithm, license-clean independent of any reference repo; Open3D (MIT)
 provides a maintained CPU implementation.
 """
 
+import multiprocessing
+import tempfile
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import numpy as np
@@ -34,9 +38,7 @@ class PoissonMeshExporter:
     ) -> tuple[int, int]:
         fmt = format.lstrip(".").lower()
         if fmt not in SUPPORTED_FORMATS:
-            raise UnsupportedFormat(
-                f"tools extract.surface supports {SUPPORTED_FORMATS}, got {fmt!r}"
-            )
+            raise UnsupportedFormat(f"poisson meshing supports {SUPPORTED_FORMATS}, got {fmt!r}")
 
         keep = cloud.to_activated_opacities() >= opacity_threshold
         if keep.sum() < MIN_POINTS:
@@ -45,7 +47,7 @@ class PoissonMeshExporter:
         colors = np.clip(0.5 + SH_C0 * cloud.sh_dc[keep], 0.0, 1.0)
         if means.shape[0] < MIN_POINTS:
             raise SplatDomainError(
-                f"extract.surface needs at least {MIN_POINTS} points, got {means.shape[0]}"
+                f"poisson meshing needs at least {MIN_POINTS} points, got {means.shape[0]}"
             )
 
         pcd = o3d.geometry.PointCloud()
@@ -65,3 +67,31 @@ class PoissonMeshExporter:
         o3d.io.write_triangle_mesh(str(path), mesh)
 
         return len(mesh.vertices), len(mesh.triangles)
+
+
+def _export_in_child(
+    cloud_path: Path, out_path: Path, format: str, params: dict
+) -> tuple[int, int]:
+    from splat.adapters.formats.ply import PlyReader
+
+    return PoissonMeshExporter().export(
+        PlyReader().read(cloud_path), out_path, format=format, **params
+    )
+
+
+def poisson_mesh(cloud: GaussianCloud, *, format: str, **params) -> tuple[bytes, int, int]:
+    """Runs Poisson in a fresh process: Open3D's OpenMP segfaults when it shares
+    one with torch's (#85)."""
+    from splat.adapters.formats.ply import PlyWriter
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cloud_path, out_path = Path(tmp_dir) / "cloud.ply", Path(tmp_dir) / f"mesh.{format}"
+        PlyWriter().write(cloud, cloud_path)
+        spawn = multiprocessing.get_context("spawn")
+        try:
+            with ProcessPoolExecutor(max_workers=1, mp_context=spawn) as pool:
+                job = pool.submit(_export_in_child, cloud_path, out_path, format, params)
+                vertices, faces = job.result()
+        except BrokenProcessPool as exc:
+            raise SplatDomainError("Poisson meshing crashed in its worker process.") from exc
+        return out_path.read_bytes(), vertices, faces

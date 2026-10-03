@@ -84,6 +84,18 @@ def gaussian(
     seed: int = typer.Option(
         0, "--seed", help="Random seed; <0 disables seeding.", envvar="SPLAT_GAUSSIAN_SEED"
     ),
+    declutter: bool = typer.Option(
+        False,
+        "--declutter",
+        help="Drop isolated floater Gaussians after reconstruction.",
+        envvar="SPLAT_GAUSSIAN_DECLUTTER",
+    ),
+    normalize_color: bool = typer.Option(
+        True,
+        "--normalize-color/--no-normalize-color",
+        help="mlx3d-capture: even out exposure across the input views first.",
+        envvar="SPLAT_GAUSSIAN_NORMALIZE_COLOR",
+    ),
     focal_35mm: float = typer.Option(
         30.0,
         "--focal-35mm",
@@ -144,6 +156,8 @@ def gaussian(
             low_memory=low_memory,
             seed=seed,
             focal_35mm=focal_35mm,
+            declutter=declutter,
+            normalize_color=normalize_color,
             orbit_frames=orbit_frames,
             orbit_degrees=orbit_degrees,
         )
