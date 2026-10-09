@@ -16,6 +16,7 @@ parameterization the aggregate defaults to.
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +29,7 @@ from splat.domain.gaussians import (
     GaussianCloudMetadata,
     sh_rest_count,
 )
+from splat.domain.value_objects import ModelLicense
 
 
 def _degree_from_rest_count(count: int) -> int:
@@ -89,6 +91,10 @@ class PlyReader:
             opacity_activation="logit",
             metadata=GaussianCloudMetadata(
                 source_format="ply",
+                source_model=comments.get("source_model"),
+                license=ModelLicense(**json.loads(comments["license"]))
+                if "license" in comments
+                else None,
                 up_axis=comments.get("up_axis", "y"),
                 coordinate_convention=comments.get("coordinate_convention", "opengl"),
                 capture_camera_position=json.loads(comments["capture_camera_position"])
@@ -173,6 +179,10 @@ class PlyWriter:
             f"up_axis {cloud.metadata.up_axis}",
             f"coordinate_convention {cloud.metadata.coordinate_convention}",
         ]
+        if cloud.metadata.source_model is not None:
+            comments.append(f"source_model {cloud.metadata.source_model}")
+        if cloud.metadata.license is not None:
+            comments.append(f"license {json.dumps(asdict(cloud.metadata.license))}")
         if cloud.metadata.capture_camera_position is not None:
             comments.append(
                 f"capture_camera_position {json.dumps(cloud.metadata.capture_camera_position)}"
