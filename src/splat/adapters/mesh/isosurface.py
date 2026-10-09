@@ -15,7 +15,8 @@ from splat.domain.gaussians import GaussianCloud
 from splat.domain.image_space import Shape3D
 
 MIN_POINTS = 4
-TRIM = 1.0  # percentile of floaters ignored on each side when sizing the grid
+TRIM = 1.0  # percentile bounding the bulk of the cloud
+MARGIN = 1.0  # bulk extents beyond which a point counts as a floater
 LEVEL = 0.5  # surface density as a fraction of the median occupied voxel
 
 
@@ -32,11 +33,14 @@ def isosurface_mesh(
         )
     sigma = float(np.median(cloud.to_linear_scales()[kept]))
     lo, hi = np.percentile(cloud.means[kept], [TRIM, 100 - TRIM], axis=0)
-    kept = kept[((cloud.means[kept] >= lo) & (cloud.means[kept] <= hi)).all(axis=1)]
+    margin = MARGIN * (hi - lo)
+    kept = kept[
+        ((cloud.means[kept] >= lo - margin) & (cloud.means[kept] <= hi + margin)).all(axis=1)
+    ]
     means = cloud.means[kept].astype(np.float64)
 
-    low = lo - 3 * sigma
-    extent = hi + 3 * sigma - low
+    low = means.min(axis=0) - 3 * sigma
+    extent = means.max(axis=0) + 3 * sigma - low
     voxel = float(extent.max()) / resolution
     shape = np.ceil(extent / voxel).astype(int) + 1
     flat = np.ravel_multi_index(np.floor((means - low) / voxel).astype(int).T, shape)

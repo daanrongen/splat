@@ -1,3 +1,5 @@
+import dataclasses
+
 import numpy as np
 import pytest
 
@@ -58,3 +60,22 @@ def test_falls_back_when_opacity_filter_leaves_too_few_points():
     cloud = _sphere_cloud(n=500, opacity=-10.0)  # activated opacity near 0 for every point
 
     assert len(isosurface_mesh(cloud, resolution=32, opacity_threshold=0.5).faces) > 0
+
+
+def test_keeps_a_thin_protrusion_beyond_the_bulk_of_the_cloud():
+    sphere = _sphere_cloud(n=40000)
+    rod = _sphere_cloud(n=300)
+    rod_means = np.zeros((300, 3), dtype=np.float32)
+    rod_means[:, 0] = np.linspace(1.0, 1.6, 300)
+    cloud = dataclasses.replace(
+        sphere,
+        means=np.concatenate([sphere.means, rod_means]),
+        scales=np.concatenate([sphere.scales, rod.scales]),
+        rotations=np.concatenate([sphere.rotations, rod.rotations]),
+        opacities=np.concatenate([sphere.opacities, rod.opacities]),
+        sh_dc=np.concatenate([sphere.sh_dc, rod.sh_dc]),
+    )
+
+    shape = isosurface_mesh(cloud, resolution=96)
+
+    assert shape.vertices[:, 0].max() > 1.4
