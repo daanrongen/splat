@@ -27,6 +27,10 @@ run = [
     "uv run pytest",
 ]
 
+[tasks.bundle]
+description = "Build the standalone macOS arm64 tarball into dist/"
+run = "scripts/bundle.sh"
+
 [tasks.env-example]
 description = "Regenerate .env.example from the CLI's own option definitions"
 run = "uv run splat env --export > .env.example"

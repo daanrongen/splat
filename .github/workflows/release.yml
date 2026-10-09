@@ -58,8 +58,26 @@ jobs:
     with:
       ref: ${{ needs.bump.outputs.sha }}
 
+  bundle:
+    needs: [bump, test]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
+
+      - uses: astral-sh/setup-uv@v5
+
+      - run: scripts/bundle.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle
+          path: dist/splat-*-macos-arm64.tar.gz*
+          compression-level: 0
+
   github-release:
-    needs: [bump, build]
+    needs: [bump, build, bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -70,13 +88,9 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          pattern: "{dist,bundle}"
+          merge-multiple: true
           path: dist
-
-      - name: Source archive for the Homebrew formula
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          git archive --prefix="splat-$version/" -o "dist/splat-$version-src.tar.gz" HEAD
 
       - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --target "${{ needs.bump.outputs.sha }}"
         env:

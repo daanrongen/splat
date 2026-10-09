@@ -25,8 +25,11 @@ any manifest ─ export ─▶ file + .manifest.json sidecar
 ## Install
 
 ```sh
+brew trust daanrongen/splat
 brew install daanrongen/splat/splat
 ```
+
+Recent Homebrew refuses third-party taps until they are trusted. Without Homebrew, unpack `splat-<version>-macos-arm64.tar.gz` from a [release](https://github.com/daanrongen/splat/releases) anywhere and run its `bin/splat`; it carries its own Python and needs nothing else installed.
 
 From source:
 
