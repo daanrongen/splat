@@ -352,3 +352,34 @@ def test_major_mismatch_fails(monkeypatch):
 
     with pytest.raises(SplatDomainError, match=r"server runs splat 2\.0\.0"):
         _client_against(monkeypatch, "2.0.0")
+
+
+def test_remote_failure_surfaces_the_server_message(live_server_url, mocker):
+    from splat.http import gaussian as gaussian_route
+
+    mocker.patch.object(
+        gaussian_route,
+        "handle",
+        side_effect=RuntimeError("operator torchvision::nms does not exist"),
+    )
+    import httpx
+
+    response = httpx.post(
+        f"{live_server_url}/gaussian", files={"images": ("a.png", sample_png_bytes())}
+    )
+
+    with pytest.raises(
+        SplatDomainError, match="server error: RuntimeError: operator torchvision::nms"
+    ):
+        from splat.adapters.client.http import _raise_for_domain_error
+
+        _raise_for_domain_error(response)
+
+
+def test_non_json_failure_names_the_status():
+    import httpx
+
+    from splat.adapters.client.http import _raise_for_domain_error
+
+    with pytest.raises(SplatDomainError, match="502"):
+        _raise_for_domain_error(httpx.Response(502, text="<html>bad gateway</html>"))

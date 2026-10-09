@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.scripts]
-splat = "splat.cli.main:app"
+splat = "splat.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/daanrongen/splat"
