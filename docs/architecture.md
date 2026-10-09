@@ -165,7 +165,7 @@ Current intentional differences:
 
 - `render` executes locally because Blender is a local external process.
 - `manifest` operates on the local cache by default.
-- HTTP has no authentication in v1 and should be treated as trusted-LAN only.
+- HTTP trusts the network unless `SPLAT_TOKEN` is set, which adds a shared bearer token. There is no TLS, so keep it on a trusted network.
 
 Any other missing operation in one transport should either be added or documented
 as deliberately unsupported.
