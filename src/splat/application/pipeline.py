@@ -367,6 +367,10 @@ def run_upscale(
     )
 
 
+def _srgb_to_linear(value: np.ndarray) -> np.ndarray:
+    return np.where(value <= 0.04045, value / 12.92, ((value + 0.055) / 1.055) ** 2.4)
+
+
 def shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     import trimesh
 
@@ -374,7 +378,10 @@ def shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     if shape.uv is not None and shape.texture is not None:
         mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=shape.texture)
     if shape.colors is not None:
-        mesh.visual = trimesh.visual.ColorVisuals(mesh, vertex_colors=shape.colors)
+        colors = shape.colors
+        if export_format in ("glb", "gltf"):  # glTF vertex colours are linear
+            colors = (_srgb_to_linear(colors / 255.0) * 255).round().astype(np.uint8)
+        mesh.visual = trimesh.visual.ColorVisuals(mesh, vertex_colors=colors)
     buf = BytesIO()
     try:
         mesh.export(buf, file_type=export_format)
