@@ -11,6 +11,9 @@ class Splat < Formula
   sha256 "{sha256}"
   license "MIT"
 
+  # keeps torch's @rpath dylib ids, which torchvision's extension resolves against
+  preserve_rpath
+
   depends_on arch: :arm64
   depends_on :macos
   depends_on "git" => :build
