@@ -25,8 +25,11 @@ any manifest ─ export ─▶ file + .manifest.json sidecar
 ## Install
 
 ```sh
+brew trust daanrongen/splat
 brew install daanrongen/splat/splat
 ```
+
+Recent Homebrew refuses third-party taps until they are trusted; older versions skip the `brew trust` line.
 
 From source:
 

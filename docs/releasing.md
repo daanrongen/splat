@@ -26,6 +26,7 @@ Then users install with:
 
 ```sh
 brew tap daanrongen/splat
+brew trust daanrongen/splat
 brew install splat
 ```
 
