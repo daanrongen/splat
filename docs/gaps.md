@@ -21,7 +21,7 @@ splat models info <name>
 ```
 
 must not import `torch`, `coremltools`, `mlx`, `transformers`, `trimesh`, `cv2`,
-`open3d`, or `splat.application.pipeline`.
+`scipy`, `huggingface_hub`, or `splat.application.pipeline`.
 
 Regression coverage lives in CLI tests.
 
