@@ -181,8 +181,7 @@ Recommended shape:
 - Progress callback contract shared by CLI, HTTP, MCP, and SDK.
 - Adapter-level exception translation into domain errors.
 
-Use subprocess isolation when runtimes conflict in one process. The known case is
-Open3D Poisson surface extraction interacting badly with Torch/OpenMP imports.
+Use subprocess isolation when runtimes conflict in one process.
 
 ## Quality Bar
 

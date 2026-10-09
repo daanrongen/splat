@@ -41,4 +41,5 @@ class Shape3D:
     faces: np.ndarray  # (F, 3) int64, indices into vertices
     uv: np.ndarray | None = None  # (V, 2) float32, [0, 1]
     texture: np.ndarray | None = None  # (H, W, 3) uint8 RGB
+    colors: np.ndarray | None = None  # (V, 3) uint8 RGB per vertex
     metadata: dict[str, object] = field(default_factory=dict)

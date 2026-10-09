@@ -76,6 +76,7 @@ def list_manifests(
             for m in rows
         ),
         flex=3,
+        ellipsis=3,
     )
 
 

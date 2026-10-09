@@ -79,7 +79,7 @@ def test_settings_are_derived_from_the_cli_not_duplicated():
 
     assert ("gaussian", "--model", "SPLAT_GAUSSIAN_MODEL") in rows
     assert ("render", "--engine", "SPLAT_RENDER_ENGINE") in rows
-    assert ("mesh", "--depth", "SPLAT_MESH_DEPTH") in rows
+    assert ("mesh", "--resolution", "SPLAT_MESH_RESOLUTION") in rows
     assert ("export", "--profile", "SPLAT_EXPORT_PROFILE") in rows
 
 

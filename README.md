@@ -114,7 +114,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `--distance`, `--fov`, `--look-at x,y,z` | fit to cloud | |
 | `-o` | | |
 
-**`splat mesh INPUT`** turns a metric depth map (`heightfield`, textured by its source image) or a Gaussian cloud (`poisson`) into a mesh. The backend follows the input kind unless `--model` says otherwise. Options: `--to` (`glb`, `obj`, `ply`, `gltf`; default from `-o`, else `glb`), `--depth` (Poisson octree depth, 9), `--opacity-threshold` (0.1), `-o`.
+**`splat mesh INPUT`** turns a metric depth map (`heightfield`, textured by its source image) or a Gaussian cloud (`isosurface`) into a mesh. The backend follows the input kind unless `--model` says otherwise. Options: `--to` (`glb`, `obj`, `ply`, `gltf`; default from `-o`, else `glb`), `--resolution` (voxels along the longest axis, 192), `--opacity-threshold` (0.1), `-o`.
 
 ### Files
 
