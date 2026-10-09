@@ -101,3 +101,16 @@ def test_every_declared_env_var_is_read_by_its_command():
     assert len(names) == len(set(names)), "duplicate SPLAT_* env var across commands"
     assert all(name.startswith("SPLAT_") for name in names)
     assert len(names) > 30
+
+
+def test_env_prints_the_server_version(monkeypatch):
+    import httpx
+
+    monkeypatch.setenv("SPLAT_URL", "http://server")
+    monkeypatch.setattr(
+        httpx, "get", lambda *args, **kwargs: httpx.Response(200, json={"version": "9.9.9"})
+    )
+
+    result = runner.invoke(app, ["env"])
+
+    assert "SPLAT_URL reachable: yes (server 9.9.9)" in _plain(result.output)

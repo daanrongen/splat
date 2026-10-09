@@ -24,6 +24,7 @@ from splat.http import (
     segment,
     upscale,
     validate,
+    version,
 )
 
 _ROUTERS = (
@@ -42,6 +43,7 @@ _ROUTERS = (
     models,
     assets,
     manifest,
+    version,
 )
 
 
