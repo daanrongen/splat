@@ -1,173 +1,151 @@
-# Pipeline guide
+# Walkthrough
 
-This guide shows how the shipped stages compose. It focuses on command shape,
-manifest flow, and output expectations rather than research notes.
+One image goes through every stage of `splat`: a diffused kettle becomes a caption, an embedding, stickers, depth maps, a sharper image, a Gaussian splat, renders, meshes and exports. Every number and picture below comes from running these commands in order, on an M-series Mac with the weights already downloaded (first use of a model downloads it, which takes minutes).
 
-## The Universal Flow
+Each command stores its output as a manifest in the cache and prints one NDJSON record when piped. `-o` also writes the file, with a `.manifest.json` sidecar so the lineage travels with it. Later commands take a file path, an `@<manifest-id>`, or `-` for piped records.
 
-Every manifest-producing command stores a cached asset and prints an NDJSON
-manifest when stdout is piped.
+## 1. Diffuse
 
 ```sh
-splat diffuse "a small red toy robot, studio lighting" \
-  | splat caption -
+splat diffuse "a single stainless steel kettle with a black handle, centered, plain mid-gray studio backdrop, soft even lighting, 3/4 view" --seed 4 -o kettle.png
 ```
 
-Every stage can also consume a path or an existing manifest id:
+![The diffused kettle](images/01-diffuse.png)
+
+The default model is `sdxl-turbo-mlx`, which renders 512 px in a few seconds. Its license is non-commercial, and `splat` prints that on every run. A plain backdrop and a single centred subject matter: every later stage does better on an image like this, and the rest of this page keeps using this one file.
+
+## 2. Caption and embed
 
 ```sh
-splat caption photo.png
-splat caption @fe3af96cea08ba36
+splat caption kettle.png -o caption.txt
+splat embed kettle.png -o kettle.npy
 ```
 
-## Text To Image
+The caption is `A shiny silver tea kettle with a black handle.` (`fastvlm-0.5b`, a `caption` manifest of 46 characters). The embedding is a normalized 512 dimensional float32 vector from `mobileclip2-s0`, stored as `.npy`. `embed --text "..."` produces the same kind of vector for a text query, and a dot product compares two of them.
+
+## 3. Segment
 
 ```sh
-splat diffuse "beautiful romantic Turner painting of a landscape" \
-  --model sdxl-turbo-mlx \
-  --seed 42 \
-  -o landscape.png
+splat segment kettle.png --model sam-mlx --max-stickers 8 -o stickers/
+splat segment kettle.png --model sam2-coreml --max-stickers 8 -o stickers/
 ```
 
-Output:
+![Automatic stickers from sam-mlx (top) and sam2-coreml (bottom)](images/02-segment-auto.png)
 
-- kind: `image`
-- storage: `.png`
-- metadata: output dimensions, optional source dimensions for image-to-image use
-- parent ids: empty for pure text-to-image, one image parent for image-to-image
+Automatic segmentation fans out into one RGBA `sticker` per mask, largest first. The first cell of each row is the frame sized mask (shown as the backdrop with the kettle cut out), and the floor strip is another background mask. One mask is the whole kettle; the rest are parts: handle, spout, lid, knob, body. `--drop-background` removes the masks that cover most of the frame or span part of its edge.
 
-`sdxl-turbo-mlx` is the fast default. `sd21-coreml` exists as a CoreML backend
-with different quality/performance tradeoffs.
-
-## Image To Caption Or Embedding
+To say which object you mean, prompt the model instead:
 
 ```sh
-splat caption landscape.png -o caption.txt
-splat embed landscape.png -o landscape.embedding.npy
-splat embed --text "romantic landscape painting" -o text.embedding.npy
+splat segment kettle.png --point 140,225 -o spout.png
+splat segment kettle.png --box 70,60,440,465 -o kettle-box.png
+splat segment kettle.png --foreground -o kettle-cutout.png
 ```
 
-Captions are text manifests. Embeddings are normalized `.npy` vector manifests.
-Embedding metadata is the reference quality bar for other stages: it records
-input type, dtype, shape, dimension, normalization, model, and text hashes where
-applicable.
+![A point on the spout, a box around the kettle, and --foreground](images/03-segment-prompts.png)
 
-## Image To Stickers
+`--point x,y` (and `--not-point x,y` for background, both repeatable) and `--box x0,y0,x1,y1` take pixel coordinates in the source image and return one sticker. `--foreground` needs no prompt: it finds the box around the masks that are not background and box-prompts the model with it, which gives one clean cutout with the handle opening left open. `sam-mlx` and `sam2-coreml` return the same box on this image, `(83, 75, 346, 381)`, give or take a pixel. `sam2-coreml` takes a box or up to two points, because its converted prompt encoder takes exactly two.
+
+A sticker is a tight crop. Its `bbox` in the manifest places it back in the source image, which is how a sticker works as a mask for the next stages.
+
+## 4. Depth
 
 ```sh
-splat segment landscape.png --model sam-mlx --max-stickers 5 -o stickers/
+splat depth kettle.png --model depth-pro -o depth-pro.png
+splat depth kettle.png --model depth-anything-v2-coreml -o depth-anything.png
 ```
 
-Output:
+![The image, depth-pro, and depth-anything-v2-coreml (near is bright)](images/04-depth.png)
 
-- one `sticker` manifest per cutout;
-- RGBA PNG payloads;
-- bounding box, score, area, width, and height metadata.
+`depth-pro` is metric: the `depth_map` is in metres and records the focal length (1846 px, a 15.8 degree field of view). `depth-anything-v2-coreml` is faster but only relative disparity, with no focal length. Both are cached losslessly as `.npy`, and `-o` writes a viewable PNG of them. Only the metric one can become geometry, and `mesh` says so if you hand it the other:
 
-Segmentation is a fan-out stage. Its cache entry records children so reruns can
-short-circuit without recomputing masks.
+```text
+error: heightfield needs metric depth in metres, but 69163aee51908296 is relative disparity (depth:depth-anything-v2-coreml); use a metric model such as depth-pro.
+```
 
-## Image To Depth To Mesh
+## 5. Upscale
 
 ```sh
-splat depth landscape.png --model depth-pro \
-  | splat mesh - -o relief.glb
+splat upscale kettle.png -o kettle-x4.png
 ```
 
-`depth-pro` is the metric-depth path and is the correct backend for geometry.
-Relative disparity backends are useful for visual depth previews but should not
-be consumed as metric depth.
+![A crop of the lid, bicubic resize of the original (left) and realesrgan-mlx (right)](images/05-upscale.png)
 
-Output:
+`realesrgan-mlx` makes a 2048 px `image` out of the 512 px one, and the result is an ordinary image manifest that any stage can take.
 
-- `depth` produces a lossless `.npy` `depth_map` manifest;
-- `mesh` (heightfield) resolves the source image through provenance and
-  writes a `shape_3d` manifest.
-
-## Image To Gaussian Splat
-
-Single image:
+## 6. Gaussian splat
 
 ```sh
-splat gaussian landscape.png --model sharp -o landscape.ply
+splat gaussian kettle.png --score -o kettle.ply
 ```
 
-Piped from generation:
+`sharp` reconstructs a Gaussian splat from the single image: 1,179,648 Gaussians, an 80 MB `.ply` in the OpenGL convention (+Y up), SH degree 0, in metres. It takes about 16 s here. `--score` renders source view 0 with Blender and records the comparison against the photo in the cloud's `quality`: PSNR 36.51 and SSIM 0.9671, plus floater statistics. `splat manifest get <id>` prints them.
+
+A single photo has a backdrop, and SHARP reconstructs that too, as a wall behind the subject. Hand `gaussian` the cutout from step 3 and it keeps only the Gaussians that project inside it:
 
 ```sh
-splat diffuse "a small ceramic fox on a table" \
-  | splat gaussian - --model sharp -o fox.ply
+splat gaussian kettle.png --mask kettle-cutout.png -o kettle-masked.ply
 ```
 
-`sharp` reconstructs visible 3D structure from one image. Its output is a
-`gaussian_cloud` manifest stored as `.ply`.
+That is 343,100 Gaussians, a 23 MB file. Gaussians that project inside the mask but sit more than half a subject size behind its nearest surface are dropped too, since they belong to the wall in line with the subject. The masked cloud is a cached child of the full one, so changing the mask does not repeat the reconstruction.
 
-Multi-view capture:
+## 7. Render
 
 ```sh
-splat gaussian frame-*.png --model mlx3d-capture --quality balanced -o scene.ply
+splat render kettle.ply -o full.png
+splat render kettle-masked.ply -o view0.png --view 0
+splat render kettle-masked.ply -o orbit.png --azimuth 25 --elevation 8
+splat render kettle-masked.ply -o side.png --azimuth 45 --elevation 8
 ```
 
-`mlx3d-capture` needs genuinely overlapping, multi-view-consistent photos or
-video frames of one physical scene. Several independently generated prompts do
-not satisfy that requirement.
+![The full cloud, the masked cloud from the capture camera, and the masked cloud orbited by 25 and 45 degrees](images/06-gaussian.png)
 
-## Gaussian Files And Meshes
+`render` runs Blender (set `SPLAT_BLENDER_BIN` if it is not on `PATH`) and produces an `image` manifest. By default it frames the whole cloud, which is why the backdrop wall makes the kettle small in the first cell. `--view 0` renders from the source camera and reproduces the photo. Orbiting shows the limit of one image: SHARP only knows the visible side, so the kettle gets thin as you turn away. `--zoom` scales the framing independent of the cloud's units (`1` fits the subject, `2` is twice as close), `--distance` is absolute in the cloud's units, and `--fov` and `--look-at x,y,z` adjust the rest.
+
+## 8. Mesh
 
 ```sh
-splat gaussian frame-*.png --model mlx3d-capture --declutter -o scene.ply
-splat export scene.ply -o scene.spz
-splat export scene.ply -o scene.web.splat --profile web-delivery
-splat mesh scene.ply -o scene.glb
+splat mesh @<depth-pro-id> -o relief.glb
+splat mesh kettle-masked.ply -o kettle.glb
 ```
 
-| Command | Input | Output | Purpose |
-|---|---|---|---|
-| `export` | any manifest | file + sidecar | Write in the format of the extension; `--profile` compresses clouds. |
-| `gaussian --declutter` | images | `gaussian_cloud` | Remove isolated floater Gaussians after reconstruction. |
-| `mesh` | `gaussian_cloud` | `shape_3d` | Isosurface of the Gaussian density field (`--resolution`), with per-vertex colours. |
+![The heightfield from depth-pro (left) and the isosurface of the masked cloud (right)](images/07-mesh.png)
 
-## Render Back To Image
+`mesh` has two paths. A metric depth map becomes a textured heightfield, a relief of everything in the photo (262,144 vertices, 515,829 faces, 11.7 MB). A Gaussian cloud becomes an isosurface of its density field with per-vertex colours (77,832 vertices, 155,588 faces, 3.1 MB), which is the kettle alone because the backdrop was masked out. Both are `shape_3d` manifests with typed counts, written as `.glb`, `.obj`, `.ply` or `.gltf` by the extension.
+
+## 9. Export
 
 ```sh
-splat render scene.ply -o scene.png \
-  --width 1280 \
-  --height 720 \
-  --samples 32 \
-  --background black
+splat export kettle-masked.ply -o kettle.spz
+splat export kettle-masked.ply -o kettle.web.splat --profile web-delivery
 ```
 
-Render output is an `image` manifest, so it can be captioned, embedded, upscaled,
-or segmented like any other image.
+`export` writes any manifest in the format of the extension, with a sidecar. For the masked cloud: `.ply` 23.3 MB, `.spz` 3.4 MB, `.web.splat` 11.0 MB (342,992 points after compression). `splat validate kettle-masked.ply --strict` checks a cloud's invariants and `splat info` prints its count, SH degree, bounds and cameras.
 
-Camera controls:
+## Lineage
 
-```sh
-splat render scene.ply -o side.png --azimuth 90 --elevation 10
-splat render scene.ply -o close.png --distance 2.5 --fov 45
+Every output remembers its parents, so `splat manifest get <id>` on the mesh shows how it was made, down to the prompt, with each model's license:
+
+```text
+c6942b0ba8451acd  shape_3d  mesh:isosurface
+└── 257ac7c3f0d115c0  gaussian_cloud  mask
+    ├── cdb0a214b4ab2afd  gaussian_cloud  gaussian:sharp  Apple-ML-Research
+    │   └── 6e4bc802376678d7  image  diffuse:sdxl-turbo-mlx  StabilityAI-NC-Community
+    └── 5a27b3a26ccc1d45-000  sticker  segment:sam-mlx  Apache-2.0
+        └── 6e4bc802376678d7  image  diffuse:sdxl-turbo-mlx  StabilityAI-NC-Community
 ```
 
-## Inspect And Validate
+Re-running any command with the same inputs is a cache hit. `splat manifest list`, `get`, `export`, `rm` and `gc` manage the cache.
 
-```sh
-splat info scene.ply
-splat validate scene.ply --strict
-splat manifest list --kind gaussian_cloud
-splat manifest get <id>
-```
+## Not in this flow
 
-Inspection commands should be cheap. Manifest listing reads metadata only and
-does not import model backends.
+`gaussian --model mlx3d-capture` is the multi-view path. It needs three or more genuinely overlapping photos of one scene, so it has no place in a single-image walkthrough. Several independently generated images do not satisfy that.
 
-## Recommended Debug Loop
+## Debug loop
 
-1. Generate or register assets.
-2. Use `splat manifest list` to find ids.
-3. Use `splat manifest get <id>` to inspect provenance and metadata.
-4. Use `splat info` for Gaussian geometry statistics.
-5. Use `splat render` to visually inspect a cloud.
-6. Use `splat export` to package the cloud, or `splat mesh` for a surface.
+1. Find ids with `splat manifest list`.
+2. Read parameters, model, license and lineage with `splat manifest get <id>`.
+3. Check a cloud with `splat info` and `splat validate`.
+4. Look at it with `splat render`.
 
-When output looks wrong, inspect metadata before rerunning heavy stages. Parent
-ids, model name, effective parameters, depth semantics, camera count, coordinate
-convention, and license often explain the result.
+When output looks wrong, read the metadata before rerunning a heavy stage: parent ids, effective parameters, depth units, camera count and coordinate convention explain most surprises.

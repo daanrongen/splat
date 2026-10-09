@@ -12,7 +12,7 @@ import splat
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import check_contract
 
-_IMAGE = Path(__file__).parent.parent / "docs" / "images" / "01-diffuse-sdxl-turbo.png"
+_IMAGE = Path(__file__).parent.parent / "docs" / "images" / "01-diffuse.png"
 
 
 def _fresh_process(code: str) -> list[str]:

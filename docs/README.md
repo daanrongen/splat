@@ -9,7 +9,7 @@ This directory holds contributor and reference docs. The root
 |---|---|
 | [README](../README.md) | Product model, command taxonomy, common workflows, install, environment, and current backend table. |
 | [architecture.md](architecture.md) | Contributor architecture: layers, import boundaries, backend loading, manifests, and transport parity. |
-| [pipeline.md](pipeline.md) | Empirical walkthrough with real commands, timings, images, and quality notes. |
+| [pipeline.md](pipeline.md) | Walkthrough: one diffused image through every stage, with the commands, numbers and pictures. |
 | [gaps.md](gaps.md) | Active defects and design gaps, mapped to the current GitHub issue backlog. |
 | [roadmap.md](roadmap.md) | Future converter stages and candidate backends for anything-to-anything visual synthesis. |
 

@@ -3,11 +3,13 @@
 `splat` is a local-first asset pipeline for Apple Silicon. Prompts, photos and captures go in; images, depth maps, captions, embeddings, Gaussian splats and meshes come out. Every stage reads and writes one typed, cached `Manifest`, so any command's output pipes into the next and every file keeps its lineage.
 
 ```sh
-splat diffuse "a small red toy robot, studio lighting" \
+splat diffuse "a stainless steel kettle, studio lighting" \
   | splat gaussian - \
-  | splat manifest label - robot \
-  | splat render - -o robot.png
+  | splat manifest label - kettle \
+  | splat render - -o kettle.png
 ```
+
+[docs/pipeline.md](docs/pipeline.md) walks one image through every stage, with the commands, numbers and pictures.
 
 ```text
 prompt ─ diffuse ─▶ image ─┬─ caption ─▶ caption

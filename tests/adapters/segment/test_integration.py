@@ -17,7 +17,7 @@ pytestmark = [
     ),
 ]
 
-_IMAGE = Path(__file__).parents[3] / "docs" / "images" / "01-diffuse-sdxl-turbo.png"
+_IMAGE = Path(__file__).parents[3] / "docs" / "images" / "01-diffuse.png"
 
 
 @pytest.mark.parametrize("model", ["sam-mlx", "sam2-coreml"])
@@ -34,7 +34,7 @@ def test_segment_produces_stickers(model):
 
 @pytest.mark.parametrize("model", ["sam-mlx", "sam2-coreml"])
 def test_box_prompt_cuts_out_the_object(model):
-    (sticker,) = get_segmentation_backend(model).segment(_IMAGE, box=[185, 130, 415, 415])
+    (sticker,) = get_segmentation_backend(model).segment(_IMAGE, box=[70, 60, 440, 465])
 
     x, y, w, h = sticker.bbox
-    assert 150 <= x <= 220 and 100 <= y <= 170 and w > 150 and h > 200
+    assert 60 <= x <= 100 and 60 <= y <= 95 and w > 300 and h > 340
