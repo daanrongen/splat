@@ -9,6 +9,7 @@ import hashlib
 import json
 import tempfile
 from collections.abc import Callable
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 
@@ -25,7 +26,7 @@ from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
-from splat.domain.foreground import canvas_mask, foreground, is_background
+from splat.domain.foreground import canvas_mask, is_background, subject_box
 from splat.domain.gaussians import (
     GaussianCloud,
     mask_cloud,
@@ -44,6 +45,7 @@ from splat.domain.manifest_metadata import (
     SegmentManifestMetadata,
     StickerMetadata,
 )
+from splat.domain.prompts import Box
 from splat.domain.quality import cloud_stats
 from splat.ports.caption import CaptioningBackend
 from splat.ports.depth import DepthEstimationBackend
@@ -182,37 +184,10 @@ def drop_background(input_asset: Manifest, stickers: list[Manifest]) -> list[Man
     return [m for m in stickers if not is_background(canvas_mask(_read_sticker(m), height, width))]
 
 
-def run_foreground(
-    cache: ManifestRepository, *, input_asset: Manifest, stickers: list[Manifest]
-) -> Manifest:
-    """Caches the main subject of `stickers` as one sticker."""
-    cache_key = compute_cache_key(
-        stage="foreground",
-        model="",
-        params={},
-        parent_ids=(input_asset.id, *(m.id for m in stickers)),
-    )
-    if (hit := cache.find(cache_key)) is not None:
-        return hit
-    cutout = foreground(
-        [_read_sticker(m) for m in stickers], read_rgb_or_rgba(input_asset.content_path)
-    )
-    return cache.put(
-        cache_key,
-        kind=ManifestKind.STICKER,
-        content_bytes=encode_png(cutout.rgba),
-        ext="png",
-        metadata=StickerMetadata(
-            bbox=cutout.bbox,
-            score=cutout.score,
-            area=cutout.area,
-            width=cutout.rgba.shape[1],
-            height=cutout.rgba.shape[0],
-        ),
-        params={},
-        parent_ids=[input_asset.id],
-        created_by="foreground",
-    )
+def foreground_box(input_asset: Manifest, stickers: list[Manifest]) -> Box:
+    """The box around the main subject of `stickers`, the masks of `input_asset`."""
+    height, width = read_rgb_or_rgba(input_asset.content_path).shape[:2]
+    return subject_box([_read_sticker(m) for m in stickers], height, width)
 
 
 def run_depth(
@@ -524,13 +499,16 @@ def run_mask(
     cloud = mask_cloud(PlyReader().read(cloud_asset.content_path), mask)
     if cloud.point_count == 0:
         raise SplatDomainError("The mask leaves no Gaussians; check it covers the subject.")
-    cloud.metadata.quality = cloud_stats(cloud)
+    # The PLY round trip drops provenance such as the model and its license.
+    metadata = replace(
+        cloud_asset.metadata, point_count=cloud.point_count, quality=cloud_stats(cloud)
+    )
     return cache.put(
         cache_key,
         kind=ManifestKind.GAUSSIAN_CLOUD,
         content_bytes=_gaussian_to_ply_bytes(cloud),
         ext="ply",
-        metadata=cloud.metadata,
+        metadata=metadata,
         params={},
         parent_ids=[cloud_asset.id, mask_asset.id],
         created_by="mask",

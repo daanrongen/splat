@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from splat.application.pipeline import drop_background, run_foreground, run_segment
+from splat.application.pipeline import drop_background, foreground_box, run_segment
 from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
 from splat.domain.prompts import parse_box, parse_points
@@ -39,7 +39,15 @@ def handle(request: SegmentRequest) -> list[Manifest]:
             params=params,
         )
         if request.foreground:
-            stickers = [run_foreground(cache, input_asset=asset, stickers=stickers)]
+            # The subject box prompts the model again for one clean mask.
+            box = foreground_box(asset, stickers)
+            stickers = run_segment(
+                backend,
+                cache,
+                model_name=request.model,
+                input_asset=asset,
+                params={"max_stickers": request.max_stickers, "box": box},
+            )
         elif request.drop_background:
             stickers = drop_background(asset, stickers)
         all_stickers.extend(stickers)
