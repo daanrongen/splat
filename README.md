@@ -168,6 +168,8 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 **`SPLAT_URL=http://host:8000`** makes the model-backed stages in the CLI, SDK and MCP server run on that `splat http` server. `render`, `mesh` and `export` always run locally. The client checks the server version once per process: a minor mismatch warns, a major one fails.
 
+**`splat doctor`** checks the install: the splat and Python versions, whether torch, torchvision, mlx, coremltools and transformers import, the device (`mps` or `cpu`) and how many catalog models are cached. With `SPLAT_URL` set it also checks the server's version and an authenticated route, without running a model. It prints one line per check and exits non-zero if any fail, and a broken import does not stop the others.
+
 **`splat env [--export]`** prints every `SPLAT_*` setting with its resolved value and source, or a `.env` template. Settings that aren't command options:
 
 | Variable | |
