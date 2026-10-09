@@ -186,6 +186,7 @@ def test_run_mask_stores_a_cached_child_without_the_masked_out_splats(tmp_path, 
             "input": 0,
         }
     ]
+    synthetic_cloud.metadata.source_model = "fake-recon"
     stored = to_convention(synthetic_cloud, "opengl")
     cloud = cache.put(
         "cloud",
@@ -210,4 +211,5 @@ def test_run_mask_stores_a_cached_child_without_the_masked_out_splats(tmp_path, 
 
     assert masked.parent_ids == [cloud.id, mask.id]
     assert masked.metadata.point_count < synthetic_cloud.point_count
+    assert masked.metadata.source_model == "fake-recon"
     assert run_mask(cache, cloud_asset=cloud, mask_asset=mask, image_asset=image).id == masked.id

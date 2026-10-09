@@ -26,3 +26,15 @@ def test_glb_vertex_colors_are_stored_linear():
 
 def test_ply_vertex_colors_keep_their_srgb_values():
     assert _vertex_color(shape_to_mesh_bytes(_triangle(128), "ply"), "ply") == 128
+
+
+def test_glb_keeps_the_texture():
+    shape = _triangle(0)
+    shape.colors = None
+    shape.uv = np.array([[0, 0], [1, 0], [0, 1]], dtype=np.float32)
+    shape.texture = np.full((4, 4, 3), 200, dtype=np.uint8)
+
+    data = shape_to_mesh_bytes(shape, "glb")
+
+    mesh = trimesh.load(BytesIO(data), file_type="glb", force="mesh", process=False)
+    assert mesh.visual.material.baseColorTexture is not None

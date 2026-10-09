@@ -56,3 +56,17 @@ def test_mask_scales_to_the_mask_resolution():
 def test_mask_needs_a_source_camera():
     with pytest.raises(InvalidGaussianCloud):
         mask_cloud(_cloud([[0.0, 0.0, 1.0]]), np.ones((10, 10), dtype=bool))
+
+
+def test_mask_drops_the_backdrop_in_line_behind_the_subject():
+    mask = np.zeros((100, 100), dtype=bool)
+    mask[:, :50] = (
+        True  # the 100 px tall subject spans a metre at depth 1 and fx 100: depth up to 1.5
+    )
+    cloud = _cloud(
+        [[-0.25, 0.0, 1.0], [-0.25, 0.0, 1.2], [-0.25, 0.0, 1.6], [-2.5, 0.0, 10.0]], [CAMERA]
+    )
+
+    masked = mask_cloud(cloud, mask)
+
+    assert masked.means[:, 2].tolist() == pytest.approx([1.0, 1.2])
