@@ -13,7 +13,6 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
-import trimesh
 
 from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png, read_rgb_or_rgba
 from splat.adapters.formats.ply import PlyWriter
@@ -369,6 +368,8 @@ def run_upscale(
 
 
 def shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
+    import trimesh
+
     mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
     if shape.uv is not None and shape.texture is not None:
         mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=shape.texture)

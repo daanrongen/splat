@@ -1,22 +1,16 @@
 from pathlib import Path
 from typing import Literal
 
-import cv2
 import numpy as np
 
 from splat.domain.errors import SplatDomainError
 
 Interpolation = Literal["nearest", "linear", "cubic", "lanczos"]
 
-_INTERPOLATION: dict[Interpolation, int] = {
-    "nearest": cv2.INTER_NEAREST,
-    "linear": cv2.INTER_LINEAR,
-    "cubic": cv2.INTER_CUBIC,
-    "lanczos": cv2.INTER_LANCZOS4,
-}
-
 
 def _read_cv(path: Path, flags: int) -> np.ndarray:
+    import cv2
+
     image = cv2.imread(str(path), flags)
     if image is None:
         raise SplatDomainError(f"Could not read image {str(path)!r}.")
@@ -24,15 +18,20 @@ def _read_cv(path: Path, flags: int) -> np.ndarray:
 
 
 def read_rgb(path: Path) -> np.ndarray:
+    import cv2
+
     return cv2.cvtColor(_read_cv(path, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
 
 
 def read_rgb_or_rgba(path: Path) -> np.ndarray:
-    image = _read_cv(path, cv2.IMREAD_UNCHANGED)
-    return cv_to_rgb_or_rgba(image)
+    import cv2
+
+    return cv_to_rgb_or_rgba(_read_cv(path, cv2.IMREAD_UNCHANGED))
 
 
 def decode_rgb_or_rgba(content: bytes) -> np.ndarray:
+    import cv2
+
     encoded = np.frombuffer(content, dtype=np.uint8)
     image = cv2.imdecode(encoded, cv2.IMREAD_UNCHANGED)
     if image is None:
@@ -41,6 +40,8 @@ def decode_rgb_or_rgba(content: bytes) -> np.ndarray:
 
 
 def cv_to_rgb_or_rgba(image: np.ndarray) -> np.ndarray:
+    import cv2
+
     if image.ndim == 2:
         return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
     if image.shape[2] == 4:
@@ -51,10 +52,20 @@ def cv_to_rgb_or_rgba(image: np.ndarray) -> np.ndarray:
 def resize(
     image: np.ndarray, size: tuple[int, int], *, interpolation: Interpolation = "lanczos"
 ) -> np.ndarray:
-    return cv2.resize(image, size, interpolation=_INTERPOLATION[interpolation])
+    import cv2
+
+    flag = {
+        "nearest": cv2.INTER_NEAREST,
+        "linear": cv2.INTER_LINEAR,
+        "cubic": cv2.INTER_CUBIC,
+        "lanczos": cv2.INTER_LANCZOS4,
+    }[interpolation]
+    return cv2.resize(image, size, interpolation=flag)
 
 
 def encode_png(image: np.ndarray) -> bytes:
+    import cv2
+
     if image.ndim == 3 and image.shape[2] == 4:
         encoded_input = cv2.cvtColor(image, cv2.COLOR_RGBA2BGRA)
     elif image.ndim == 3 and image.shape[2] == 3:

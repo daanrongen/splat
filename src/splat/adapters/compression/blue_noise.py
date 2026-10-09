@@ -36,7 +36,6 @@ Implementation notes (deliberate deviations from the paper, not oversights):
 import heapq
 
 import numpy as np
-from scipy.spatial import cKDTree
 
 
 def weighted_sample_elimination(
@@ -122,6 +121,8 @@ def _candidate_pairs(
     radius query, which is unbounded in dense regions."""
     n = points.shape[0]
     k = min(k_cap, n - 1)
+    from scipy.spatial import cKDTree
+
     tree = cKDTree(points)
     distances, neighbor_idx = tree.query(points, k=k + 1, distance_upper_bound=r_max)
     distances, neighbor_idx = distances[:, 1:], neighbor_idx[:, 1:]  # column 0 is self
