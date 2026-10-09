@@ -89,8 +89,16 @@ def _main(
     debug: bool = typer.Option(
         False, "--debug", envvar="SPLAT_DEBUG", help="Show the full traceback on failure."
     ),
+    no_manifest: bool = typer.Option(
+        False,
+        "--no-manifest",
+        envvar="SPLAT_NO_MANIFEST",
+        help="Write -o files without a .manifest.json sidecar.",
+    ),
 ) -> None:
     """splat runs pipeline stages, exports assets, and administers the local cache."""
+    if no_manifest:
+        os.environ["SPLAT_NO_MANIFEST"] = "1"
 
 
 def main() -> None:

@@ -76,3 +76,16 @@ def test_export_round_trips_the_whole_lineage(tmp_path):
     fresh = FilesystemManifestRepository(tmp_path / "b")
     fresh.put_external(out_dir / "upscaled.png", kind=ManifestKind.IMAGE)
     assert {m.id for m in fresh.list()} == {"upscaled", "base"}
+
+
+def test_no_manifest_skips_the_sidecar(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_NO_MANIFEST", "1")
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    asset = _produce(cache, "robot", tiny_png("robot"))
+    out = tmp_path / "robot.png"
+    out.write_bytes(tiny_png("robot"))
+
+    cache.write_sidecar(asset.id, out)
+
+    assert not sidecar_path(out).exists()
+    assert cache.put_external(out, kind=ManifestKind.IMAGE).id

@@ -177,6 +177,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `SPLAT_URL` | remote `splat http` server |
 | `SPLAT_BLENDER_BIN` | Blender executable |
 | `SPLAT_RENDER_TIMEOUT` | render timeout in seconds, 0 disables it |
+| `SPLAT_NO_MANIFEST` | write `-o` files without a `.manifest.json` sidecar, same as `splat --no-manifest`; the cache still records the manifest |
 | `SPLAT_DEBUG` | show the full traceback on failure, same as `splat --debug` |
 
 `splat --version` prints the version.
