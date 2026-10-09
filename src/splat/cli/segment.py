@@ -22,6 +22,13 @@ def segment(
     device: str = typer.Option(
         "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_SEGMENT_DEVICE"
     ),
+    point: list[str] = typer.Option(
+        [], "--point", help="Foreground point 'x,y' in pixels; repeatable."
+    ),
+    not_point: list[str] = typer.Option(
+        [], "--not-point", help="Background point 'x,y' in pixels; repeatable."
+    ),
+    box: str | None = typer.Option(None, "--box", help="Box 'x0,y0,x1,y1' in pixels."),
     foreground: bool = typer.Option(
         False, "--foreground", help="Merge the masks into one cutout of the main subject."
     ),
@@ -41,6 +48,8 @@ def segment(
                 device=device,
                 foreground=foreground,
                 drop_background=drop_background,
+                points=(*point, *(f"{p},0" for p in not_point)),
+                box=box,
             )
         )
     except SplatDomainError as exc:

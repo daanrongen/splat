@@ -17,6 +17,7 @@ from huggingface_hub import snapshot_download
 
 from splat.adapters.formats.image import read_rgb
 from splat.adapters.segment._vendor.mlx_sam import SamAutomaticMaskGenerator, sam
+from splat.adapters.segment._vendor.mlx_sam.predictor import SamPredictor
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
 from splat.paths import model_cache_dir
@@ -75,9 +76,32 @@ class MLXSamBackend:
             self._model = sam.load(str(mlx_dir))
         return self._model
 
+    def _prompted(self, image: np.ndarray, points: list, box: list | None) -> list[Sticker]:
+        predictor = SamPredictor(self._load())
+        predictor.set_image(image)
+        coords = mx.array([[p[:2] for p in points]], dtype=mx.float32) if points else None
+        labels = mx.array([[p[2] for p in points]], dtype=mx.int64) if points else None
+        masks, scores, _ = predictor.predict(
+            coords,
+            labels,
+            mx.array([box], dtype=mx.float32) if box else None,
+            multimask_output=len(points) + (box is not None) == 1,
+        )
+        best = int(mx.argmax(scores[0]).item())
+        mask = np.array(masks[0, :, :, best])
+        return [Sticker.from_mask(image, mask, float(scores[0, best].item()))]
+
     def segment(
-        self, image_path: Path, *, max_stickers: int | None = None, **params
+        self,
+        image_path: Path,
+        *,
+        max_stickers: int | None = None,
+        points: list | None = None,
+        box: list | None = None,
+        **params,
     ) -> list[Sticker]:
+        if points or box:
+            return self._prompted(read_rgb(image_path), points or [], box)
         model = self._load()
         generator = SamAutomaticMaskGenerator(model, **params)
 

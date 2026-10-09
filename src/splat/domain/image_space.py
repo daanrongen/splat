@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from splat.domain.errors import SplatDomainError
+
 
 @dataclass
 class Sticker:
@@ -17,6 +19,16 @@ class Sticker:
     bbox: tuple[int, int, int, int]  # (x0, y0, w, h) in the source image
     score: float  # predicted IoU / confidence from the segmentation model
     area: int
+
+    @classmethod
+    def from_mask(cls, image: np.ndarray, mask: np.ndarray, score: float) -> "Sticker":
+        """A tight RGBA cutout of `image` where `mask` (H, W bool) is set."""
+        ys, xs = np.nonzero(mask)
+        if xs.size == 0:
+            raise SplatDomainError("The prompt produced an empty mask.")
+        x0, y0, x1, y1 = int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
+        rgba = np.dstack([image[y0:y1, x0:x1, :3], mask[y0:y1, x0:x1] * 255]).astype(np.uint8)
+        return cls(rgba, (x0, y0, x1 - x0, y1 - y0), score, int(mask.sum()))
 
 
 @dataclass

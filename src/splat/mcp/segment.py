@@ -14,6 +14,8 @@ def segment(
     device: str = "auto",
     foreground: bool = False,
     drop_background: bool = False,
+    points: list[str] | None = None,
+    box: str | None = None,
 ) -> list[types.ContentBlock]:
     """Segment an image (path or @<asset-id>) into RGBA sticker cutouts."""
     cache = get_manifest_repository()
@@ -26,6 +28,8 @@ def segment(
             device=device,
             foreground=foreground,
             drop_background=drop_background,
+            points=tuple(points or ()),
+            box=box,
         )
     )
     content: list[types.ContentBlock] = [
