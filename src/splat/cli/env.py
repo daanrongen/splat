@@ -138,14 +138,15 @@ def _resolve(var: str, default: str) -> tuple[str, str]:
     return default, "default"
 
 
-def _reachable(host: str) -> bool:
+def _reachable(host: str) -> str | None:
+    """ "The server version, "" if it reports none, None if unreachable."""
     import httpx
 
     try:
-        httpx.get(f"{host.rstrip('/')}/openapi.json", timeout=2.0)
-        return True
+        response = httpx.get(f"{host.rstrip('/')}/version", timeout=2.0)
     except httpx.HTTPError:
-        return False
+        return None
+    return response.json()["version"] if response.status_code == 200 else ""
 
 
 def _export() -> str:
@@ -219,7 +220,9 @@ def env(
 
     url = os.environ.get("SPLAT_URL", "")
     if url:
-        console.print(f"SPLAT_URL reachable: {'yes' if _reachable(url) else 'no'}")
+        server = _reachable(url)
+        detail = "no" if server is None else f"yes (server {server})" if server else "yes"
+        console.print(f"SPLAT_URL reachable: {detail}")
 
     if invalid:
         for setting in invalid:

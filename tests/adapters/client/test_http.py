@@ -318,3 +318,37 @@ def test_server_error_detail_raises_domain_error(mocker, tmp_path, monkeypatch, 
 
     with pytest.raises(SplatDomainError, match="server error: RuntimeError: boom"):
         remote_client.gaussian(GaussianRequest(inputs=[asset], model="sharp"))
+
+
+def _client_against(monkeypatch, server_version: str):
+    import httpx
+
+    from splat.adapters.client.http import _check_server_version
+
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(200, json={"version": server_version})
+    )
+    _check_server_version(httpx.Client(base_url="http://server", transport=transport))
+
+
+def test_matching_version_is_silent(monkeypatch, recwarn):
+    monkeypatch.setattr("splat.adapters.client.http.__version__", "1.2.3")
+    _client_against(monkeypatch, "1.2.9")
+
+    assert not recwarn
+
+
+def test_minor_mismatch_warns(monkeypatch):
+    monkeypatch.setattr("splat.adapters.client.http.__version__", "1.2.3")
+
+    with pytest.warns(UserWarning, match=r"server runs splat 1\.3\.0"):
+        _client_against(monkeypatch, "1.3.0")
+
+
+def test_major_mismatch_fails(monkeypatch):
+    from splat.domain.errors import SplatDomainError
+
+    monkeypatch.setattr("splat.adapters.client.http.__version__", "1.2.3")
+
+    with pytest.raises(SplatDomainError, match=r"server runs splat 2\.0\.0"):
+        _client_against(monkeypatch, "2.0.0")

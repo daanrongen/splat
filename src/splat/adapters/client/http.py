@@ -6,12 +6,14 @@ shape, shared with the server that produces/consumes it.
 
 import hashlib
 import tempfile
+import warnings
 from io import BytesIO
 from pathlib import Path
 
 import httpx
 import numpy as np
 
+from splat import __version__
 from splat.adapters.formats.image import decode_rgb_or_rgba, read_rgb_or_rgba
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
@@ -53,6 +55,22 @@ def _raise_for_domain_error(response: httpx.Response) -> None:
     response.raise_for_status()
 
 
+def _check_server_version(client: httpx.Client) -> None:
+    try:
+        response = client.get("/version")
+    except httpx.HTTPError:
+        return
+    if response.status_code != 200:
+        return
+    server = response.json()["version"]
+    server_major, server_minor = server.split(".")[:2]
+    major, minor = __version__.split(".")[:2]
+    if server_major != major:
+        raise SplatDomainError(f"server runs splat {server}, this client is {__version__}")
+    if server_minor != minor:
+        warnings.warn(f"server runs splat {server}, this client is {__version__}", stacklevel=2)
+
+
 class RemoteSplatClient:
     """Proxies every SplatClient method to a remote `splat http` server,
     storing asset-shaped results in the local asset cache under the same
@@ -62,6 +80,7 @@ class RemoteSplatClient:
 
     def __init__(self, base_url: str, *, timeout: float = 300.0) -> None:
         self._client = httpx.Client(base_url=base_url.rstrip("/"), timeout=timeout)
+        _check_server_version(self._client)
 
     def _store_asset(
         self,
