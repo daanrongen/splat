@@ -306,7 +306,7 @@ def batched_mask_to_box(masks: mx.array) -> mx.array:
     """
     # mx.max below raises an error on empty inputs, just skip in this case
     if np.prod(masks.shape) == 0:
-        return mx.zeros(*masks.shape[:-2], 4)
+        return mx.zeros((*masks.shape[:-2], 4))
 
     # Normalize shape to CxHxW
     shape = masks.shape
