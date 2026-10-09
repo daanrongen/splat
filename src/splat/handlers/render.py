@@ -20,6 +20,7 @@ class RenderRequest:
     azimuth: float | None = None
     elevation: float | None = None
     distance: float | None = None
+    zoom: float | None = None
     fov: float | None = None
     look_at: str | None = None
     view: int | None = None
@@ -40,6 +41,7 @@ def handle(
         "azimuth": request.azimuth,
         "elevation": request.elevation,
         "distance": request.distance,
+        "zoom": request.zoom,
         "fov": request.fov,
         "look_at": request.look_at,
     }
