@@ -48,6 +48,8 @@ def _raise_for_domain_error(response: httpx.Response) -> None:
     if response.status_code == 422:
         detail = response.json().get("detail", response.text)
         raise SplatDomainError(detail)
+    if response.is_server_error and "application/json" in response.headers.get("content-type", ""):
+        raise SplatDomainError(f"server error: {response.json().get('detail', response.text)}")
     response.raise_for_status()
 
 

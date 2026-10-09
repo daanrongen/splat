@@ -309,3 +309,12 @@ def test_models_info_unknown_model_raises(remote_client):
 def test_models_rm_unknown_model_raises(remote_client):
     with pytest.raises(SplatDomainError):
         remote_client.models_rm("not-a-real-model")
+
+
+def test_server_error_detail_raises_domain_error(mocker, tmp_path, monkeypatch, remote_client):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch.object(gaussian_route, "handle", side_effect=RuntimeError("boom"))
+    asset = get_manifest_repository().put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
+
+    with pytest.raises(SplatDomainError, match="server error: RuntimeError: boom"):
+        remote_client.gaussian(GaussianRequest(inputs=[asset], model="sharp"))
