@@ -10,7 +10,7 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
 from splat.domain.manifest_metadata import DepthMetadata
 from splat.handlers.mesh import MeshRequest, handle
-from tests.adapters.mesh.test_poisson import _sphere_cloud
+from tests.adapters.mesh.test_isosurface import _sphere_cloud
 from tests.image_helpers import depth_npy, write_sample_png
 
 
@@ -95,23 +95,23 @@ def test_legacy_relative_depth_manifest_reads_as_disparity(tmp_path: Path):
     assert cache.get("legacykey").metadata.units == "disparity"
 
 
-def test_handle_meshes_a_gaussian_cloud_with_poisson(tmp_path: Path, monkeypatch):
+def test_handle_meshes_a_gaussian_cloud_with_isosurface(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     cache = FilesystemManifestRepository(tmp_path / "cache")
     PlyWriter().write(_sphere_cloud(), tmp_path / "sphere.ply")
     cloud = cache.put_external(tmp_path / "sphere.ply", kind=ManifestKind.GAUSSIAN_CLOUD)
 
-    result = handle(MeshRequest(inputs=[cloud], format="obj", depth=6))[0]
+    result = handle(MeshRequest(inputs=[cloud], format="obj", resolution=48))[0]
 
-    assert result.created_by == "mesh:poisson"
+    assert result.created_by == "mesh:isosurface"
     assert result.parent_ids == [cloud.id]
     assert result.metadata.face_count > 0
     assert result.content_path.read_bytes().startswith(b"#")
 
 
-def test_poisson_rejects_a_depth_map(tmp_path: Path, monkeypatch):
+def test_isosurface_rejects_a_depth_map(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     depth_asset, _ = _depth_asset(tmp_path, FilesystemManifestRepository(tmp_path / "cache"))
 
-    with pytest.raises(SplatDomainError, match="poisson needs a gaussian_cloud"):
-        handle(MeshRequest(inputs=[depth_asset], model="poisson"))
+    with pytest.raises(SplatDomainError, match="isosurface needs a gaussian_cloud"):
+        handle(MeshRequest(inputs=[depth_asset], model="isosurface"))

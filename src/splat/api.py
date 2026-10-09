@@ -223,7 +223,7 @@ def mesh(
     *,
     model: str | None = None,
     format: str = "glb",
-    depth: int = 8,
+    resolution: int = 192,
     opacity_threshold: float = 0.1,
 ) -> list[Manifest]:
     from splat.handlers.mesh import MeshRequest
@@ -235,7 +235,7 @@ def mesh(
             inputs=resolved,
             model=model,
             format=format,
-            depth=depth,
+            resolution=resolution,
             opacity_threshold=opacity_threshold,
         )
     )

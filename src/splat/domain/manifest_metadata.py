@@ -80,7 +80,7 @@ class MeshMetadata:
     vertex_count: int = 0
     face_count: int = 0
     textured: bool = False
-    depth: int | None = None  # Poisson octree depth that converged
+    resolution: int | None = None  # voxels along the longest axis
 
 
 ManifestMetadata = (

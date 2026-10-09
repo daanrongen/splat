@@ -72,25 +72,25 @@ def test_mesh_heightfield_rejects_non_depth_input(tmp_path, monkeypatch):
     assert "needs a depth_map" in result.output
 
 
-def test_mesh_poisson_writes_a_real_mesh(tmp_path: Path, monkeypatch) -> None:
+def test_mesh_isosurface_writes_a_real_mesh(tmp_path: Path, monkeypatch) -> None:
     from splat.adapters.formats.ply import PlyWriter
-    from tests.adapters.mesh.test_poisson import _sphere_cloud
+    from tests.adapters.mesh.test_isosurface import _sphere_cloud
 
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     ply_path = tmp_path / "sphere.ply"
     PlyWriter().write(_sphere_cloud(), ply_path)
     out_path = tmp_path / "sphere.obj"
 
-    result = runner.invoke(app, ["mesh", str(ply_path), "-o", str(out_path), "--depth", "6"])
+    result = runner.invoke(app, ["mesh", str(ply_path), "-o", str(out_path), "--resolution", "48"])
 
     assert result.exit_code == 0, result.output
     assert out_path.exists()
     assert (tmp_path / "sphere.obj.manifest.json").exists()
 
 
-def test_mesh_poisson_rejects_unsupported_format(tmp_path: Path, monkeypatch) -> None:
+def test_mesh_isosurface_rejects_unsupported_format(tmp_path: Path, monkeypatch) -> None:
     from splat.adapters.formats.ply import PlyWriter
-    from tests.adapters.mesh.test_poisson import _sphere_cloud
+    from tests.adapters.mesh.test_isosurface import _sphere_cloud
 
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     ply_path = tmp_path / "sphere.ply"
@@ -99,7 +99,7 @@ def test_mesh_poisson_rejects_unsupported_format(tmp_path: Path, monkeypatch) ->
     result = runner.invoke(app, ["mesh", str(ply_path), "-o", str(tmp_path / "sphere.usdz")])
 
     assert result.exit_code == 1
-    assert "supports" in result.output
+    assert "Could not export mesh" in result.output
 
 
 def _cloud_file(tmp_path: Path, synthetic_cloud) -> Path:

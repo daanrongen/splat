@@ -10,7 +10,7 @@ methods return summaries because the HTTP wire schema intentionally exposes
 presentation data, not every internal domain detail.
 
 `splat render`, `splat mesh` and `splat export` aren't part of this contract:
-they run where their inputs and tools (Blender, Open3D, the -o path) live, so
+they run where their inputs and tools (Blender, the -o path) live, so
 they call their handlers directly, unaffected by SPLAT_URL.
 
 `splat models prune` is deliberately not on this contract either: it deletes

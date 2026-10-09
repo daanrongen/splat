@@ -9,7 +9,7 @@ from splat.domain.manifest import Manifest, ManifestKind
 from splat.ports.manifest_repository import ManifestRepository
 from splat.registry.wiring import get_manifest_repository
 
-MESH_MODELS = {ManifestKind.DEPTH_MAP: "heightfield", ManifestKind.GAUSSIAN_CLOUD: "poisson"}
+MESH_MODELS = {ManifestKind.DEPTH_MAP: "heightfield", ManifestKind.GAUSSIAN_CLOUD: "isosurface"}
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class MeshRequest:
     inputs: list[Manifest]
     model: str | None = None  # inferred from each input's kind
     format: str = "glb"
-    depth: int = 8
+    resolution: int = 192
     opacity_threshold: float = 0.1
 
 
@@ -30,10 +30,10 @@ def _mesh_one(asset: Manifest, request: MeshRequest, cache: ManifestRepository) 
     model = request.model or MESH_MODELS.get(asset.kind)
     if model == "heightfield":
         return _heightfield(asset, request.format, cache)
-    if model == "poisson":
-        return _poisson(asset, request, cache)
+    if model == "isosurface":
+        return _isosurface(asset, request, cache)
     raise SplatDomainError(
-        f"mesh needs a depth_map (heightfield) or gaussian_cloud (poisson), got "
+        f"mesh needs a depth_map (heightfield) or gaussian_cloud (isosurface), got "
         f"{asset.kind.value}" + (f" with model {model!r}" if model else "") + "."
     )
 
@@ -73,23 +73,25 @@ def _heightfield(asset: Manifest, fmt: str, cache: ManifestRepository) -> Manife
     )
 
 
-def _poisson(asset: Manifest, request: MeshRequest, cache: ManifestRepository) -> Manifest:
-    from splat.adapters.mesh.poisson import poisson_mesh
+def _isosurface(asset: Manifest, request: MeshRequest, cache: ManifestRepository) -> Manifest:
+    from splat.adapters.mesh.isosurface import isosurface_mesh
 
     if asset.kind != ManifestKind.GAUSSIAN_CLOUD:
-        raise SplatDomainError(f"poisson needs a gaussian_cloud, got {asset.kind.value}.")
+        raise SplatDomainError(f"isosurface needs a gaussian_cloud, got {asset.kind.value}.")
     params = {
         "format": request.format,
-        "depth": request.depth,
+        "resolution": request.resolution,
         "opacity_threshold": request.opacity_threshold,
     }
 
     def build() -> tuple[bytes, dict]:
-        return poisson_mesh(
+        shape = isosurface_mesh(
             asset.as_gaussian_cloud(),
-            format=request.format,
-            depth=request.depth,
+            resolution=request.resolution,
             opacity_threshold=request.opacity_threshold,
         )
+        return shape_to_mesh_bytes(shape, request.format), shape.metadata
 
-    return run_mesh(cache, model_name="poisson", parent_ids=(asset.id,), params=params, build=build)
+    return run_mesh(
+        cache, model_name="isosurface", parent_ids=(asset.id,), params=params, build=build
+    )

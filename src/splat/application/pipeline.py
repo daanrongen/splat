@@ -373,6 +373,8 @@ def shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
     if shape.uv is not None and shape.texture is not None:
         mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=shape.texture)
+    if shape.colors is not None:
+        mesh.visual = trimesh.visual.ColorVisuals(mesh, vertex_colors=shape.colors)
     buf = BytesIO()
     try:
         mesh.export(buf, file_type=export_format)

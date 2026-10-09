@@ -12,14 +12,14 @@ router = APIRouter()
 def mesh(
     cloud: UploadFile = File(...),
     format: str = Form("glb"),
-    depth: int = Form(8),
+    resolution: int = Form(192),
     opacity_threshold: float = Form(0.1),
 ) -> Response:
     cache = get_manifest_repository()
     with saved_upload(cloud) as path:
         asset = cache.put_external(path, kind=ManifestKind.GAUSSIAN_CLOUD)
     request = MeshRequest(
-        inputs=[asset], format=format, depth=depth, opacity_threshold=opacity_threshold
+        inputs=[asset], format=format, resolution=resolution, opacity_threshold=opacity_threshold
     )
     result = handle(request)[0]
     return Response(

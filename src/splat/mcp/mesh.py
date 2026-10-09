@@ -11,10 +11,10 @@ def mesh(
     input: str,
     model: str | None = None,
     format: str = "glb",
-    depth: int = 8,
+    resolution: int = 192,
     opacity_threshold: float = 0.1,
 ) -> list[types.ContentBlock]:
-    """Mesh a metric depth map (heightfield) or a Gaussian cloud (poisson), given a path
+    """Mesh a metric depth map (heightfield) or a Gaussian cloud (isosurface), given a path
     or @<asset-id>; the model follows the input kind unless set."""
     cache = get_manifest_repository()
     asset = resolve_input_asset(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)
@@ -22,7 +22,7 @@ def mesh(
         inputs=[asset],
         model=model,
         format=format,
-        depth=depth,
+        resolution=resolution,
         opacity_threshold=opacity_threshold,
     )
     result = handle(request)[0]

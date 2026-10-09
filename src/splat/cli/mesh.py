@@ -18,7 +18,7 @@ def mesh(
     model: str | None = typer.Option(
         None,
         "--model",
-        help="heightfield (depth map) | poisson (gaussian cloud); default follows the input.",
+        help="heightfield (depth map) | isosurface (gaussian cloud); default follows the input.",
         envvar="SPLAT_MESH_MODEL",
     ),
     to: str | None = typer.Option(
@@ -27,16 +27,16 @@ def mesh(
         help="glb | obj | ply | gltf; default from -o, else glb.",
         envvar="SPLAT_MESH_TO",
     ),
-    depth: int = typer.Option(
-        8,
-        "--depth",
-        help="poisson: octree depth; retries lower if PoissonRecon fails.",
-        envvar="SPLAT_MESH_DEPTH",
+    resolution: int = typer.Option(
+        192,
+        "--resolution",
+        help="isosurface: voxels along the longest axis.",
+        envvar="SPLAT_MESH_RESOLUTION",
     ),
     opacity_threshold: float = typer.Option(
         0.1,
         "--opacity-threshold",
-        help="poisson: drop Gaussians below this opacity first.",
+        help="isosurface: drop Gaussians below this opacity first.",
         envvar="SPLAT_MESH_OPACITY_THRESHOLD",
     ),
 ) -> None:
@@ -51,7 +51,7 @@ def mesh(
                 inputs=inputs,
                 model=model,
                 format=fmt,
-                depth=depth,
+                resolution=resolution,
                 opacity_threshold=opacity_threshold,
             )
         )
