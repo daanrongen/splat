@@ -22,14 +22,14 @@ def export(
         help=f"Gaussian clouds: compress first with {' | '.join(PROFILES)}.",
         envvar="SPLAT_EXPORT_PROFILE",
     ),
-    pruning: str = typer.Option(
-        "threshold",
+    pruning: str | None = typer.Option(
+        None,
         "--pruning",
-        help="With --profile: threshold | blue-noise (needs --target-count).",
+        help="With --profile: threshold (default) | blue-noise (needs --target-count).",
         envvar="SPLAT_EXPORT_PRUNING",
     ),
     target_count: int | None = typer.Option(
-        None, "--target-count", help="Point count for --pruning blue-noise."
+        None, "--target-count", help="With --profile: point count for --pruning blue-noise."
     ),
 ) -> None:
     """Write an asset to a file in the format of its extension, with a lineage sidecar."""
