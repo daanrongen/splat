@@ -125,7 +125,7 @@ splat mesh scene.ply -o scene.glb
 |---|---|---|---|
 | `export` | any manifest | file + sidecar | Write in the format of the extension; `--profile` compresses clouds. |
 | `gaussian --declutter` | images | `gaussian_cloud` | Remove isolated floater Gaussians after reconstruction. |
-| `mesh` | `gaussian_cloud` | `shape_3d` | Poisson surface extraction, in its own worker process. |
+| `mesh` | `gaussian_cloud` | `shape_3d` | Isosurface of the Gaussian density field (`--resolution`), with per-vertex colours. |
 
 ## Render Back To Image
 

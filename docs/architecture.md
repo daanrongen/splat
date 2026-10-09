@@ -54,9 +54,10 @@ torch
 coremltools
 mlx
 transformers
-open3d
 trimesh
 cv2
+scipy
+huggingface_hub
 splat.application.pipeline
 ```
 
