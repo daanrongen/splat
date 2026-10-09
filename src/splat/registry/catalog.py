@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from importlib import import_module
 from typing import Any, Literal
 
-from splat.domain.errors import UnsupportedFormat
+from splat.domain.errors import SplatDomainError, UnsupportedFormat
 from splat.domain.value_objects import ModelLicense
 
 Runtime = Literal["mlx", "coreml", "torch"]
@@ -31,7 +31,13 @@ class ModelDescriptor:
     @property
     def backend_cls(self) -> type[Any]:
         module_name, class_name = self.backend.rsplit(":", 1)
-        return getattr(import_module(module_name), class_name)
+        try:
+            return getattr(import_module(module_name), class_name)
+        except ImportError as exc:
+            raise SplatDomainError(
+                f"Model {self.name!r} needs the {self.runtime} runtime, "
+                f"which failed to import: {exc}"
+            ) from exc
 
 
 def lookup(catalog: dict[str, ModelDescriptor], name: str, label: str = "") -> ModelDescriptor:
