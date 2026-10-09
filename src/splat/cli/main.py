@@ -1,4 +1,7 @@
+import logging
 import os
+import sys
+import warnings
 
 from splat.paths import hf_home_dir, manifest_cache_dir, model_cache_dir
 
@@ -9,7 +12,15 @@ os.environ.setdefault("HF_HOME", str(hf_home_dir()))
 os.environ.setdefault("SPLAT_MODEL_CACHE_DIR", str(model_cache_dir()))
 os.environ.setdefault("SPLAT_MANIFEST_CACHE_DIR", str(manifest_cache_dir()))
 
-import sys
+if not (os.environ.get("SPLAT_DEBUG") or "--debug" in sys.argv):
+    for var, value in {
+        "HF_HUB_DISABLE_PROGRESS_BARS": "1",
+        "HF_HUB_VERBOSITY": "error",
+        "TRANSFORMERS_VERBOSITY": "error",
+    }.items():
+        os.environ.setdefault(var, value)
+    logging.getLogger("coremltools").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 import typer
 
@@ -90,7 +101,10 @@ def _main(
         False, "--version", callback=_print_version, is_eager=True, help="Show the version."
     ),
     debug: bool = typer.Option(
-        False, "--debug", envvar="SPLAT_DEBUG", help="Show the full traceback on failure."
+        False,
+        "--debug",
+        envvar="SPLAT_DEBUG",
+        help="Show the full traceback on failure and third-party warnings.",
     ),
     no_manifest: bool = typer.Option(
         False,

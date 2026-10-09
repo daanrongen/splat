@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 import pytest
 
 from splat.cli import main as cli_main
@@ -26,3 +29,20 @@ def test_debug_env_lets_the_traceback_through(monkeypatch):
 
     with pytest.raises(RuntimeError, match="boom"):
         cli_main.main()
+
+
+def _bars_disabled(monkeypatch, *args: str) -> str:
+    for var in ("SPLAT_DEBUG", "HF_HUB_DISABLE_PROGRESS_BARS"):
+        monkeypatch.delenv(var, raising=False)
+    code = "import os, splat.cli.main; print(os.environ.get('HF_HUB_DISABLE_PROGRESS_BARS'))"
+    return subprocess.run(
+        [sys.executable, "-c", code, *args], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def test_third_party_output_is_quiet_by_default(monkeypatch):
+    assert _bars_disabled(monkeypatch) == "1"
+
+
+def test_debug_keeps_third_party_output(monkeypatch):
+    assert _bars_disabled(monkeypatch, "--debug") == "None"
