@@ -99,10 +99,17 @@ def segment(
     model: str = "sam-mlx",
     max_stickers: int = 20,
     device: str = "auto",
+    foreground: bool = False,
+    drop_background: bool = False,
 ) -> list[Manifest]:
     return get_client().segment(
         SegmentRequest(
-            inputs=_resolve_all(inputs), model=model, max_stickers=max_stickers, device=device
+            inputs=_resolve_all(inputs),
+            model=model,
+            max_stickers=max_stickers,
+            device=device,
+            foreground=foreground,
+            drop_background=drop_background,
         )
     )
 

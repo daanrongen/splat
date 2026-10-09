@@ -14,13 +14,19 @@ def segment(
     input: str = typer.Argument(
         ..., help="Image path, @<asset-id>, or '-' to read piped asset records."
     ),
-    output_dir: Path | None = typer.Option(
-        None, "-o", "--output", help="Also export stickers here."
+    output: Path | None = typer.Option(
+        None, "-o", "--output", help="Export stickers to this directory, or one sticker to a .png."
     ),
     model: str = typer.Option("sam-mlx", "--model", envvar="SPLAT_SEGMENT_MODEL"),
     max_stickers: int = typer.Option(20, "--max-stickers", envvar="SPLAT_SEGMENT_MAX_STICKERS"),
     device: str = typer.Option(
         "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_SEGMENT_DEVICE"
+    ),
+    foreground: bool = typer.Option(
+        False, "--foreground", help="Merge the masks into one cutout of the main subject."
+    ),
+    drop_background: bool = typer.Option(
+        False, "--drop-background", help="Drop masks that cover the frame or its border."
     ),
 ) -> None:
     """Segment image(s) into RGBA sticker cutouts (cached; fans out to many assets)."""
@@ -28,16 +34,28 @@ def segment(
     try:
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.IMAGE)
         all_stickers = get_client().segment(
-            SegmentRequest(inputs=inputs, model=model, max_stickers=max_stickers, device=device)
+            SegmentRequest(
+                inputs=inputs,
+                model=model,
+                max_stickers=max_stickers,
+                device=device,
+                foreground=foreground,
+                drop_background=drop_background,
+            )
         )
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
 
-    if output_dir is not None:
-        output_dir.mkdir(parents=True, exist_ok=True)
+    if output is not None and output.suffix:
+        if len(all_stickers) != 1:
+            error(f"-o {output} needs exactly one sticker, got {len(all_stickers)}")
+            raise typer.Exit(code=1)
+        export_output(all_stickers[0], output, cache)
+    elif output is not None:
+        output.mkdir(parents=True, exist_ok=True)
         for i, sticker_asset in enumerate(all_stickers):
-            export_output(sticker_asset, output_dir / f"sticker_{i:03d}.png", cache)
+            export_output(sticker_asset, output / f"sticker_{i:03d}.png", cache)
 
     def _human(assets: list) -> None:
         console.print(f"[green]segmented[/green] {len(assets)} stickers")

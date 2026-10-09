@@ -160,6 +160,8 @@ class RemoteSplatClient:
                 "model": request.model,
                 "max_stickers": request.max_stickers,
                 "device": request.device,
+                "foreground": request.foreground,
+                "drop_background": request.drop_background,
             }
             response = self._client.post("/segment", files=files, data=form)
             _raise_for_domain_error(response)

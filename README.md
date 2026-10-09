@@ -78,7 +78,7 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 
 **`splat embed [INPUT] [--text TEXT]`** embeds images or a text query as a normalized vector: `--model` (`mobileclip2-s0`), `--device`, `-o` (`.npy`).
 
-**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam-mlx`), `--max-stickers` (20), `--device`, `-o DIR`.
+**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam-mlx`), `--max-stickers` (20), `--device`, `--foreground` (one cutout of the main subject), `--drop-background` (drop masks that cover the frame or its border), `-o DIR` or `-o file.png` for a single sticker.
 
 **`splat depth INPUT`** estimates per-pixel depth: `--model` (`depth-pro`, metric), `--device`, `-o` (a viewable PNG, near is bright).
 
