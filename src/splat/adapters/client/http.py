@@ -418,6 +418,7 @@ class RemoteSplatClient:
             source_model=data.source_model,
             license=data.license,
             capture_camera_count=data.capture_camera_count,
+            capture_camera_intrinsics=data.capture_camera_intrinsics,
         )
 
     def validate(self, path: Path, *, strict: bool = False) -> ValidationSummary:

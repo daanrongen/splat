@@ -55,7 +55,7 @@ Model weights download on first use. `render` needs [Blender](https://www.blende
 | `caption` | `caption` | non-empty UTF-8 `.txt` |
 | `embedding` | `embed` | `.npy` whose dtype and shape match its metadata |
 | `depth_map` | `depth` | 2D float32 `.npy` in `metres`, or relative `disparity`, plus focal length when known |
-| `gaussian_cloud` | `gaussian` | `.ply` in the OpenGL convention (+Y up), SH degree 0 to 3, point count matching its metadata, plus the source cameras |
+| `gaussian_cloud` | `gaussian` | `.ply` in the OpenGL convention (+Y up), SH degree 0 to 3, point count matching its metadata, plus the source cameras. The PLY header stores the capture camera as `comment capture_camera_intrinsics [fx, fy, cx, cy, width, height]` (a JSON array, stable), and `splat info --json` prints it as `intrinsics` next to `coordinate_convention` and `up_axis` |
 | `shape_3d` | `mesh` | `.glb`, `.obj`, `.ply` or `.gltf` with typed vertex and face counts |
 
 ## Command reference

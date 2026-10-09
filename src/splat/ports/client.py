@@ -18,7 +18,7 @@ weights from whichever machine's disk it runs on, and a route that lets a
 client reclaim a shared server's model cache is a footgun, not parity.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -30,6 +30,8 @@ from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.upscale import UpscaleRequest
+
+_INTRINSICS = ("fx", "fy", "cx", "cy", "width", "height")
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,14 @@ class InfoSummary:
     source_model: str | None
     license: str | None
     capture_camera_count: int | None
+    capture_camera_intrinsics: list[float] | None = None
+
+    def as_json(self) -> dict:
+        """Plain dict with the intrinsics named, so consumers need not know the order."""
+        data = asdict(self)
+        values = data.pop("capture_camera_intrinsics")
+        data["intrinsics"] = dict(zip(_INTRINSICS, values, strict=True)) if values else None
+        return data
 
 
 @dataclass(frozen=True)

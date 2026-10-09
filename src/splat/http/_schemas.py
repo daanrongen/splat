@@ -102,6 +102,7 @@ class InfoResponse(BaseModel):
     source_model: str | None
     license: str | None
     capture_camera_count: int | None
+    capture_camera_intrinsics: list[float] | None = None
 
 
 class ValidationResponse(BaseModel):
