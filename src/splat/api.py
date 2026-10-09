@@ -162,6 +162,7 @@ def gaussian(
     orbit_frames: int | None = None,
     orbit_degrees: float = 30.0,
     score: bool = False,
+    mask: ManifestLike | None = None,
 ) -> list[Manifest]:
     return get_client().gaussian(
         GaussianRequest(
@@ -182,6 +183,7 @@ def gaussian(
             orbit_frames=orbit_frames,
             orbit_degrees=orbit_degrees,
             score=score,
+            mask=_resolve_all(mask, default_kind=ManifestKind.STICKER)[0] if mask else None,
         )
     )
 

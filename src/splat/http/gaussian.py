@@ -1,9 +1,12 @@
+import hashlib
+import json
 import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
 from splat.domain.manifest import ManifestKind
+from splat.domain.manifest_metadata import StickerMetadata
 from splat.handlers.gaussian import GaussianRequest, handle
 from splat.registry.wiring import get_manifest_repository, get_reader, get_writer
 
@@ -13,6 +16,8 @@ router = APIRouter()
 @router.post("/gaussian")
 def gaussian(
     images: list[UploadFile] = File(...),
+    mask: UploadFile | None = File(None),
+    mask_metadata: str | None = Form(None),
     model: str = Form("sharp"),
     device: str = Form("auto"),
     to: str = Form("ply"),
@@ -39,6 +44,20 @@ def gaussian(
             image_path = tmp_path / f"input_{i:03d}{Path(image.filename or '').suffix}"
             image_path.write_bytes(image.file.read())
             input_assets.append(cache.put_external(image_path, kind=ManifestKind.IMAGE))
+        mask_asset = None
+        if mask is not None and mask_metadata is not None:
+            content = mask.file.read()
+            key = hashlib.sha256(content + mask_metadata.encode()).hexdigest()[:16]
+            mask_asset = cache.put(
+                f"mask-{key}",
+                kind=ManifestKind.STICKER,
+                content_bytes=content,
+                ext="png",
+                metadata=StickerMetadata(**json.loads(mask_metadata)),
+                params={},
+                parent_ids=[],
+                created_by="external",
+            )
         output_path = tmp_path / f"output.{to.lstrip('.')}"
 
         result = handle(
@@ -60,6 +79,7 @@ def gaussian(
                 orbit_frames=orbit_frames,
                 orbit_degrees=orbit_degrees,
                 score=score,
+                mask=mask_asset,
             )
         )[0]
         cloud = get_reader(result.content_path.suffix).read(result.content_path)

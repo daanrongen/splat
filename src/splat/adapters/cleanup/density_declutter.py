@@ -9,8 +9,6 @@ part - the part that needs no rendered views and works directly on
 (see #66) since it needs known camera poses to be meaningfully accurate.
 """
 
-from dataclasses import replace
-
 import numpy as np
 from scipy.spatial import cKDTree
 
@@ -45,16 +43,4 @@ class DensityDeclutterer:
         self, cloud: GaussianCloud, *, k: int = 16, std_ratio: float = 2.0, **params
     ) -> GaussianCloud:
         keep = floater_mask(cloud.means, k=k, std_ratio=std_ratio)
-        sh_rest = cloud.sh_rest[keep] if cloud.sh_rest is not None else None
-        return GaussianCloud(
-            means=cloud.means[keep],
-            scales=cloud.scales[keep],
-            rotations=cloud.rotations[keep],
-            opacities=cloud.opacities[keep],
-            sh_dc=cloud.sh_dc[keep],
-            sh_rest=sh_rest,
-            sh_degree=cloud.sh_degree,
-            scale_activation=cloud.scale_activation,
-            opacity_activation=cloud.opacity_activation,
-            metadata=replace(cloud.metadata),
-        )
+        return cloud.subset(keep)

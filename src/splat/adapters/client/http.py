@@ -5,8 +5,10 @@ shape, shared with the server that produces/consumes it.
 """
 
 import hashlib
+import json
 import tempfile
 import warnings
+from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
 
@@ -339,6 +341,10 @@ class RemoteSplatClient:
             ("images", (asset.content_path.name, asset.content_path.read_bytes()))
             for asset in request.inputs
         ]
+        if request.mask is not None:
+            files.append(
+                ("mask", (request.mask.content_path.name, request.mask.content_path.read_bytes()))
+            )
         form = {
             "model": request.model,
             "device": request.device,
@@ -353,6 +359,8 @@ class RemoteSplatClient:
             "normalize_color": request.normalize_color,
             "score": request.score,
         }
+        if request.mask is not None:
+            form["mask_metadata"] = json.dumps(asdict(request.mask.metadata))
         if request.iters is not None:
             form["iters"] = request.iters
         if request.max_dim is not None:
