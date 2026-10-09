@@ -164,7 +164,10 @@ class RemoteSplatClient:
                 "device": request.device,
                 "foreground": request.foreground,
                 "drop_background": request.drop_background,
+                "points": list(request.points),
             }
+            if request.box:
+                form["box"] = request.box
             response = self._client.post("/segment", files=files, data=form)
             _raise_for_domain_error(response)
             for item in response.json():

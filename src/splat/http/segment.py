@@ -17,6 +17,8 @@ def segment(
     device: str = Form("auto"),
     foreground: bool = Form(False),
     drop_background: bool = Form(False),
+    points: list[str] = Form([]),
+    box: str | None = Form(None),
 ) -> list[ManifestDetail]:
     cache = get_manifest_repository()
     with saved_upload(image) as path:
@@ -29,6 +31,8 @@ def segment(
             device=device,
             foreground=foreground,
             drop_background=drop_background,
+            points=tuple(points),
+            box=box,
         )
     )
     return [ManifestDetail.from_manifest(a) for a in stickers]

@@ -101,6 +101,8 @@ def segment(
     device: str = "auto",
     foreground: bool = False,
     drop_background: bool = False,
+    points: list[str] | None = None,
+    box: str | None = None,
 ) -> list[Manifest]:
     return get_client().segment(
         SegmentRequest(
@@ -110,6 +112,8 @@ def segment(
             device=device,
             foreground=foreground,
             drop_background=drop_background,
+            points=tuple(points or ()),
+            box=box,
         )
     )
 

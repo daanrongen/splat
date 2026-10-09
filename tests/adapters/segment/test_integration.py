@@ -30,3 +30,11 @@ def test_segment_produces_stickers(model):
         assert sticker.rgba.shape == (h, w, 4)
         assert x >= 0 and y >= 0 and x + w <= 512 and y + h <= 512
         assert sticker.area > 0
+
+
+@pytest.mark.parametrize("model", ["sam-mlx", "sam2-coreml"])
+def test_box_prompt_cuts_out_the_object(model):
+    (sticker,) = get_segmentation_backend(model).segment(_IMAGE, box=[185, 130, 415, 415])
+
+    x, y, w, h = sticker.bbox
+    assert 150 <= x <= 220 and 100 <= y <= 170 and w > 150 and h > 200

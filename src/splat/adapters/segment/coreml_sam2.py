@@ -19,6 +19,7 @@ from huggingface_hub import snapshot_download
 from PIL import Image
 
 from splat.adapters.formats.image import read_rgb, resize
+from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
 from splat.paths import model_cache_dir
@@ -112,6 +113,49 @@ class CoreMLSam2Backend:
             str(by_role["mask_decoder"]), compute_units=self._compute_unit
         )
 
+    def _decode(
+        self, embeddings: dict, coords: np.ndarray, labels: list[int], size: tuple[int, int]
+    ) -> tuple[float, np.ndarray]:
+        """Best mask score and the binary mask at `size` (W, H) for two prompt points."""
+        prompt_out = self._prompt_encoder.predict(
+            {
+                "points": coords[None].astype(np.float32),
+                "labels": np.array([labels], dtype=np.int32),
+            }
+        )
+        decoder_out = self._mask_decoder.predict(
+            {
+                "image_embedding": embeddings["image_embedding"],
+                "sparse_embedding": prompt_out["sparse_embeddings"],
+                "dense_embedding": prompt_out["dense_embeddings"],
+                "feats_s0": embeddings["feats_s0"],
+                "feats_s1": embeddings["feats_s1"],
+            }
+        )
+        best_idx = int(np.argmax(decoder_out["scores"][0]))
+        low_res = decoder_out["low_res_masks"][0, best_idx]
+        mask = resize(low_res.astype(np.float32), size, interpolation="linear") > 0
+        return float(decoder_out["scores"][0, best_idx]), mask
+
+    def _prompted(
+        self, image: np.ndarray, embeddings: dict, points: list, box: list | None
+    ) -> Sticker:
+        """The prompt encoder takes exactly two points: a box is its two corners (labels 2 and
+        3), and a single point is doubled."""
+        if box and points:
+            raise SplatDomainError("sam2-coreml takes a box or points, not both.")
+        if len(points) > 2:
+            raise SplatDomainError("sam2-coreml takes at most 2 points.")
+        if box:
+            pairs, labels = [box[:2], box[2:]], [2, 3]
+        else:
+            pairs = [p[:2] for p in points] * (2 // len(points))
+            labels = [p[2] for p in points] * (2 // len(points))
+        size = (image.shape[1], image.shape[0])
+        scale = np.array([_INPUT_SIZE[0] / size[0], _INPUT_SIZE[1] / size[1]])
+        score, mask = self._decode(embeddings, np.array(pairs) * scale, labels, size)
+        return Sticker.from_mask(image, mask, score)
+
     def segment(
         self,
         image_path: Path,
@@ -120,6 +164,8 @@ class CoreMLSam2Backend:
         points_per_side: int = 16,
         pred_iou_thresh: float = 0.85,
         box_nms_thresh: float = 0.7,
+        points: list | None = None,
+        box: list | None = None,
         **params,
     ) -> list[Sticker]:
         self._load()
@@ -131,6 +177,9 @@ class CoreMLSam2Backend:
         # CoreML imageType inputs must be PIL images, not arrays
         embeddings = self._image_encoder.predict({"image": Image.fromarray(resized)})
 
+        if points or box:
+            return [self._prompted(original, embeddings, points or [], box)]
+
         grid = _build_point_grid(points_per_side, original_size[0], original_size[1])
         scale = np.array([_INPUT_SIZE[0] / original_size[0], _INPUT_SIZE[1] / original_size[1]])
 
@@ -140,29 +189,11 @@ class CoreMLSam2Backend:
 
         for point in grid:
             scaled_point = point * scale
-            coords = np.stack([scaled_point, scaled_point])[None, :, :].astype(np.float32)
-            labels = np.array([[1, 1]], dtype=np.int32)
-
-            prompt_out = self._prompt_encoder.predict({"points": coords, "labels": labels})
-            decoder_out = self._mask_decoder.predict(
-                {
-                    "image_embedding": embeddings["image_embedding"],
-                    "sparse_embedding": prompt_out["sparse_embeddings"],
-                    "dense_embedding": prompt_out["dense_embeddings"],
-                    "feats_s0": embeddings["feats_s0"],
-                    "feats_s1": embeddings["feats_s1"],
-                }
-            )
-
-            best_idx = int(np.argmax(decoder_out["scores"][0]))
-            score = float(decoder_out["scores"][0, best_idx])
+            coords = np.stack([scaled_point, scaled_point])
+            score, binary_mask = self._decode(embeddings, coords, [1, 1], original_size)
             if score < pred_iou_thresh:
                 continue
 
-            low_res = decoder_out["low_res_masks"][0, best_idx]
-            binary_mask = (
-                resize(low_res.astype(np.float32), original_size, interpolation="linear") > 0
-            )
             bbox = _mask_to_bbox(binary_mask)
             if bbox is None:
                 continue
