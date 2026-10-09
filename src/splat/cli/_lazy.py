@@ -53,14 +53,6 @@ class LazyCommand(click.Command):
     def commands(self) -> dict[str, click.Command]:
         return getattr(self.load(), "commands", {})
 
-    @property
-    def hidden(self) -> bool:  # type: ignore[override]
-        return self.load().hidden
-
-    @hidden.setter
-    def hidden(self, value: bool) -> None:
-        self.__dict__["hidden"] = value
-
     def invoke(self, ctx: click.Context) -> object:
         return self.load().invoke(ctx)
 
