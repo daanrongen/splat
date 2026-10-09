@@ -54,17 +54,19 @@ from splat.ports.segmentation import SegmentationBackend
 from splat.ports.upscaling import UpscalingBackend
 from splat.registry.wiring import get_reader
 
+# Bump a stage when a code change alters its output for the same arguments.
+STAGE_REVISION = {"mesh": 1}
+
 
 def compute_cache_key(
     *, stage: str, model: str, params: dict, parent_ids: tuple[str, ...] = ()
 ) -> str:
     # Where a stage runs doesn't change what it produces.
     params = {k: v for k, v in params.items() if k != "device"}
-    payload = json.dumps(
-        {"stage": stage, "model": model, "params": params, "parents": sorted(parent_ids)},
-        sort_keys=True,
-        default=str,
-    )
+    key = {"stage": stage, "model": model, "params": params, "parents": sorted(parent_ids)}
+    if revision := STAGE_REVISION.get(stage):
+        key["revision"] = revision
+    payload = json.dumps(key, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 

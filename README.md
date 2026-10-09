@@ -38,7 +38,7 @@ Model weights download on first use. `render` needs [Blender](https://www.blende
 
 ## How it works
 
-**Manifests.** Each stage output is a manifest: content in its kind's format plus typed metadata, params, parent ids, the producing model and its license. Ids are invocation keys (stage, model, semantic params, parents), so re-running anything is a cache hit. External files are content-addressed.
+**Manifests.** Each stage output is a manifest: content in its kind's format plus typed metadata, params, parent ids, the producing model and its license. Ids are invocation keys (stage, model, semantic params, parents), so re-running anything is a cache hit. A stage whose output changes between releases bumps its `STAGE_REVISION`, so only that stage's results are recomputed. External files are content-addressed.
 
 **Inputs.** Every stage takes a file path, `@<manifest-id>`, or `-` for NDJSON records piped from another command. When stdout is piped, commands print one NDJSON record per output; in a terminal they print a summary.
 
