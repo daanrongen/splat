@@ -59,7 +59,7 @@ from splat.ports.upscaling import UpscalingBackend
 from splat.registry.wiring import get_reader
 
 # Bump a stage when a code change alters its output for the same arguments.
-STAGE_REVISION = {"mesh": 1, "render": 1}
+STAGE_REVISION = {"mesh": 2, "render": 1}
 
 
 def compute_cache_key(
@@ -400,10 +400,13 @@ def _srgb_to_linear(value: np.ndarray) -> np.ndarray:
 
 def shape_to_mesh_bytes(shape: Shape3D, export_format: str) -> bytes:
     import trimesh
+    from PIL import Image
 
     mesh = trimesh.Trimesh(vertices=shape.vertices, faces=shape.faces, process=False)
     if shape.uv is not None and shape.texture is not None:
-        mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=shape.texture)
+        # trimesh drops a raw array on glb export; it needs a PIL image.
+        image = Image.fromarray(shape.texture)
+        mesh.visual = trimesh.visual.TextureVisuals(uv=shape.uv, image=image)
     if shape.colors is not None:
         colors = shape.colors
         if export_format in ("glb", "gltf"):  # glTF vertex colours are linear

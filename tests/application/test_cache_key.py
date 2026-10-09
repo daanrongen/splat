@@ -10,7 +10,7 @@ def _key(stage: str) -> str:
 
 def test_bumping_a_stage_revision_changes_only_that_stage():
     before = {s: _key(s) for s in ("mesh", "depth")}
-    with patch.dict(pipeline.STAGE_REVISION, {"mesh": 2}):
+    with patch.dict(pipeline.STAGE_REVISION, {"mesh": pipeline.STAGE_REVISION["mesh"] + 1}):
         assert _key("mesh") != before["mesh"]
         assert _key("depth") == before["depth"]
 
