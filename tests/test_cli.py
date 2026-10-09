@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 from io import StringIO
@@ -184,3 +185,31 @@ def test_version_flag_prints_the_package_version():
 
     assert result.exit_code == 0
     assert result.output.strip().count(".") == 2
+
+
+def test_info_json_names_the_intrinsics_and_convention(tmp_path: Path, synthetic_cloud) -> None:
+    from dataclasses import replace
+
+    cloud = replace(
+        synthetic_cloud,
+        metadata=replace(
+            synthetic_cloud.metadata,
+            capture_camera_intrinsics=[1500.0, 1500.0, 512.0, 384.0, 1024.0, 768.0],
+        ),
+    )
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(cloud, ply_path)
+
+    result = runner.invoke(app, ["info", str(ply_path), "--json"])
+
+    data = json.loads(result.output)
+    assert data["intrinsics"] == {
+        "fx": 1500.0,
+        "fy": 1500.0,
+        "cx": 512.0,
+        "cy": 384.0,
+        "width": 1024.0,
+        "height": 768.0,
+    }
+    assert data["coordinate_convention"] == "opengl"
+    assert data["up_axis"] == "y"

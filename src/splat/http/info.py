@@ -27,4 +27,5 @@ def info(input: UploadFile = File(...)) -> InfoResponse:
         source_model=cloud.metadata.source_model,
         license=cloud.metadata.license.spdx_id if cloud.metadata.license else None,
         capture_camera_count=cloud.metadata.capture_camera_count,
+        capture_camera_intrinsics=cloud.metadata.capture_camera_intrinsics,
     )

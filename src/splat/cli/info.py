@@ -1,3 +1,5 @@
+import json
+
 import typer
 
 from splat.cli._console import console, error
@@ -6,7 +8,10 @@ from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_client
 
 
-def info(path: str = typer.Argument(..., help="Splat file to inspect, or @<manifest-id>.")) -> None:
+def info(
+    path: str = typer.Argument(..., help="Splat file to inspect, or @<manifest-id>."),
+    as_json: bool = typer.Option(False, "--json", help="Print the summary as JSON."),
+) -> None:
     """Print point count, SH degree, bounding box, file size, and cloud metadata."""
     try:
         path = resolve_input_path(path)
@@ -14,6 +19,10 @@ def info(path: str = typer.Argument(..., help="Splat file to inspect, or @<manif
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
+
+    if as_json:
+        print(json.dumps(summary.as_json()))
+        return
 
     console.print(f"format:       {summary.format}")
     console.print(f"points:       {summary.points:,}")
@@ -27,3 +36,8 @@ def info(path: str = typer.Argument(..., help="Splat file to inspect, or @<manif
         console.print(f"license:      {summary.license}")
     if summary.capture_camera_count is not None:
         console.print(f"cameras:      {summary.capture_camera_count}")
+    if summary.capture_camera_intrinsics is not None:
+        fx, fy, cx, cy, width, height = summary.capture_camera_intrinsics
+        console.print(
+            f"intrinsics:   fx={fx:g} fy={fy:g} cx={cx:g} cy={cy:g} size={width:g}x{height:g}"
+        )
