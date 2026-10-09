@@ -111,7 +111,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `--background` | `black` | `transparent`, `black`, `white`, `grey` or a hex colour |
 | `--view N` | | render from source camera N of the cloud |
 | `--azimuth`, `--elevation` | 25°, 20° | orbit camera instead of the capture pose |
-| `--distance`, `--fov`, `--look-at x,y,z` | fit to cloud | |
+| `--zoom`, `--distance`, `--fov`, `--look-at x,y,z` | fit to cloud | `--zoom 1` fits the whole subject at any scale; `--distance` is absolute, in the cloud's units |
 | `-o` | | |
 
 **`splat mesh INPUT`** turns a metric depth map (`heightfield`, textured by its source image) or a Gaussian cloud (`isosurface`) into a mesh. The backend follows the input kind unless `--model` says otherwise. Options: `--to` (`glb`, `obj`, `ply`, `gltf`; default from `-o`, else `glb`), `--resolution` (voxels along the longest axis, 192), `--opacity-threshold` (0.1), `-o`.

@@ -82,8 +82,14 @@ def render(
     distance: float | None = typer.Option(
         None,
         "--distance",
-        help="Camera distance from the look-at point (default fits the cloud).",
+        help="Camera distance in the cloud's units (default fits the cloud).",
         envvar="SPLAT_RENDER_DISTANCE",
+    ),
+    zoom: float | None = typer.Option(
+        None,
+        "--zoom",
+        help="Framing multiplier: 1 fits the subject, 2 is twice as close (default 1).",
+        envvar="SPLAT_RENDER_ZOOM",
     ),
     fov: float | None = typer.Option(
         None,
@@ -117,6 +123,7 @@ def render(
         azimuth=azimuth,
         elevation=elevation,
         distance=distance,
+        zoom=zoom,
         fov=fov,
         look_at=look_at,
         view=view,

@@ -234,6 +234,7 @@ class BlenderBackend:
         azimuth: float | None = None,
         elevation: float | None = None,
         distance: float | None = None,
+        zoom: float | None = None,
         fov: float | None = None,
         look_at: str | None = None,
         blender_bin: str | None = None,
@@ -275,6 +276,7 @@ class BlenderBackend:
                 ("azimuth", azimuth),
                 ("elevation", elevation),
                 ("distance", distance),
+                ("zoom", zoom),
                 ("fov", fov),
                 ("look-at", _parse_look_at(look_at)),
             ):

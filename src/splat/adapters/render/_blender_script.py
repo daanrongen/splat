@@ -44,6 +44,7 @@ _NAMED_COLOURS = {"black": "000000", "white": "ffffff", "grey": "808080"}
 # of its geometry.
 _DEFAULT_AZIMUTH = 25.0
 _DEFAULT_ELEVATION = 20.0
+_FIT_MARGIN = 1.1  # room for the splats' own extent around their means
 
 # Clouds are handed to Blender in the OpenGL convention (up is +Y), not
 # Blender's own world convention (up is +Z). See `_look_at_euler`.
@@ -77,6 +78,7 @@ def _parse_args():
     parser.add_argument("--azimuth", type=float, default=None)
     parser.add_argument("--elevation", type=float, default=None)
     parser.add_argument("--distance", type=float, default=None)
+    parser.add_argument("--zoom", type=float, default=None)
     parser.add_argument("--fov", type=float, default=None)
     parser.add_argument("--look-at", default=None)
     return parser.parse_args(argv)
@@ -274,23 +276,49 @@ def _look_at_euler(position: Vector, target: Vector):
     return Matrix((right, up, backward)).transposed().to_euler()
 
 
+def _bounding_sphere(means: np.ndarray) -> tuple[np.ndarray, float]:
+    """Centre and radius of the cloud's bulk, trimmed of extreme floaters."""
+    lo, hi = np.percentile(means, [1, 99], axis=0)
+    margin = hi - lo
+    bulk = means[((means >= lo - margin) & (means <= hi + margin)).all(axis=1)]
+    center = (bulk.min(axis=0) + bulk.max(axis=0)) / 2
+    return center, float(np.linalg.norm(bulk - center, axis=1).max()) or 1.0
+
+
+def _fit_distance(radius: float, tan_half_fov: float, zoom: float) -> float:
+    """Distance at which a sphere of `radius` fills a cone of the given half angle."""
+    return radius / np.sin(np.arctan(tan_half_fov)) * _FIT_MARGIN / zoom
+
+
+def _tan_half_fov(cam_data, width: int, height: int) -> float:
+    """Half-angle tangent along the narrower image side."""
+    fov_side = {"HORIZONTAL": width, "VERTICAL": height}.get(
+        cam_data.sensor_fit, max(width, height)
+    )
+    return float(np.tan(cam_data.angle / 2)) * min(width, height) / fov_side
+
+
 def _frame_camera_orbit(means: np.ndarray, args):
-    """Spherical framing around the cloud's robust centre.
+    """Spherical framing around the cloud's bounding sphere.
 
     Clouds arrive in the OpenGL convention, so up is +Y and azimuth 0 sits on
     +Z looking down -Z - the direction a default camera already points. The
-    distance comes off a high percentile of the radius distribution rather
-    than the median, because `normalize_gaussian_cloud` pins the median radius
-    to exactly 1.0 while a real cloud reaches several times that, and a
-    median-derived distance put the camera inside the cloud (issue #83).
+    distance fits the bulk's bounding sphere to the field of view, so thin
+    protrusions stay in frame at any scale (issues #83, #195).
     """
+    center, radius = _bounding_sphere(means)
     if args.look_at is not None:
         center = np.array([float(part) for part in args.look_at.split(",")], dtype=np.float64)
-    else:
-        center = np.median(means, axis=0)
-    radii = np.linalg.norm(means - center, axis=1)
-    extent = float(np.percentile(radii, 95)) or 1.0
-    distance = extent * 2.5 if args.distance is None else args.distance
+        radius = float(np.linalg.norm(means - center, axis=1).max()) or 1.0
+
+    cam_data = bpy.data.cameras.new("RenderCamera")
+    if args.fov is not None:
+        cam_data.sensor_fit = "HORIZONTAL"
+        cam_data.lens_unit = "FOV"
+        cam_data.angle = np.radians(args.fov)
+    tan_half_fov = _tan_half_fov(cam_data, args.width, args.height)
+    zoom = 1.0 if args.zoom is None else args.zoom
+    distance = _fit_distance(radius, tan_half_fov, zoom) if args.distance is None else args.distance
 
     azimuth = np.radians(_DEFAULT_AZIMUTH if args.azimuth is None else args.azimuth)
     elevation = np.radians(_DEFAULT_ELEVATION if args.elevation is None else args.elevation)
@@ -302,21 +330,17 @@ def _frame_camera_orbit(means: np.ndarray, args):
         ]
     )
 
-    cam_data = bpy.data.cameras.new("RenderCamera")
     cam_obj = bpy.data.objects.new("RenderCamera", cam_data)
     bpy.context.collection.objects.link(cam_obj)
     target = Vector(center.tolist())
     cam_obj.location = target + Vector(offset.tolist())
     euler = _look_at_euler(cam_obj.location, target)
     cam_obj.rotation_euler = euler
-    if args.fov is not None:
-        cam_data.sensor_fit = "HORIZONTAL"
-        cam_data.lens_unit = "FOV"
-        cam_data.angle = np.radians(args.fov)
     bpy.context.scene.camera = cam_obj
     _report(
         f"camera orbit azimuth {np.degrees(azimuth):.1f} elevation "
-        f"{np.degrees(elevation):.1f} distance {distance:.3f}"
+        f"{np.degrees(elevation):.1f} distance {distance:.3f} "
+        f"centre {center[0]:.3f},{center[1]:.3f},{center[2]:.3f}"
     )
     return euler
 
@@ -324,7 +348,14 @@ def _frame_camera_orbit(means: np.ndarray, args):
 def _requested_orbit(args) -> bool:
     return any(
         value is not None
-        for value in (args.azimuth, args.elevation, args.distance, args.fov, args.look_at)
+        for value in (
+            args.azimuth,
+            args.elevation,
+            args.distance,
+            args.zoom,
+            args.fov,
+            args.look_at,
+        )
     )
 
 
