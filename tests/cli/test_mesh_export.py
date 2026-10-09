@@ -145,6 +145,29 @@ def test_export_profile_compresses_the_cloud(tmp_path, monkeypatch, synthetic_cl
     assert PlyReader().read(out).sh_degree == 0
 
 
+def test_export_pruning_without_profile_is_refused(tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    out = tmp_path / "thin.ply"
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(_cloud_file(tmp_path, synthetic_cloud)),
+            "-o",
+            str(out),
+            "--pruning",
+            "blue-noise",
+            "--target-count",
+            "10",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "need --profile" in result.output
+    assert not out.exists()
+
+
 def test_export_copies_non_cloud_assets_in_their_own_format(tmp_path, monkeypatch):
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
     image = FilesystemManifestRepository(tmp_path / "cache").put_external(

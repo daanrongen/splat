@@ -12,7 +12,7 @@ class ExportRequest:
     input: Manifest
     output_path: Path
     profile: str | None = None  # compression profile, gaussian clouds only
-    pruning: str = "threshold"
+    pruning: str | None = None
     target_count: int | None = None
 
 
@@ -26,6 +26,8 @@ class ExportResult:
 def handle(request: ExportRequest) -> ExportResult:
     """Writes a manifest to a file the format of its extension, with a sidecar."""
     asset, output = request.input, request.output_path
+    if request.profile is None and (request.pruning or request.target_count is not None):
+        raise SplatDomainError("--pruning and --target-count need --profile.")
     if asset.kind == ManifestKind.GAUSSIAN_CLOUD:
         result = _export_cloud(request)
     else:
@@ -50,7 +52,7 @@ def _export_cloud(request: ExportRequest) -> ExportResult:
         cloud = PruneQuantizeCompressor().compress(
             cloud,
             profile=request.profile,
-            pruning=request.pruning,
+            pruning=request.pruning or "threshold",
             target_count=request.target_count,
         )
     writer = get_writer(request.output_path.suffix)
