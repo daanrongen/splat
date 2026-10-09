@@ -321,6 +321,11 @@ class FilesystemManifestRepository:
         return restored
 
     def write_sidecar(self, manifest_id: str, path: Path) -> None:
+        if os.environ.get("SPLAT_NO_MANIFEST"):
+            return
+        self._write_sidecar(manifest_id, path)
+
+    def _write_sidecar(self, manifest_id: str, path: Path) -> None:
         meta = self._load_meta(self._meta_path(manifest_id)) or {}
         record = {key: value for key, value in meta.items() if key in _SIDECAR_KEYS}
         sidecar = {"schema": SIDECAR_SCHEMA, "id": manifest_id, **record}
@@ -337,7 +342,7 @@ class FilesystemManifestRepository:
                 continue
             target = out_dir / manifest.content_path.name
             shutil.copyfile(manifest.content_path, target)
-            self.write_sidecar(manifest.id, target)
+            self._write_sidecar(manifest.id, target)
             written.append(target)
             pending.extend(manifest.parent_ids)
         return written
