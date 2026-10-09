@@ -296,6 +296,10 @@ def with_view(cloud: GaussianCloud, index: int) -> GaussianCloud:
     return replace(cloud, metadata=metadata)
 
 
+_MASK_NEAR_PERCENTILE = 2  # nearest masked surface, robust to stray floaters
+_MASK_DEPTH = 0.5  # subject depth as a share of its size
+
+
 def project_to_camera(means: np.ndarray, camera: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Pixel coordinates and depth of colmap-convention `means` in a source camera."""
     fx, fy, cx, cy, _, _ = camera["intrinsics"]
@@ -306,7 +310,8 @@ def project_to_camera(means: np.ndarray, camera: dict) -> tuple[np.ndarray, np.n
 
 
 def mask_cloud(cloud: GaussianCloud, mask: np.ndarray) -> GaussianCloud:
-    """Keeps the Gaussians that project inside `mask` (H, W bool) in source camera 0."""
+    """Keeps the Gaussians that project inside `mask` (H, W bool) in source camera 0, up to
+    half a subject size behind the nearest of them, so the backdrop in line with it is dropped."""
     cameras = cloud.metadata.source_cameras
     if not cameras:
         raise InvalidGaussianCloud("A mask needs a cloud with a source camera.")
@@ -319,4 +324,11 @@ def mask_cloud(cloud: GaussianCloud, mask: np.ndarray) -> GaussianCloud:
     inside = (z > 0) & (col >= 0) & (col < width) & (row >= 0) & (row < height)
     keep = np.zeros(cloud.point_count, dtype=bool)
     keep[inside] = mask[row[inside].astype(int), col[inside].astype(int)]
+    if keep.any():
+        ys, xs = np.nonzero(mask)
+        fx, camera_width = camera["intrinsics"][0], camera["intrinsics"][4]
+        extent_px = max(np.ptp(xs) + 1, np.ptp(ys) + 1) * camera_width / width
+        keep &= z <= np.percentile(z[keep], _MASK_NEAR_PERCENTILE) * (
+            1 + _MASK_DEPTH * extent_px / fx
+        )
     return cloud.subset(keep)
