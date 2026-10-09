@@ -59,6 +59,9 @@ LazyTyperGroup.lazy_commands = {
     ),
     "http": LazyCommandSpec("splat.cli.http", "http", "command", "Run the local HTTP server."),
     "mcp": LazyCommandSpec("splat.cli.mcp", "mcp", "command", "Run the MCP stdio server."),
+    "doctor": LazyCommandSpec(
+        "splat.cli.doctor", "doctor", "command", "Check the install and the remote server."
+    ),
     "env": LazyCommandSpec("splat.cli.env", "env", "command", "Show SPLAT_* environment settings."),
 }
 
