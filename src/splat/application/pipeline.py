@@ -55,7 +55,7 @@ from splat.ports.upscaling import UpscalingBackend
 from splat.registry.wiring import get_reader
 
 # Bump a stage when a code change alters its output for the same arguments.
-STAGE_REVISION = {"mesh": 1}
+STAGE_REVISION = {"mesh": 1, "render": 1}
 
 
 def compute_cache_key(
