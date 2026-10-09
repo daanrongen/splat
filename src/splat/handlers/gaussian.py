@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from splat.adapters.formats.image import read_rgb, resize
-from splat.application.pipeline import run_gaussian, run_render
+from splat.application.pipeline import run_gaussian, run_mask, run_render
 from splat.domain.contracts import Requirement, StageContract, validate_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
@@ -63,6 +63,7 @@ class GaussianRequest:
     orbit_frames: int | None = None
     orbit_degrees: float = 30.0
     score: bool = False
+    mask: Manifest | None = None  # a sticker of the first input image
 
 
 _RENDER_DEFAULTS = {
@@ -209,6 +210,10 @@ def handle(
     )
     if request.score and "psnr" not in (cloud.metadata.quality or {}):
         cloud = score(cloud, request.inputs)
+    if request.mask is not None:
+        cloud = run_mask(
+            cache, cloud_asset=cloud, mask_asset=request.mask, image_asset=request.inputs[0]
+        )
     results = [cloud]
     if request.orbit_frames is not None:
         results.extend(

@@ -167,3 +167,47 @@ def test_run_gaussian_records_the_backend_license(tmp_path, synthetic_cloud):
     )
 
     assert result.metadata.license == MIT
+
+
+def test_run_mask_stores_a_cached_child_without_the_masked_out_splats(tmp_path, synthetic_cloud):
+    from splat.adapters.formats.image import encode_png
+    from splat.application.pipeline import _gaussian_to_ply_bytes, run_mask
+    from splat.domain.gaussians import to_convention
+    from splat.domain.manifest_metadata import StickerMetadata
+
+    cache = FilesystemManifestRepository(tmp_path / "cache")
+    image = _image_asset(cache, tmp_path, "a.png")  # 2x2
+    synthetic_cloud.metadata.coordinate_convention = "colmap"
+    synthetic_cloud.metadata.source_cameras = [
+        {
+            "position": [0.0, 0.0, -20.0],
+            "rotation": np.eye(3).tolist(),
+            "intrinsics": [10.0, 10.0, 1.0, 1.0, 2.0, 2.0],
+            "input": 0,
+        }
+    ]
+    stored = to_convention(synthetic_cloud, "opengl")
+    cloud = cache.put(
+        "cloud",
+        kind=ManifestKind.GAUSSIAN_CLOUD,
+        content_bytes=_gaussian_to_ply_bytes(stored),
+        ext="ply",
+        metadata=stored.metadata,
+        parent_ids=[image.id],
+        created_by="test",
+    )
+    mask = cache.put(
+        "mask",
+        kind=ManifestKind.STICKER,
+        content_bytes=encode_png(np.full((2, 1, 4), 255, dtype=np.uint8)),
+        ext="png",
+        metadata=StickerMetadata(bbox=(0, 0, 1, 2), score=1.0, area=2, width=1, height=2),
+        parent_ids=[image.id],
+        created_by="test",
+    )
+
+    masked = run_mask(cache, cloud_asset=cloud, mask_asset=mask, image_asset=image)
+
+    assert masked.parent_ids == [cloud.id, mask.id]
+    assert masked.metadata.point_count < synthetic_cloud.point_count
+    assert run_mask(cache, cloud_asset=cloud, mask_asset=mask, image_asset=image).id == masked.id

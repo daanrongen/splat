@@ -95,6 +95,7 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 | `--normalize-color` / `--no-normalize-color` | on | `mlx3d-capture`: even out exposure across views |
 | `--low-mem`, `--seed` | | `mlx3d-capture` |
 | `--declutter` | off | drop isolated floater Gaussians |
+| `--mask STICKER` | | keep only Gaussians that project inside a sticker of the first image, as a cached child cloud |
 | `--score` | off | render source view 0 with Blender and record PSNR and SSIM against its photo |
 | `--min-registered` | | fail if fewer than this fraction of inputs registered |
 | `--orbit-frames`, `--orbit-degrees` | 30° | also render N synthetic views across the sweep |

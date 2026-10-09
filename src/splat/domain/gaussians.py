@@ -114,6 +114,21 @@ class GaussianCloud:
     def point_count(self) -> int:
         return self.means.shape[0]
 
+    def subset(self, keep: np.ndarray) -> GaussianCloud:
+        """The Gaussians selected by a boolean mask or index array."""
+        return GaussianCloud(
+            means=self.means[keep],
+            scales=self.scales[keep],
+            rotations=self.rotations[keep],
+            opacities=self.opacities[keep],
+            sh_dc=self.sh_dc[keep],
+            sh_rest=self.sh_rest[keep] if self.sh_rest is not None else None,
+            sh_degree=self.sh_degree,
+            scale_activation=self.scale_activation,
+            opacity_activation=self.opacity_activation,
+            metadata=replace(self.metadata),
+        )
+
     def to_linear_scales(self) -> np.ndarray:
         """Scale in real (non-log) units, regardless of source parameterization."""
         if self.scale_activation == "log":
@@ -279,3 +294,29 @@ def with_view(cloud: GaussianCloud, index: int) -> GaussianCloud:
         capture_camera_intrinsics=camera["intrinsics"],
     )
     return replace(cloud, metadata=metadata)
+
+
+def project_to_camera(means: np.ndarray, camera: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Pixel coordinates and depth of colmap-convention `means` in a source camera."""
+    fx, fy, cx, cy, _, _ = camera["intrinsics"]
+    local = (means - camera["position"]) @ np.asarray(camera["rotation"]).T
+    z = local[:, 2]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return fx * local[:, 0] / z + cx, fy * local[:, 1] / z + cy, z
+
+
+def mask_cloud(cloud: GaussianCloud, mask: np.ndarray) -> GaussianCloud:
+    """Keeps the Gaussians that project inside `mask` (H, W bool) in source camera 0."""
+    cameras = cloud.metadata.source_cameras
+    if not cameras:
+        raise InvalidGaussianCloud("A mask needs a cloud with a source camera.")
+    colmap = to_convention(cloud, "colmap")
+    camera = colmap.metadata.source_cameras[0]
+    u, v, z = project_to_camera(colmap.means.astype(np.float64), camera)
+    height, width = mask.shape
+    col = np.floor(u * width / camera["intrinsics"][4])
+    row = np.floor(v * height / camera["intrinsics"][5])
+    inside = (z > 0) & (col >= 0) & (col < width) & (row >= 0) & (row < height)
+    keep = np.zeros(cloud.point_count, dtype=bool)
+    keep[inside] = mask[row[inside].astype(int), col[inside].astype(int)]
+    return cloud.subset(keep)

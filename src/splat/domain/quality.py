@@ -4,7 +4,7 @@ render against the photo it should reproduce."""
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
-from splat.domain.gaussians import GaussianCloud, to_convention
+from splat.domain.gaussians import GaussianCloud, project_to_camera, to_convention
 
 _TRANSPARENT = 0.05
 _NEEDLE_ANISOTROPY = 10.0
@@ -33,11 +33,8 @@ def _out_of_view_ratio(cloud: GaussianCloud) -> float | None:
     means = colmap.means.astype(np.float64)
     seen = np.zeros(len(means), dtype=bool)
     for camera in colmap.metadata.source_cameras:
-        fx, fy, cx, cy, width, height = camera["intrinsics"]
-        local = (means - camera["position"]) @ np.asarray(camera["rotation"]).T
-        z = local[:, 2]
-        with np.errstate(divide="ignore", invalid="ignore"):
-            u, v = fx * local[:, 0] / z + cx, fy * local[:, 1] / z + cy
+        width, height = camera["intrinsics"][4:6]
+        u, v, z = project_to_camera(means, camera)
         seen |= (z > 0) & (u >= 0) & (u < width) & (v >= 0) & (v < height)
     return round(float(1.0 - seen.mean()), 4)
 

@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from splat.adapters.formats.image import decode_rgb_or_rgba, encode_png, read_rgb_or_rgba
-from splat.adapters.formats.ply import PlyWriter
+from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.application.caption import CaptionUseCase
 from splat.application.depth import EstimateDepthUseCase
 from splat.application.diffuse import DiffuseUseCase
@@ -28,6 +28,7 @@ from splat.domain.errors import SplatDomainError
 from splat.domain.foreground import canvas_mask, foreground, is_background
 from splat.domain.gaussians import (
     GaussianCloud,
+    mask_cloud,
     normalize_gaussian_cloud,
     to_convention,
     with_view,
@@ -504,6 +505,35 @@ def run_gaussian(
         params={"model": model_name, **params},
         parent_ids=list(parent_ids),
         created_by=f"gaussian:{model_name}",
+    )
+
+
+def run_mask(
+    cache: ManifestRepository, *, cloud_asset: Manifest, mask_asset: Manifest, image_asset: Manifest
+) -> Manifest:
+    """Caches `cloud_asset` without the Gaussians that fall outside `mask_asset`, a sticker of
+    `image_asset` (the image source camera 0 was calibrated on)."""
+    cache_key = compute_cache_key(
+        stage="mask", model="", params={}, parent_ids=(cloud_asset.id, mask_asset.id)
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+
+    height, width = read_rgb_or_rgba(image_asset.content_path).shape[:2]
+    mask = canvas_mask(_read_sticker(mask_asset), height, width)
+    cloud = mask_cloud(PlyReader().read(cloud_asset.content_path), mask)
+    if cloud.point_count == 0:
+        raise SplatDomainError("The mask leaves no Gaussians; check it covers the subject.")
+    cloud.metadata.quality = cloud_stats(cloud)
+    return cache.put(
+        cache_key,
+        kind=ManifestKind.GAUSSIAN_CLOUD,
+        content_bytes=_gaussian_to_ply_bytes(cloud),
+        ext="ply",
+        metadata=cloud.metadata,
+        params={},
+        parent_ids=[cloud_asset.id, mask_asset.id],
+        created_by="mask",
     )
 
 

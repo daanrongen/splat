@@ -133,6 +133,12 @@ def gaussian(
         help="Render source view 0 with Blender and record PSNR and SSIM against its photo.",
         envvar="SPLAT_GAUSSIAN_SCORE",
     ),
+    mask: str | None = typer.Option(
+        None,
+        "--mask",
+        help="Sticker (path or @id) of the first image; Gaussians outside it are dropped.",
+        envvar="SPLAT_GAUSSIAN_MASK",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -167,6 +173,9 @@ def gaussian(
             orbit_frames=orbit_frames,
             orbit_degrees=orbit_degrees,
             score=score,
+            mask=resolve_inputs(mask, cache, default_kind=ManifestKind.STICKER)[0]
+            if mask
+            else None,
         )
         if verbose:
             results = handle_gaussian(
