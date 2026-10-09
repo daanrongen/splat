@@ -164,7 +164,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 **`splat mcp`** runs an MCP server over stdio. Tools: `diffuse`, `caption`, `embed`, `segment`, `depth`, `upscale`, `gaussian`, `render` (returns the image), `mesh`, `export`, `info`, `validate`, `models_list`, `models_info`, `models_pull`, `models_rm`, `manifest_list`, `manifest_get`, `manifest_label`, `manifest_delete`.
 
-**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, with no authentication, so bind it only to trusted interfaces. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull`, `GET /version`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
+**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, and trusts whoever can reach the port unless `SPLAT_TOKEN` is set, which then requires `Authorization: Bearer <token>` on every route except `GET /version`. The CLI, SDK and MCP server send `SPLAT_TOKEN` when it is set. A token is not encryption, so bind a non-loopback address only on a trusted network (a tailnet, say); `splat http` warns when you bind one without a token. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull`, `GET /version`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
 
 **`SPLAT_URL=http://host:8000`** makes the model-backed stages in the CLI, SDK and MCP server run on that `splat http` server. `render`, `mesh` and `export` always run locally. The client checks the server version once per process: a minor mismatch warns, a major one fails.
 
@@ -175,6 +175,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `SPLAT_MANIFEST_CACHE_DIR` | manifest cache, default `$XDG_CACHE_HOME/splat/manifests` |
 | `SPLAT_MODEL_CACHE_DIR` | model cache, default `$XDG_CACHE_HOME/splat/models` |
 | `SPLAT_URL` | remote `splat http` server |
+| `SPLAT_TOKEN` | bearer token for `splat http` and its clients |
 | `SPLAT_BLENDER_BIN` | Blender executable |
 | `SPLAT_RENDER_TIMEOUT` | render timeout in seconds, 0 disables it |
 | `SPLAT_DEBUG` | show the full traceback on failure, same as `splat --debug` |

@@ -30,6 +30,13 @@ _NON_OPTION_VARS: list[tuple[str, str, str, str, str]] = [
     ),
     (
         "global",
+        "client",
+        "SPLAT_TOKEN",
+        "",
+        "Bearer token: `splat http` requires it, and clients send it",
+    ),
+    (
+        "global",
         "cache",
         "SPLAT_MODEL_CACHE_DIR",
         "",
