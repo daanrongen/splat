@@ -5,6 +5,7 @@ import pytest
 
 from splat.adapters.formats.ply import PlyReader, PlyWriter
 from splat.domain.errors import InvalidGaussianCloud
+from splat.domain.value_objects import ModelLicense
 
 
 def test_ply_roundtrip_is_lossless(tmp_path: Path, synthetic_cloud):
@@ -47,6 +48,16 @@ def test_ply_roundtrip_preserves_capture_camera_pose(tmp_path: Path, synthetic_c
     assert loaded.metadata.capture_camera_rotation == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
     assert loaded.metadata.capture_camera_intrinsics == [800.0, 800.0, 320.0, 240.0, 640.0, 480.0]
     assert loaded.metadata.capture_camera_count == 5
+
+
+def test_ply_roundtrip_preserves_model_and_license(tmp_path: Path, synthetic_cloud):
+    synthetic_cloud.metadata.source_model = "sharp"
+    synthetic_cloud.metadata.license = ModelLicense("Apple-ML-Research", False, "research only")
+    out = tmp_path / "scene.ply"
+    PlyWriter().write(synthetic_cloud, out)
+    loaded = PlyReader().read(out)
+    assert loaded.metadata.source_model == "sharp"
+    assert loaded.metadata.license == ModelLicense("Apple-ML-Research", False, "research only")
 
 
 def test_ply_roundtrip_leaves_absent_capture_camera_pose_as_none(tmp_path: Path, synthetic_cloud):
