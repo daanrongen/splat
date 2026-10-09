@@ -1,7 +1,8 @@
 name: Publish Homebrew formula
 
 # Runs after Release succeeds. (A release created with GITHUB_TOKEN does not
-# fire `release: published`, but it does complete a workflow_run.)
+# fire `release: published`, but it does complete a workflow_run.) The tap
+# owns its formula; this only tells it which bundle to point at.
 on:
   workflow_run:
     workflows: [Release]
@@ -22,34 +23,16 @@ jobs:
     env:
       TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate the formula
+      - name: Send the bundle to the tap
         run: |
           set -o pipefail
-          url="https://github.com/${{ github.repository }}/releases/download/$TAG/splat-${TAG#v}-src.tar.gz"
-          sha="$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)"
-          python3 scripts/generate_formula.py \
-            --version="${TAG#v}" --repo="${{ github.repository }}" --sha256="$sha" \
-            --out=Formula/splat.rb
-
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ vars.HOMEBREW_TAP_OWNER }}/${{ vars.HOMEBREW_TAP_REPO }}
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: tap
-
-      - name: Push the formula to the tap
-        run: |
-          mkdir -p tap/Formula
-          cp Formula/splat.rb tap/Formula/splat.rb
-          cd tap
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/splat.rb
-          if git diff --cached --quiet; then
-            echo "Formula unchanged, nothing to commit."
-            exit 0
-          fi
-          git commit -m "splat $TAG"
-          git push
+          version="${TAG#v}"
+          base="https://github.com/${{ github.repository }}/releases/download/$TAG/splat-$version-macos-arm64.tar.gz"
+          sha="$(curl -fsSL "$base.sha256" | cut -d' ' -f1)"
+          gh api "repos/${{ vars.HOMEBREW_TAP_OWNER }}/${{ vars.HOMEBREW_TAP_REPO }}/dispatches" \
+            -f event_type=release \
+            -f "client_payload[version]=$version" \
+            -f "client_payload[url]=$base" \
+            -f "client_payload[sha256]=$sha"
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
