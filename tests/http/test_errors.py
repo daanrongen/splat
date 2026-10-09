@@ -13,4 +13,4 @@ def test_unhandled_error_returns_500_with_detail(mocker):
     response = client.post("/gaussian", files={"images": ("a.png", sample_png_bytes())})
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "RuntimeError: boom"}
+    assert response.json() == {"code": "internal_error", "detail": "RuntimeError: boom"}

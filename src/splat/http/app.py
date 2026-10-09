@@ -55,11 +55,14 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(SplatDomainError)
     async def _handle_domain_error(request: Request, exc: SplatDomainError) -> JSONResponse:
-        return JSONResponse(status_code=422, content={"detail": str(exc)})
+        return JSONResponse(status_code=422, content={"code": "domain_error", "detail": str(exc)})
 
     @app.exception_handler(Exception)
     async def _handle_error(request: Request, exc: Exception) -> JSONResponse:
-        return JSONResponse(status_code=500, content={"detail": f"{type(exc).__name__}: {exc}"})
+        return JSONResponse(
+            status_code=500,
+            content={"code": "internal_error", "detail": f"{type(exc).__name__}: {exc}"},
+        )
 
     for router_module in _ROUTERS:
         app.include_router(router_module.router)

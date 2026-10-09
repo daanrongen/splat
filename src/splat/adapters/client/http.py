@@ -47,12 +47,13 @@ from splat.registry.wiring import get_manifest_repository, get_reader
 
 
 def _raise_for_domain_error(response: httpx.Response) -> None:
-    if response.status_code == 422:
-        detail = response.json().get("detail", response.text)
-        raise SplatDomainError(detail)
-    if response.is_server_error and "application/json" in response.headers.get("content-type", ""):
-        raise SplatDomainError(f"server error: {response.json().get('detail', response.text)}")
-    response.raise_for_status()
+    if response.is_success:
+        return
+    try:
+        detail = response.json()["detail"]
+    except (ValueError, KeyError, TypeError):
+        detail = f"{response.status_code} {response.reason_phrase}"
+    raise SplatDomainError(detail if response.status_code == 422 else f"server error: {detail}")
 
 
 def _check_server_version(client: httpx.Client) -> None:

@@ -9,6 +9,8 @@ os.environ.setdefault("HF_HOME", str(hf_home_dir()))
 os.environ.setdefault("SPLAT_MODEL_CACHE_DIR", str(model_cache_dir()))
 os.environ.setdefault("SPLAT_MANIFEST_CACHE_DIR", str(manifest_cache_dir()))
 
+import sys
+
 import typer
 
 from splat.cli._lazy import LazyCommandSpec, LazyTyperGroup
@@ -67,6 +69,7 @@ app = typer.Typer(
     ),
     no_args_is_help=True,
     cls=LazyTyperGroup,
+    pretty_exceptions_enable=False,
 )
 
 
@@ -83,9 +86,24 @@ def _main(
     _version: bool = typer.Option(
         False, "--version", callback=_print_version, is_eager=True, help="Show the version."
     ),
+    debug: bool = typer.Option(
+        False, "--debug", envvar="SPLAT_DEBUG", help="Show the full traceback on failure."
+    ),
 ) -> None:
     """splat runs pipeline stages, exports assets, and administers the local cache."""
 
 
+def main() -> None:
+    try:
+        app()
+    except Exception as exc:
+        if os.environ.get("SPLAT_DEBUG") or "--debug" in sys.argv:
+            raise
+        from splat.cli._console import error
+
+        error(f"{type(exc).__name__}: {exc}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    app()
+    main()
