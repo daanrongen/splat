@@ -49,6 +49,8 @@ class PlyReader:
         except (PlyParseError, KeyError) as exc:
             raise InvalidGaussianCloud(f"{path.name} is not a Gaussian splat PLY: {exc}") from exc
         names = vertex.data.dtype.names
+        if "f_dc_0" not in names:
+            raise InvalidGaussianCloud(f"{path.name} is not a Gaussian splat PLY (no f_dc_0).")
         comments = dict(c.split(" ", 1) for c in ply.comments if " " in c)
         n = vertex["x"].shape[0]
 

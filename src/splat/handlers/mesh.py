@@ -27,6 +27,10 @@ def handle(request: MeshRequest) -> list[Manifest]:
 
 
 def _mesh_one(asset: Manifest, request: MeshRequest, cache: ManifestRepository) -> Manifest:
+    if asset.kind == ManifestKind.GAUSSIAN_CLOUD and asset.content_path.suffix == ".png":
+        raise SplatDomainError(
+            "mesh cannot read a PNG (depth PNGs are previews); pass the depth @<id> or its .npy."
+        )
     model = request.model or MESH_MODELS.get(asset.kind)
     if model == "heightfield":
         return _heightfield(asset, request.format, cache)

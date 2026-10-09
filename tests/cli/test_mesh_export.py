@@ -72,6 +72,15 @@ def test_mesh_heightfield_rejects_non_depth_input(tmp_path, monkeypatch):
     assert "needs a depth_map" in result.output
 
 
+def test_mesh_refuses_a_png_path(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+
+    result = runner.invoke(app, ["mesh", str(_sample_image(tmp_path))])
+
+    assert result.exit_code == 1
+    assert "cannot read a PNG" in result.output
+
+
 def test_mesh_isosurface_writes_a_real_mesh(tmp_path: Path, monkeypatch) -> None:
     from splat.adapters.formats.ply import PlyWriter
     from tests.adapters.mesh.test_isosurface import _sphere_cloud
@@ -181,6 +190,20 @@ def test_export_copies_non_cloud_assets_in_their_own_format(tmp_path, monkeypatc
     assert (tmp_path / "copy.png").read_bytes() == image.content_path.read_bytes()
     assert refused.exit_code == 1
     assert "exports as .png" in refused.output
+
+
+def test_info_refuses_a_ply_that_is_not_a_splat(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    path = tmp_path / "mesh.ply"
+    path.write_text(
+        "ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nproperty float y\n"
+        "property float z\nend_header\n0 0 0\n"
+    )
+
+    for command in ("info", "validate"):
+        result = runner.invoke(app, [command, str(path)])
+        assert result.exit_code == 1
+        assert "not a Gaussian splat PLY" in result.output
 
 
 def test_tools_group_is_gone():
