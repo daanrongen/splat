@@ -25,13 +25,14 @@ from splat.application.render import RenderUseCase
 from splat.application.segment import SegmentUseCase
 from splat.application.upscale import UpscaleUseCase
 from splat.domain.errors import SplatDomainError
+from splat.domain.foreground import canvas_mask, foreground, is_background
 from splat.domain.gaussians import (
     GaussianCloud,
     normalize_gaussian_cloud,
     to_convention,
     with_view,
 )
-from splat.domain.image_space import Shape3D
+from splat.domain.image_space import Shape3D, Sticker
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.domain.manifest_metadata import (
     CaptionMetadata,
@@ -163,6 +164,54 @@ def run_segment(
         created_by=f"segment:{model_name}",
     )
     return children
+
+
+def _read_sticker(manifest: Manifest) -> Sticker:
+    meta = manifest.metadata
+    return Sticker(
+        rgba=read_rgb_or_rgba(manifest.content_path),
+        bbox=tuple(meta.bbox),
+        score=meta.score,
+        area=meta.area,
+    )
+
+
+def drop_background(input_asset: Manifest, stickers: list[Manifest]) -> list[Manifest]:
+    height, width = read_rgb_or_rgba(input_asset.content_path).shape[:2]
+    return [m for m in stickers if not is_background(canvas_mask(_read_sticker(m), height, width))]
+
+
+def run_foreground(
+    cache: ManifestRepository, *, input_asset: Manifest, stickers: list[Manifest]
+) -> Manifest:
+    """Caches the main subject of `stickers` as one sticker."""
+    cache_key = compute_cache_key(
+        stage="foreground",
+        model="",
+        params={},
+        parent_ids=(input_asset.id, *(m.id for m in stickers)),
+    )
+    if (hit := cache.find(cache_key)) is not None:
+        return hit
+    cutout = foreground(
+        [_read_sticker(m) for m in stickers], read_rgb_or_rgba(input_asset.content_path)
+    )
+    return cache.put(
+        cache_key,
+        kind=ManifestKind.STICKER,
+        content_bytes=encode_png(cutout.rgba),
+        ext="png",
+        metadata=StickerMetadata(
+            bbox=cutout.bbox,
+            score=cutout.score,
+            area=cutout.area,
+            width=cutout.rgba.shape[1],
+            height=cutout.rgba.shape[0],
+        ),
+        params={},
+        parent_ids=[input_asset.id],
+        created_by="foreground",
+    )
 
 
 def run_depth(

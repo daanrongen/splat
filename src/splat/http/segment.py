@@ -15,11 +15,20 @@ def segment(
     model: str = Form("sam-mlx"),
     max_stickers: int = Form(20),
     device: str = Form("auto"),
+    foreground: bool = Form(False),
+    drop_background: bool = Form(False),
 ) -> list[ManifestDetail]:
     cache = get_manifest_repository()
     with saved_upload(image) as path:
         asset = cache.put_external(path, kind=ManifestKind.IMAGE)
     stickers = handle(
-        SegmentRequest(inputs=[asset], model=model, max_stickers=max_stickers, device=device)
+        SegmentRequest(
+            inputs=[asset],
+            model=model,
+            max_stickers=max_stickers,
+            device=device,
+            foreground=foreground,
+            drop_background=drop_background,
+        )
     )
     return [ManifestDetail.from_manifest(a) for a in stickers]
