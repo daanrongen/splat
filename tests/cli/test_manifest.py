@@ -35,6 +35,28 @@ def test_manifest_list_shows_cached_manifests(tmp_path, monkeypatch):
     assert "diffuse:sdxl" in result.stdout
 
 
+def test_manifest_list_keeps_a_long_prompt_on_one_line(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("COLUMNS", "120")
+    get_manifest_repository().put(
+        "abc123",
+        kind=ManifestKind.IMAGE,
+        content_bytes=tiny_png("abc123"),
+        ext="png",
+        metadata=RasterMetadata(),
+        params={"prompt": "a single ornate weathered bronze teapot " * 5},
+        parent_ids=[],
+        created_by="diffuse:sdxl",
+    )
+
+    result = runner.invoke(app, ["manifest", "list"])
+
+    row = [line for line in result.stdout.splitlines() if "abc123" in line]
+    assert len(row) == 1
+    assert "…" in row[0]
+    assert len(result.stdout.splitlines()) == 5
+
+
 def test_manifest_get_shows_full_detail(tmp_path, monkeypatch):
     _put_image(monkeypatch, tmp_path, "abc123")
 
