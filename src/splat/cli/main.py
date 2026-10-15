@@ -70,6 +70,9 @@ LazyTyperGroup.lazy_commands = {
     ),
     "http": LazyCommandSpec("splat.cli.http", "http", "command", "Run the local HTTP server."),
     "mcp": LazyCommandSpec("splat.cli.mcp", "mcp", "command", "Run the MCP stdio server."),
+    "completion": LazyCommandSpec(
+        "splat.cli.completion", "completion", "command", "Print a shell completion script."
+    ),
     "doctor": LazyCommandSpec(
         "splat.cli.doctor", "doctor", "command", "Check the install and the remote server."
     ),
@@ -82,6 +85,7 @@ app = typer.Typer(
         "stage reads and writes manifests, so any command's output pipes into the next."
     ),
     no_args_is_help=True,
+    add_completion=False,
     cls=LazyTyperGroup,
     pretty_exceptions_enable=False,
 )
