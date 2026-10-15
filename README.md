@@ -173,6 +173,8 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 **`splat doctor`** checks the install: the splat and Python versions, whether torch, torchvision, mlx, coremltools and transformers import, the device (`mps` or `cpu`) and how many catalog models are cached. With `SPLAT_URL` set it also checks the server's version and an authenticated route, without running a model. It prints one line per check and exits non-zero if any fail, and a broken import does not stop the others.
 
+**`splat completion <shell>`** prints a completion script for `bash`, `zsh`, `fish` or `powershell` and installs nothing, so you choose where it goes: `splat completion zsh > ~/.zsh_completions/_splat`.
+
 **`splat env [--export]`** prints every `SPLAT_*` setting with its resolved value and source, or a `.env` template. Settings that aren't command options:
 
 | Variable | |
