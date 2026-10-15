@@ -23,6 +23,7 @@ if not (os.environ.get("SPLAT_DEBUG") or "--debug" in sys.argv):
     warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 import typer
+from typer._completion_classes import completion_init
 
 from splat.cli._lazy import LazyCommandSpec, LazyTyperGroup
 
@@ -78,6 +79,8 @@ LazyTyperGroup.lazy_commands = {
     ),
     "env": LazyCommandSpec("splat.cli.env", "env", "command", "Show SPLAT_* environment settings."),
 }
+
+completion_init()  # add_completion=False skips registering the shell classes
 
 app = typer.Typer(
     help=(
