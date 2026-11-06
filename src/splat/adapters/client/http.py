@@ -6,6 +6,7 @@ shape, shared with the server that produces/consumes it.
 
 import hashlib
 import json
+import os
 import tempfile
 import warnings
 from dataclasses import asdict
@@ -82,7 +83,12 @@ class RemoteSplatClient:
     writing, NDJSON piping) works identically to LocalSplatClient."""
 
     def __init__(self, base_url: str, *, timeout: float = 300.0) -> None:
-        self._client = httpx.Client(base_url=base_url.rstrip("/"), timeout=timeout)
+        token = os.environ.get("SPLAT_TOKEN", "")
+        self._client = httpx.Client(
+            base_url=base_url.rstrip("/"),
+            timeout=timeout,
+            headers={"Authorization": f"Bearer {token}"} if token else None,
+        )
         _check_server_version(self._client)
 
     def _store_asset(
