@@ -1,9 +1,11 @@
 from dataclasses import replace
 from pathlib import Path
 
+import httpx
 import numpy as np
 import pytest
 
+from splat.adapters.client.http import RemoteSplatClient
 from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.errors import SplatDomainError
@@ -299,6 +301,51 @@ def test_models_list_returns_summaries(remote_client):
 def test_models_pull_unknown_model_raises(remote_client):
     with pytest.raises(SplatDomainError):
         remote_client.models_pull("not-a-real-model")
+
+
+class ReportingSource:
+    def pull(self, model_id, *, revision=None, on_progress=None):
+        on_progress(50, 100)
+        on_progress(100, 100)
+
+
+def test_models_pull_forwards_server_progress(mocker, remote_client):
+    mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
+    reports = []
+
+    remote_client.models_pull("depth-pro", on_progress=lambda *report: reports.append(report))
+
+    assert reports == [("apple/DepthPro-hf", 50, 100), ("apple/DepthPro-hf", 100, 100)]
+
+
+def test_models_pull_without_a_callback_still_completes(mocker, remote_client):
+    mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
+
+    remote_client.models_pull("depth-pro")
+
+
+def test_models_pull_raises_the_error_the_server_sent_mid_stream(mocker, remote_client):
+    class FailingSource:
+        def pull(self, model_id, *, revision=None, on_progress=None):
+            raise SplatDomainError("repo gated")
+
+    mocker.patch("splat.handlers.models.get_model_source", return_value=FailingSource())
+
+    with pytest.raises(SplatDomainError, match="repo gated"):
+        remote_client.models_pull("depth-pro")
+
+
+def test_models_pull_raises_when_the_stream_ends_early():
+    client = RemoteSplatClient("http://splat.test")
+    client._client = httpx.Client(
+        base_url="http://splat.test",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, text='{"repo": "a/b", "done": 1, "total": 2}\n')
+        ),
+    )
+
+    with pytest.raises(SplatDomainError, match="before it finished"):
+        client.models_pull("depth-pro")
 
 
 def test_models_info_unknown_model_raises(remote_client):

@@ -91,6 +91,17 @@ class ModelInfoResponse(BaseModel):
     notes: str = ""
 
 
+class PullEvent(BaseModel):
+    """One NDJSON line of `POST /models/{name}/pull`: progress, then `pulled` or an error."""
+
+    repo: str | None = None
+    done: int | None = None
+    total: int | None = None
+    pulled: str | None = None
+    code: str | None = None
+    detail: str | None = None
+
+
 class InfoResponse(BaseModel):
     format: str | None
     points: int
