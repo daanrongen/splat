@@ -5,6 +5,7 @@ from splat.adapters.model_sources.huggingface import HuggingFaceModelSource
 from splat.adapters.model_sources.stub import StubModelSource
 from splat.domain.errors import UnsupportedFormat
 from splat.registry.wiring import (
+    get_client,
     get_embedding_backend,
     get_model_source,
     get_reader,
@@ -103,3 +104,18 @@ def test_get_model_source_unknown_name_raises(monkeypatch):
 
     with pytest.raises(UnsupportedFormat, match="Available: huggingface, stub"):
         get_model_source()
+
+
+def test_get_client_is_remote_when_splat_url_is_set(monkeypatch):
+    monkeypatch.setenv("SPLAT_URL", "http://splat.test")
+    monkeypatch.delenv("SPLAT_LOCAL", raising=False)
+    monkeypatch.setattr("splat.adapters.client.http._check_server_version", lambda client: None)
+
+    assert type(get_client()).__name__ == "RemoteSplatClient"
+
+
+def test_get_client_is_local_when_splat_local_overrides_splat_url(monkeypatch):
+    monkeypatch.setenv("SPLAT_URL", "http://splat.test")
+    monkeypatch.setenv("SPLAT_LOCAL", "1")
+
+    assert type(get_client()).__name__ == "LocalSplatClient"

@@ -143,3 +143,26 @@ def test_splat_url_renders_on_the_server_not_the_client(
     assert backend.calls == 1  # the server's backend ran
     local_render.assert_not_called()  # the client's own did not
     assert read_rgb_or_rgba(out_path).shape == (4, 6, 3)
+
+
+def test_local_flag_renders_here_even_when_splat_url_is_set(
+    mocker, tmp_path, monkeypatch, live_server_url, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    mocker.patch.dict("os.environ")  # --local sets SPLAT_LOCAL; restore it afterwards
+    server_backend = FakeRenderBackend()
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=server_backend)
+    local_render = mocker.patch(
+        "splat.adapters.client.local.LocalSplatClient.render", return_value=[]
+    )
+    cloud_path = tmp_path / "cloud.ply"
+    PlyWriter().write(synthetic_cloud, cloud_path)
+
+    runner.invoke(
+        app,
+        ["--local", "render", str(cloud_path), "--model", "fake-render"],
+        env={"SPLAT_URL": live_server_url},
+    )
+
+    local_render.assert_called_once()
+    assert server_backend.calls == 0
