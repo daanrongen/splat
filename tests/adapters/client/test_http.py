@@ -8,7 +8,7 @@ import pytest
 from splat.adapters.client.http import RemoteSplatClient
 from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.adapters.formats.ply import PlyWriter
-from splat.domain.errors import SplatDomainError
+from splat.domain.errors import RenderBackendError, SplatDomainError
 from splat.domain.image_space import DepthMap, Sticker
 from splat.domain.manifest import ManifestKind
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
@@ -17,6 +17,7 @@ from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
+from splat.handlers.render import RenderRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.http import gaussian as gaussian_route
@@ -301,6 +302,55 @@ def test_models_list_returns_summaries(remote_client):
 def test_models_pull_unknown_model_raises(remote_client):
     with pytest.raises(SplatDomainError):
         remote_client.models_pull("not-a-real-model")
+
+
+class FakeRenderBackend:
+    name = "fake-render"
+
+    def __init__(self) -> None:
+        self.params: dict = {}
+
+    def render(self, cloud, output_path, **params):
+        self.params = params
+        output_path.write_bytes(sample_png_bytes((6, 4)))
+
+
+def _cloud_asset(tmp_path, synthetic_cloud):
+    path = tmp_path / "cloud.ply"
+    PlyWriter().write(synthetic_cloud, path)
+    return get_manifest_repository().put_external(path, kind=ManifestKind.GAUSSIAN_CLOUD)
+
+
+def test_render_runs_the_server_backend_and_stores_the_image(
+    mocker, tmp_path, monkeypatch, synthetic_cloud, remote_client
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    backend = FakeRenderBackend()
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
+    cloud = _cloud_asset(tmp_path, synthetic_cloud)
+
+    [image] = remote_client.render(
+        RenderRequest(inputs=[cloud], model="fake-render", azimuth=90.0, width=6, height=4)
+    )
+
+    assert backend.params["azimuth"] == 90.0
+    assert image.kind == ManifestKind.IMAGE
+    assert image.parent_ids == [cloud.id]
+    assert image.created_by == "render:fake-render"
+    assert (image.metadata.output_width, image.metadata.output_height) == (6, 4)
+
+
+def test_render_surfaces_the_servers_missing_blender_message(
+    mocker, tmp_path, monkeypatch, synthetic_cloud, remote_client
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    backend = mocker.Mock()
+    backend.render.side_effect = RenderBackendError("Blender not found")
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
+    cloud = _cloud_asset(tmp_path, synthetic_cloud)
+
+    with pytest.raises(SplatDomainError, match="Blender not found"):
+        remote_client.render(RenderRequest(inputs=[cloud]))
 
 
 class ReportingSource:

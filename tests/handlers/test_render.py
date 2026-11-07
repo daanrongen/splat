@@ -5,7 +5,7 @@ from splat.adapters.formats.image import encode_png
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
-from splat.handlers.render import RenderRequest, handle
+from splat.handlers.render import RenderRequest, handle, render_params
 from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
@@ -72,3 +72,8 @@ def test_handle_rejects_non_gaussian_input(mocker, tmp_path, monkeypatch, synthe
 
     with pytest.raises(SplatDomainError):
         handle(RenderRequest(inputs=[asset], model="fake-render"))
+
+
+def test_render_params_leave_out_view_unless_it_is_set():
+    assert "view" not in render_params(RenderRequest(inputs=[]))
+    assert render_params(RenderRequest(inputs=[], view=2))["view"] == 2

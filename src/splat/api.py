@@ -4,9 +4,9 @@ Thin, Pythonic wrappers over handlers/*.py — the same request/response
 shapes the CLI uses, minus Typer's argument parsing and console/exit-code
 error handling (domain errors raise directly). Every function here routes
 through `registry.wiring.get_client()`, exactly like the CLI, so setting
-`SPLAT_URL` redirects remote-capable calls transparently — the one exception
-are `render()`, `mesh()` and `export()`, which (like the CLI) always execute
-locally; see `ports/client.py`'s docstring for why.
+`SPLAT_URL` redirects remote-capable calls transparently — the exceptions
+are `mesh()` and `export()`, which (like the CLI) still execute locally; see
+`ports/client.py`'s docstring.
 """
 
 from pathlib import Path
@@ -210,10 +210,9 @@ def render(
     view: int | None = None,
 ) -> list[Manifest]:
     from splat.handlers.render import RenderRequest
-    from splat.handlers.render import handle as handle_render
 
     resolved = _resolve_all(inputs, default_kind=ManifestKind.GAUSSIAN_CLOUD)
-    return handle_render(
+    return get_client().render(
         RenderRequest(
             inputs=resolved,
             model=model,

@@ -49,6 +49,10 @@ class _FakeClient:
         self.calls.append(("gaussian", request))
         return ["gaussian-result"]
 
+    def render(self, request, *, on_progress=None):
+        self.calls.append(("render", request))
+        return ["render-result"]
+
     def info(self, path):
         self.calls.append(("info", path))
         return "info-result"
@@ -146,18 +150,15 @@ def test_gaussian_builds_request(fake_client):
     assert request.inputs == [manifest]
 
 
-def test_render_bypasses_client_and_calls_handler_directly(mocker, fake_client):
-    handle_render = mocker.patch("splat.handlers.render.handle", return_value=["render-result"])
+def test_render_goes_through_the_client(fake_client):
     manifest = _manifest(kind=ManifestKind.GAUSSIAN_CLOUD)
 
     result = splat.render(manifest, engine="eevee")
 
     assert result == ["render-result"]
-    handle_render.assert_called_once()
-    request = handle_render.call_args[0][0]
+    _, request = fake_client.calls[0]
     assert request.engine == "eevee"
     assert request.inputs == [manifest]
-    assert not fake_client.calls  # render never goes through get_client()
 
 
 def test_export_and_mesh_run_locally(tmp_path, monkeypatch, synthetic_cloud):

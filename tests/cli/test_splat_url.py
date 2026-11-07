@@ -12,6 +12,7 @@ import uvicorn
 from typer.testing import CliRunner
 
 from splat.adapters.formats.image import read_rgb_or_rgba
+from splat.adapters.formats.ply import PlyWriter
 from splat.cli.main import app
 from splat.domain.value_objects import MIT
 from splat.http.app import app as http_app
@@ -27,6 +28,17 @@ class FakeDiffusionBackend:
     def diffuse(self, prompt, *, output_path: Path, **params) -> Path:
         output_path.write_bytes(sample_png_bytes())
         return output_path
+
+
+class FakeRenderBackend:
+    name = "fake-render"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def render(self, cloud, output_path: Path, **params) -> None:
+        self.calls += 1
+        output_path.write_bytes(sample_png_bytes((6, 4)))
 
 
 class FakeUpscaleBackend:
@@ -107,4 +119,27 @@ def test_splat_url_redirects_upscale_to_remote_server(
     )
 
     assert result.exit_code == 0, result.output
+    assert read_rgb_or_rgba(out_path).shape == (4, 6, 3)
+
+
+def test_splat_url_renders_on_the_server_not_the_client(
+    mocker, tmp_path, monkeypatch, live_server_url, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    backend = FakeRenderBackend()
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
+    local_render = mocker.patch("splat.adapters.client.local.LocalSplatClient.render")
+    cloud_path = tmp_path / "cloud.ply"
+    PlyWriter().write(synthetic_cloud, cloud_path)
+    out_path = tmp_path / "render.png"
+
+    result = runner.invoke(
+        app,
+        ["render", str(cloud_path), "--model", "fake-render", "-o", str(out_path)],
+        env={"SPLAT_URL": live_server_url},
+    )
+
+    assert result.exit_code == 0, result.output
+    assert backend.calls == 1  # the server's backend ran
+    local_render.assert_not_called()  # the client's own did not
     assert read_rgb_or_rgba(out_path).shape == (4, 6, 3)

@@ -33,6 +33,7 @@ from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
 from splat.handlers.gaussian import GaussianRequest
+from splat.handlers.render import RenderRequest, render_params
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.upscale import UpscaleRequest
 from splat.http._schemas import (
@@ -403,6 +404,35 @@ class RemoteSplatClient:
                 created_by=f"gaussian:{request.model}",
             )
         ]
+
+    def render(
+        self, request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
+    ) -> list[Manifest]:
+        form = {
+            "model": request.model,
+            **{k: v for k, v in render_params(request).items() if v is not None},
+        }
+        results: list[Manifest] = []
+        for asset in request.inputs:
+            files = {"cloud": (asset.content_path.name, asset.content_path.read_bytes())}
+            response = self._client.post("/render", files=files, data=form)
+            _raise_for_domain_error(response)
+            image = decode_rgb_or_rgba(response.content)
+            results.append(
+                self._store_asset(
+                    response.headers["X-Splat-Asset-Id"],
+                    kind=ManifestKind.IMAGE,
+                    content=response.content,
+                    ext="png",
+                    metadata=RasterMetadata(
+                        output_width=image.shape[1], output_height=image.shape[0]
+                    ),
+                    params=render_params(request),
+                    parent_ids=[asset.id],
+                    created_by=f"render:{request.model}",
+                )
+            )
+        return results
 
     def info(self, path: Path) -> InfoSummary:
         files = {"input": (path.name, path.read_bytes())}

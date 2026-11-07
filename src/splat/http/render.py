@@ -11,6 +11,7 @@ router = APIRouter()
 @router.post("/render")
 def render(
     cloud: UploadFile = File(...),
+    model: str = Form("blender"),
     width: int = Form(1280),
     height: int = Form(720),
     samples: int = Form(32),
@@ -29,6 +30,7 @@ def render(
         asset = cache.put_external(path, kind=ManifestKind.GAUSSIAN_CLOUD)
     request = RenderRequest(
         inputs=[asset],
+        model=model,
         width=width,
         height=height,
         samples=samples,

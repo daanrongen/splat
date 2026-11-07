@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
     from splat.handlers.embed import EmbedRequest
     from splat.handlers.gaussian import GaussianRequest
+    from splat.handlers.render import RenderRequest
     from splat.handlers.segment import SegmentRequest
     from splat.handlers.upscale import UpscaleRequest
 
@@ -56,6 +57,13 @@ class LocalSplatClient:
         from splat.handlers.gaussian import handle as handle_gaussian
 
         return handle_gaussian(request)
+
+    def render(
+        self, request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
+    ) -> list[Manifest]:
+        from splat.handlers.render import handle as handle_render
+
+        return handle_render(request, on_progress=on_progress)
 
     def info(self, path: Path) -> InfoSummary:
         from splat.handlers.inspect import info as handle_info

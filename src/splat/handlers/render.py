@@ -26,12 +26,7 @@ class RenderRequest:
     view: int | None = None
 
 
-def handle(
-    request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
-) -> list[Manifest]:
-    validate_inputs(RENDER_CONTRACT, request.inputs)
-    cache = get_manifest_repository()
-    backend = get_render_backend(request.model)
+def render_params(request: RenderRequest) -> dict:
     params = {
         "width": request.width,
         "height": request.height,
@@ -47,6 +42,16 @@ def handle(
     }
     if request.view is not None:
         params["view"] = request.view
+    return params
+
+
+def handle(
+    request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
+) -> list[Manifest]:
+    validate_inputs(RENDER_CONTRACT, request.inputs)
+    cache = get_manifest_repository()
+    backend = get_render_backend(request.model)
+    params = render_params(request)
     return [
         run_render(
             backend,
