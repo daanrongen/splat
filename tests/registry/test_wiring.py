@@ -1,9 +1,12 @@
 import pytest
 
 from splat.adapters.formats.ply import PlyReader, PlyWriter
+from splat.adapters.model_sources.huggingface import HuggingFaceModelSource
+from splat.adapters.model_sources.stub import StubModelSource
 from splat.domain.errors import UnsupportedFormat
 from splat.registry.wiring import (
     get_embedding_backend,
+    get_model_source,
     get_reader,
     get_reconstruction_backend,
     get_render_backend,
@@ -81,3 +84,22 @@ def test_get_upscale_backend_wires_known_model():
     backend = get_upscale_backend("realesrgan-mlx")
     assert backend.name == "realesrgan-mlx"
     assert backend.supported_factors == (2, 4)
+
+
+def test_get_model_source_defaults_to_huggingface(monkeypatch):
+    monkeypatch.delenv("SPLAT_MODEL_SOURCE", raising=False)
+
+    assert type(get_model_source()) is HuggingFaceModelSource
+
+
+def test_get_model_source_selects_the_stub(monkeypatch):
+    monkeypatch.setenv("SPLAT_MODEL_SOURCE", "stub")
+
+    assert isinstance(get_model_source(), StubModelSource)
+
+
+def test_get_model_source_unknown_name_raises(monkeypatch):
+    monkeypatch.setenv("SPLAT_MODEL_SOURCE", "nope")
+
+    with pytest.raises(UnsupportedFormat, match="Available: huggingface, stub"):
+        get_model_source()

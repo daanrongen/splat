@@ -4,6 +4,7 @@ extending it means adding one dict entry and one adapter file.
 """
 
 import os
+from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -52,10 +53,20 @@ def is_known_format(ext: str) -> bool:
     return ext in FORMAT_READERS or ext in FORMAT_WRITERS
 
 
-def get_model_source() -> ModelSource:
-    from splat.adapters.model_sources.huggingface import HuggingFaceModelSource
+_MODEL_SOURCES = {
+    "huggingface": "splat.adapters.model_sources.huggingface:HuggingFaceModelSource",
+    "stub": "splat.adapters.model_sources.stub:StubModelSource",
+}
 
-    return HuggingFaceModelSource()
+
+def get_model_source() -> ModelSource:
+    name = os.environ.get("SPLAT_MODEL_SOURCE", "huggingface")
+    try:
+        module_name, class_name = _MODEL_SOURCES[name].rsplit(":", 1)
+    except KeyError as exc:
+        available = ", ".join(sorted(_MODEL_SOURCES))
+        raise UnsupportedFormat(f"Unknown model source {name!r}. Available: {available}") from exc
+    return getattr(import_module(module_name), class_name)()
 
 
 def get_manifest_repository() -> ManifestRepository:
