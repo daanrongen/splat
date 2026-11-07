@@ -7,6 +7,7 @@ import typer
 
 from splat import __version__
 from splat.cli._console import console
+from splat.domain.errors import RenderBackendError
 
 _RUNTIMES = ("torch", "torchvision", "mlx.core", "coremltools", "transformers")
 
@@ -28,12 +29,27 @@ def _models() -> str:
     return f"{sum(row.cached for row in rows)} of {len(rows)} cached"
 
 
+def _server_headers() -> dict[str, str] | None:
+    token = os.environ.get("SPLAT_TOKEN", "")
+    return {"Authorization": f"Bearer {token}"} if token else None
+
+
+def _server_blender() -> str:
+    import httpx
+
+    url = os.environ["SPLAT_URL"].rstrip("/")
+    response = httpx.get(f"{url}/render/blender", headers=_server_headers(), timeout=5.0)
+    path = response.raise_for_status().json()["path"]
+    if path is None:
+        raise RenderBackendError("not found on the server's PATH or SPLAT_BLENDER_BIN")
+    return path
+
+
 def _server() -> str:
     import httpx
 
     url = os.environ["SPLAT_URL"].rstrip("/")
-    token = os.environ.get("SPLAT_TOKEN", "")
-    headers = {"Authorization": f"Bearer {token}"} if token else None
+    headers = _server_headers()
     version = httpx.get(f"{url}/version", timeout=2.0).raise_for_status().json()["version"]
     httpx.get(f"{url}/models", headers=headers, timeout=5.0).raise_for_status()
     return f"{url} runs splat {version}"
@@ -48,6 +64,7 @@ def _checks() -> list[tuple[str, Callable[[], str]]]:
     ]
     if os.environ.get("SPLAT_URL"):
         checks.append(("server", _server))
+        checks.append(("server blender", _server_blender))
     return checks
 
 

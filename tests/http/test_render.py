@@ -33,3 +33,32 @@ def test_render_returns_png(mocker, tmp_path, monkeypatch, synthetic_cloud):
     assert response.content == _FAKE_PNG
     assert response.headers["content-type"] == "image/png"
     assert "X-Splat-Asset-Id" in response.headers
+
+
+def test_render_forwards_the_model_to_the_backend(mocker, tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    get_backend = mocker.patch(
+        "splat.handlers.render.get_render_backend", return_value=FakeRenderBackend()
+    )
+    ply_path = tmp_path / "cloud.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+
+    client.post(
+        "/render",
+        files={"cloud": ("cloud.ply", ply_path.read_bytes(), "application/octet-stream")},
+        data={"model": "fake-render"},
+    )
+
+    get_backend.assert_called_once_with("fake-render")
+
+
+def test_blender_route_reports_the_servers_executable(mocker):
+    mocker.patch("splat.http.render.locate", return_value="/path/blender")
+
+    assert client.get("/render/blender").json() == {"path": "/path/blender"}
+
+
+def test_blender_route_reports_null_when_it_is_missing(mocker):
+    mocker.patch("splat.http.render.locate", return_value=None)
+
+    assert client.get("/render/blender").json() == {"path": None}

@@ -1,16 +1,22 @@
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
 from splat.domain.manifest import ManifestKind
-from splat.handlers.render import RenderRequest, handle
+from splat.handlers.render import RenderRequest, handle, locate
 from splat.http._files import saved_upload
 from splat.registry.wiring import get_manifest_repository
 
 router = APIRouter()
 
 
+@router.get("/render/blender")
+def blender() -> dict:
+    return {"path": locate()}
+
+
 @router.post("/render")
 def render(
     cloud: UploadFile = File(...),
+    model: str = Form("blender"),
     width: int = Form(1280),
     height: int = Form(720),
     samples: int = Form(32),
@@ -29,6 +35,7 @@ def render(
         asset = cache.put_external(path, kind=ManifestKind.GAUSSIAN_CLOUD)
     request = RenderRequest(
         inputs=[asset],
+        model=model,
         width=width,
         height=height,
         samples=samples,

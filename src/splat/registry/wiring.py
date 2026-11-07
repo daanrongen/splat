@@ -76,7 +76,7 @@ def get_manifest_repository() -> ManifestRepository:
 
 
 def get_client() -> "SplatClient":
-    url = os.environ.get("SPLAT_URL", "")
+    url = "" if os.environ.get("SPLAT_LOCAL") else os.environ.get("SPLAT_URL", "")
     if url:
         from splat.adapters.client.http import RemoteSplatClient
 

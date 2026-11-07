@@ -1,16 +1,16 @@
 from pathlib import Path
 
 from splat.domain.manifest import ManifestKind
-from splat.handlers.export import ExportRequest, handle
+from splat.handlers.export import ExportRequest
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_manifest_repository
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def export(
     input: str,
     output_path: str,
     profile: str | None = None,
-    pruning: str = "threshold",
+    pruning: str | None = None,
     target_count: int | None = None,
 ) -> dict:
     """Write an asset (path or @<asset-id>) to output_path in the format of its extension,
@@ -18,7 +18,7 @@ def export(
     asset = resolve_input_asset(
         input, get_manifest_repository(), default_kind=ManifestKind.GAUSSIAN_CLOUD
     )
-    result = handle(
+    result = get_client().export(
         ExportRequest(
             input=asset,
             output_path=Path(output_path),

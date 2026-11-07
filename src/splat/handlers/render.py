@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from splat.application.pipeline import run_render
 from splat.domain.contracts import validate_inputs
+from splat.domain.errors import RenderBackendError
 from splat.domain.manifest import Manifest
 from splat.registry.render import RENDER_CONTRACT
 from splat.registry.wiring import get_manifest_repository, get_render_backend
@@ -26,12 +27,14 @@ class RenderRequest:
     view: int | None = None
 
 
-def handle(
-    request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
-) -> list[Manifest]:
-    validate_inputs(RENDER_CONTRACT, request.inputs)
-    cache = get_manifest_repository()
-    backend = get_render_backend(request.model)
+def locate(model: str = "blender") -> str | None:
+    try:
+        return get_render_backend(model).locate()
+    except RenderBackendError:
+        return None
+
+
+def render_params(request: RenderRequest) -> dict:
     params = {
         "width": request.width,
         "height": request.height,
@@ -47,6 +50,16 @@ def handle(
     }
     if request.view is not None:
         params["view"] = request.view
+    return params
+
+
+def handle(
+    request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
+) -> list[Manifest]:
+    validate_inputs(RENDER_CONTRACT, request.inputs)
+    cache = get_manifest_repository()
+    backend = get_render_backend(request.model)
+    params = render_params(request)
     return [
         run_render(
             backend,

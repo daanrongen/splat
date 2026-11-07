@@ -39,7 +39,7 @@ mise install && uv sync
 uv run splat --help
 ```
 
-Model weights download on first use. `render` needs [Blender](https://www.blender.org) on `PATH` (or `SPLAT_BLENDER_BIN`).
+Model weights download on first use. `render` needs [Blender](https://www.blender.org) on `PATH` (or `SPLAT_BLENDER_BIN`) on the machine that renders, which is the `splat http` server when `SPLAT_URL` is set.
 
 ## How it works
 
@@ -167,11 +167,11 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 **`splat mcp`** runs an MCP server over stdio. Tools: `diffuse`, `caption`, `embed`, `segment`, `depth`, `upscale`, `gaussian`, `render` (returns the image), `mesh`, `export`, `info`, `validate`, `models_list`, `models_info`, `models_pull`, `models_rm`, `manifest_list`, `manifest_get`, `manifest_label`, `manifest_delete`.
 
-**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, with no authentication, so bind it only to trusted interfaces. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull` (streams progress as NDJSON), `GET /version`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
+**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, with no authentication, so bind it only to trusted interfaces. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull` (streams progress as NDJSON), `GET /render/blender`, `GET /version`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
 
-**`SPLAT_URL=http://host:8000`** makes the model-backed stages in the CLI, SDK and MCP server run on that `splat http` server. `render`, `mesh` and `export` always run locally. The client checks the server version once per process: a minor mismatch warns, a major one fails.
+**`SPLAT_URL=http://host:8000`** makes every stage in the CLI, SDK and MCP server run on that `splat http` server, so `render` uses the server's Blender and the client needs none. `splat --local COMMAND` (or `SPLAT_LOCAL=1`) runs one command here instead. Two inputs stay on the client because the server routes take only a Gaussian cloud: `mesh` of a depth map, which fails with a hint to pass `--local`, and `export` of a non-cloud asset, which is a plain copy. A remote `render` is one request with no progress yet. The client checks the server version once per process: a minor mismatch warns, a major one fails.
 
-**`splat doctor`** checks the install: the splat and Python versions, whether torch, torchvision, mlx, coremltools and transformers import, the device (`mps` or `cpu`) and how many catalog models are cached. With `SPLAT_URL` set it also checks the server's version and an authenticated route, without running a model. It prints one line per check and exits non-zero if any fail, and a broken import does not stop the others.
+**`splat doctor`** checks the install: the splat and Python versions, whether torch, torchvision, mlx, coremltools and transformers import, the device (`mps` or `cpu`) and how many catalog models are cached. With `SPLAT_URL` set it also checks the server's version, an authenticated route and whether the server has Blender, without running a model. It prints one line per check and exits non-zero if any fail, and a broken import does not stop the others.
 
 **`splat completion <shell>`** prints a completion script for `bash`, `zsh`, `fish` or `powershell` and installs nothing, so you choose where it goes: `splat completion zsh > ~/.zsh_completions/_splat`.
 
@@ -182,7 +182,8 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `SPLAT_MANIFEST_CACHE_DIR` | manifest cache, default `$XDG_CACHE_HOME/splat/manifests` |
 | `SPLAT_MODEL_CACHE_DIR` | model cache, default `$XDG_CACHE_HOME/splat/models` |
 | `SPLAT_URL` | remote `splat http` server |
-| `SPLAT_BLENDER_BIN` | Blender executable |
+| `SPLAT_LOCAL` | run here even when `SPLAT_URL` is set, same as `splat --local` |
+| `SPLAT_BLENDER_BIN` | Blender executable, on the server when `SPLAT_URL` is set |
 | `SPLAT_RENDER_TIMEOUT` | render timeout in seconds, 0 disables it |
 | `SPLAT_NO_MANIFEST` | write `-o` files without a `.manifest.json` sidecar, same as `splat --no-manifest`; the cache still records the manifest |
 | `SPLAT_DEBUG` | show the full traceback on failure, same as `splat --debug` |

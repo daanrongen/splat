@@ -49,6 +49,10 @@ class _FakeClient:
         self.calls.append(("gaussian", request))
         return ["gaussian-result"]
 
+    def render(self, request, *, on_progress=None):
+        self.calls.append(("render", request))
+        return ["render-result"]
+
     def info(self, path):
         self.calls.append(("info", path))
         return "info-result"
@@ -146,18 +150,15 @@ def test_gaussian_builds_request(fake_client):
     assert request.inputs == [manifest]
 
 
-def test_render_bypasses_client_and_calls_handler_directly(mocker, fake_client):
-    handle_render = mocker.patch("splat.handlers.render.handle", return_value=["render-result"])
+def test_render_goes_through_the_client(fake_client):
     manifest = _manifest(kind=ManifestKind.GAUSSIAN_CLOUD)
 
     result = splat.render(manifest, engine="eevee")
 
     assert result == ["render-result"]
-    handle_render.assert_called_once()
-    request = handle_render.call_args[0][0]
+    _, request = fake_client.calls[0]
     assert request.engine == "eevee"
     assert request.inputs == [manifest]
-    assert not fake_client.calls  # render never goes through get_client()
 
 
 def test_export_and_mesh_run_locally(tmp_path, monkeypatch, synthetic_cloud):
@@ -193,3 +194,14 @@ def test_sdk_exposes_every_request_option(stage):
     options = {f.name for f in dataclasses.fields(request)} - {"inputs"}
 
     assert options <= set(inspect.signature(getattr(splat, stage)).parameters)
+
+
+def test_export_without_a_profile_converts_the_cloud(tmp_path, monkeypatch, synthetic_cloud):
+    from splat.adapters.formats.ply import PlyWriter
+
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    PlyWriter().write(synthetic_cloud, tmp_path / "in.ply")
+
+    result = splat.export(tmp_path / "in.ply", tmp_path / "out.splat")
+
+    assert result.point_count == synthetic_cloud.point_count

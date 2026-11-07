@@ -119,10 +119,18 @@ def _main(
         envvar="SPLAT_NO_MANIFEST",
         help="Write -o files without a .manifest.json sidecar.",
     ),
+    local: bool = typer.Option(
+        False,
+        "--local",
+        envvar="SPLAT_LOCAL",
+        help="Run this command here even when SPLAT_URL is set.",
+    ),
 ) -> None:
     """splat runs pipeline stages, exports assets, and administers the local cache."""
     if no_manifest:
         os.environ["SPLAT_NO_MANIFEST"] = "1"
+    if local:
+        os.environ["SPLAT_LOCAL"] = "1"
 
 
 def main() -> None:

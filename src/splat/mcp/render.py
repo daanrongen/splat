@@ -1,10 +1,10 @@
 import mcp.types as types
 
 from splat.domain.manifest import ManifestKind
-from splat.handlers.render import RenderRequest, handle
+from splat.handlers.render import RenderRequest
 from splat.mcp._content import image_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_manifest_repository
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def render(
@@ -40,5 +40,5 @@ def render(
         look_at=look_at,
         view=view,
     )
-    result = handle(request)[0]
+    result = get_client().render(request)[0]
     return [text_content(f"asset id: {result.id}"), image_content(result)]

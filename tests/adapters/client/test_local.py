@@ -7,6 +7,9 @@ from splat.domain.value_objects import MIT
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.embed import EmbedRequest
+from splat.handlers.export import ExportRequest
+from splat.handlers.mesh import MeshRequest
+from splat.handlers.render import RenderRequest
 from splat.handlers.upscale import UpscaleRequest
 from tests.image_helpers import sample_png_bytes, write_sample_png
 
@@ -139,3 +142,29 @@ def test_models_list_returns_summaries():
 
     assert len(rows) > 0
     assert all(hasattr(r, "cached") for r in rows)
+
+
+def test_render_delegates_to_handler_with_progress(mocker):
+    handle = mocker.patch("splat.handlers.render.handle", return_value=["rendered"])
+    request, on_progress = RenderRequest(inputs=[]), print
+
+    result = LocalSplatClient().render(request, on_progress=on_progress)
+
+    assert result == ["rendered"]
+    handle.assert_called_once_with(request, on_progress=on_progress)
+
+
+def test_mesh_delegates_to_handler(mocker):
+    handle = mocker.patch("splat.handlers.mesh.handle", return_value=["meshed"])
+    request = MeshRequest(inputs=[])
+
+    assert LocalSplatClient().mesh(request) == ["meshed"]
+    handle.assert_called_once_with(request)
+
+
+def test_export_delegates_to_handler(mocker):
+    handle = mocker.patch("splat.handlers.export.handle", return_value="exported")
+    request = ExportRequest(input=mocker.Mock(), output_path=Path("out.ply"))
+
+    assert LocalSplatClient().export(request) == "exported"
+    handle.assert_called_once_with(request)

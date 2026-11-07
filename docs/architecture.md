@@ -163,8 +163,8 @@ inventory where possible. Drift is a bug.
 
 Current intentional differences:
 
-- `render` executes locally because Blender is a local external process.
 - `manifest` operates on the local cache by default.
+- Over `SPLAT_URL`, `mesh` of a depth map and `export` of a non-cloud asset run on the client, because the server routes take only a Gaussian cloud.
 - HTTP has no authentication in v1 and should be treated as trusted-LAN only.
 
 Any other missing operation in one transport should either be added or documented

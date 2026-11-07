@@ -4,9 +4,8 @@ Thin, Pythonic wrappers over handlers/*.py — the same request/response
 shapes the CLI uses, minus Typer's argument parsing and console/exit-code
 error handling (domain errors raise directly). Every function here routes
 through `registry.wiring.get_client()`, exactly like the CLI, so setting
-`SPLAT_URL` redirects remote-capable calls transparently — the one exception
-are `render()`, `mesh()` and `export()`, which (like the CLI) always execute
-locally; see `ports/client.py`'s docstring for why.
+`SPLAT_URL` redirects every call transparently; see `ports/client.py`'s
+docstring for the two inputs that stay local.
 """
 
 from pathlib import Path
@@ -210,10 +209,9 @@ def render(
     view: int | None = None,
 ) -> list[Manifest]:
     from splat.handlers.render import RenderRequest
-    from splat.handlers.render import handle as handle_render
 
     resolved = _resolve_all(inputs, default_kind=ManifestKind.GAUSSIAN_CLOUD)
-    return handle_render(
+    return get_client().render(
         RenderRequest(
             inputs=resolved,
             model=model,
@@ -242,10 +240,9 @@ def mesh(
     opacity_threshold: float = 0.1,
 ) -> list[Manifest]:
     from splat.handlers.mesh import MeshRequest
-    from splat.handlers.mesh import handle as handle_mesh
 
     resolved = _resolve_all(inputs, default_kind=ManifestKind.GAUSSIAN_CLOUD)
-    return handle_mesh(
+    return get_client().mesh(
         MeshRequest(
             inputs=resolved,
             model=model,
@@ -261,13 +258,12 @@ def export(
     output_path: str | Path,
     *,
     profile: str | None = None,
-    pruning: str = "threshold",
+    pruning: str | None = None,
     target_count: int | None = None,
 ) -> ExportResult:
     from splat.handlers.export import ExportRequest
-    from splat.handlers.export import handle as handle_export
 
-    return handle_export(
+    return get_client().export(
         ExportRequest(
             input=_resolve(input, default_kind=ManifestKind.GAUSSIAN_CLOUD),
             output_path=Path(output_path),

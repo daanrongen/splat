@@ -1,3 +1,4 @@
+import json
 import tempfile
 from pathlib import Path
 
@@ -16,7 +17,7 @@ def export(
     input: UploadFile = File(...),
     to: str = Form(...),
     profile: str | None = Form(None),
-    pruning: str = Form("threshold"),
+    pruning: str | None = Form(None),
     target_count: int | None = Form(None),
 ) -> Response:
     with saved_upload(input) as path:
@@ -37,5 +38,5 @@ def export(
     if result.point_count is not None:
         headers["X-Splat-Point-Count"] = str(result.point_count)
     if result.warnings:
-        headers["X-Splat-Warnings"] = "; ".join(result.warnings)
+        headers["X-Splat-Warnings"] = json.dumps(result.warnings)
     return Response(content=content, media_type="application/octet-stream", headers=headers)

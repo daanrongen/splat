@@ -19,6 +19,10 @@ class RenderBackend(Protocol):
 
     name: str
 
+    def locate(self) -> str:
+        """The engine executable this backend would run; raises if it is missing."""
+        ...
+
     # `on_progress` is threaded separately from `params` on purpose: `params`
     # is hashed into the cache key, and a callable in there would change the
     # key on every run.

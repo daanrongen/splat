@@ -52,3 +52,17 @@ def test_export_writes_output_file(tmp_path, monkeypatch, synthetic_cloud, call_
 
     assert result.is_error is False
     assert splat_path.exists()
+
+
+def test_export_without_a_profile_converts_the_cloud(
+    tmp_path, monkeypatch, synthetic_cloud, call_tool
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+    splat_path = tmp_path / "out.splat"
+
+    result = call_tool("export", input=str(ply_path), output_path=str(splat_path))
+
+    assert result.is_error is False
+    assert splat_path.exists()

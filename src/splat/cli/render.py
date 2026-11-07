@@ -9,8 +9,8 @@ from splat.cli._console import console, error, warn
 from splat.cli._pipeline_io import export_output, is_piped, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
-from splat.handlers.render import RenderRequest, handle
-from splat.registry.wiring import get_manifest_repository
+from splat.handlers.render import RenderRequest
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 @contextmanager
@@ -132,7 +132,7 @@ def render(
         prepare_output(output)
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)
         with _progress() as on_progress:
-            results = handle(replace(request, inputs=inputs), on_progress=on_progress)
+            results = get_client().render(replace(request, inputs=inputs), on_progress=on_progress)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
