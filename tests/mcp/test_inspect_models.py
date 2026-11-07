@@ -13,7 +13,7 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None) -> Path:
+    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 

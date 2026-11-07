@@ -165,6 +165,7 @@ Current intentional differences:
 
 - `render` executes locally because Blender is a local external process.
 - `manifest` operates on the local cache by default.
+- `models pull` shows download progress only when it runs locally; a remote pull is one blocking request until #175.
 - HTTP has no authentication in v1 and should be treated as trusted-LAN only.
 
 Any other missing operation in one transport should either be added or documented

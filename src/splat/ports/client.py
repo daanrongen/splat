@@ -18,6 +18,7 @@ weights from whichever machine's disk it runs on, and a route that lets a
 client reclaim a shared server's model cache is a footgun, not parity.
 """
 
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
@@ -107,7 +108,9 @@ class SplatClient(Protocol):
 
     def models_list(self) -> list[ModelSummary]: ...
 
-    def models_pull(self, name: str) -> None: ...
+    def models_pull(
+        self, name: str, *, on_progress: Callable[[str, int, int], None] | None = None
+    ) -> None: ...
 
     def models_info(self, name: str) -> ModelInfo: ...
 

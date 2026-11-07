@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any
 
 from splat.application.models_admin import (
@@ -15,8 +16,8 @@ def list_models() -> list[tuple[Any, bool]]:
     return ListModelsUseCase(get_model_source()).execute()
 
 
-def pull(name: str) -> None:
-    PullModelUseCase(get_model_source()).execute(name)
+def pull(name: str, *, on_progress: Callable[[str, int, int], None] | None = None) -> None:
+    PullModelUseCase(get_model_source()).execute(name, on_progress)
 
 
 def info(name: str) -> Any:

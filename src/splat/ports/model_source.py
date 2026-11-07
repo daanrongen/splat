@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -7,7 +8,15 @@ class ModelSource(Protocol):
     the package — this is the only place a network call to fetch weights
     happens."""
 
-    def pull(self, model_id: str, *, revision: str | None = None) -> Path: ...
+    def pull(
+        self,
+        model_id: str,
+        *,
+        revision: str | None = None,
+        on_progress: Callable[[int, int], None] | None = None,
+    ) -> Path:
+        """Reports `(bytes_done, bytes_total)` as the download advances."""
+        ...
 
     def is_cached(self, model_id: str) -> bool: ...
 

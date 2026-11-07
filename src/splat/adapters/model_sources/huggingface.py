@@ -16,6 +16,7 @@ adapter shares.
 
 import os
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 from splat.paths import hf_home_dir, model_cache_dir
@@ -24,6 +25,38 @@ from splat.paths import hf_home_dir, model_cache_dir
 def hub_cache_dir() -> Path:
     override = os.environ.get("HF_HUB_CACHE")
     return Path(override).expanduser() if override else hf_home_dir() / "hub"
+
+
+class _NullFile:
+    encoding = "utf-8"
+
+    def write(self, text: str) -> int:
+        return len(text)
+
+    def flush(self) -> None:
+        pass
+
+
+def _progress_bar(on_progress: Callable[[int, int], None]):
+    """A `tqdm_class` that draws nothing and reports the bar `snapshot_download`
+    reconstructs files on (the second byte bar it creates). Not an HF subclass,
+    so HF_HUB_DISABLE_PROGRESS_BARS does not silence it."""
+    from tqdm import tqdm
+
+    byte_bars: list[tqdm] = []
+
+    class ProgressBar(tqdm):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **{**kwargs, "file": _NullFile(), "disable": False})
+            if self.unit == "B":
+                byte_bars.append(self)
+
+        def update(self, n=1):
+            super().update(n)
+            if len(byte_bars) > 1 and self is byte_bars[1]:
+                on_progress(int(self.n), int(self.total or 0))
+
+    return ProgressBar
 
 
 class HuggingFaceModelSource:
@@ -51,10 +84,17 @@ class HuggingFaceModelSource:
             return path.parent.parent
         return path
 
-    def pull(self, model_id: str, *, revision: str | None = None) -> Path:
+    def pull(
+        self,
+        model_id: str,
+        *,
+        revision: str | None = None,
+        on_progress: Callable[[int, int], None] | None = None,
+    ) -> Path:
         from huggingface_hub import snapshot_download
 
-        path = snapshot_download(repo_id=model_id, revision=revision)
+        extra = {} if on_progress is None else {"tqdm_class": _progress_bar(on_progress)}
+        path = snapshot_download(repo_id=model_id, revision=revision, **extra)
         return Path(path)
 
     def is_cached(self, model_id: str) -> bool:

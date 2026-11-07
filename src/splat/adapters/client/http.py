@@ -8,6 +8,7 @@ import hashlib
 import json
 import tempfile
 import warnings
+from collections.abc import Callable
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
@@ -444,7 +445,9 @@ class RemoteSplatClient:
             for r in rows
         ]
 
-    def models_pull(self, name: str) -> None:
+    def models_pull(
+        self, name: str, *, on_progress: Callable[[str, int, int], None] | None = None
+    ) -> None:
         response = self._client.post(f"/models/{name}/pull")
         _raise_for_domain_error(response)
 

@@ -112,3 +112,64 @@ def test_size_on_disk_counts_blobs_once_not_through_snapshot_symlinks(hub):
 
 def test_size_on_disk_zero_when_not_cached(hub):
     assert HuggingFaceModelSource().size_on_disk("org/name") == 0
+
+
+def _bar_class(mocker, tmp_path, reports):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download", return_value=str(tmp_path))
+    HuggingFaceModelSource().pull("some/model", on_progress=lambda *report: reports.append(report))
+    return mock_download.call_args.kwargs["tqdm_class"]
+
+
+def test_pull_without_a_callback_passes_no_progress_class(mocker, tmp_path):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download", return_value=str(tmp_path))
+
+    HuggingFaceModelSource().pull("some/model")
+
+    assert "tqdm_class" not in mock_download.call_args.kwargs
+
+
+def test_progress_reports_the_second_byte_bar(mocker, tmp_path):
+    reports = []
+    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class(total=0, unit="B")  # transfer bar
+    reconstruct = bar_class(total=0, unit="B")
+
+    reconstruct.total = 100
+    reconstruct.update(40)
+    reconstruct.update(60)
+
+    assert reports == [(40, 100), (100, 100)]
+
+
+def test_progress_ignores_the_transfer_bar(mocker, tmp_path):
+    reports = []
+    bar_class = _bar_class(mocker, tmp_path, reports)
+    transfer = bar_class(total=0, unit="B")
+    bar_class(total=0, unit="B")
+
+    transfer.update(10)
+
+    assert reports == []
+
+
+def test_progress_ignores_the_file_count_bar(mocker, tmp_path):
+    reports = []
+    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class(total=0, unit="B")
+    bar_class(total=0, unit="B")
+
+    bar_class(total=3, unit="it").update(1)
+
+    assert reports == []
+
+
+def test_progress_survives_disabled_hub_bars(mocker, tmp_path, monkeypatch):
+    monkeypatch.setenv("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    reports = []
+    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class(total=0, unit="B")
+    reconstruct = bar_class(total=50, unit="B")
+
+    reconstruct.update(50)
+
+    assert reports == [(50, 50)]
