@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from splat.ports.model_source import ModelSource
@@ -61,13 +62,21 @@ class ListModelsUseCase:
         ]
 
 
+def _for_repo(
+    repo_id: str, on_progress: Callable[[str, int, int], None] | None
+) -> Callable[[int, int], None] | None:
+    return None if on_progress is None else lambda done, total: on_progress(repo_id, done, total)
+
+
 class PullModelUseCase:
     def __init__(self, model_source: ModelSource) -> None:
         self._model_source = model_source
 
-    def execute(self, name: str) -> None:
+    def execute(
+        self, name: str, on_progress: Callable[[str, int, int], None] | None = None
+    ) -> None:
         for source in _lookup(name).hf_repo_ids:
-            self._model_source.pull(source)
+            self._model_source.pull(source, on_progress=_for_repo(source, on_progress))
 
 
 class ModelInfoUseCase:

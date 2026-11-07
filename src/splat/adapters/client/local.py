@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -97,10 +98,12 @@ class LocalSplatClient:
             for descriptor, cached in models_handler.list_models()
         ]
 
-    def models_pull(self, name: str) -> None:
+    def models_pull(
+        self, name: str, *, on_progress: Callable[[str, int, int], None] | None = None
+    ) -> None:
         from splat.handlers import models as models_handler
 
-        models_handler.pull(name)
+        models_handler.pull(name, on_progress=on_progress)
 
     def models_info(self, name: str) -> ModelInfo:
         from splat.handlers import models as models_handler

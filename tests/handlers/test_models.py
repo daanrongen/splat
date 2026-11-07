@@ -11,7 +11,7 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None) -> Path:
+    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 
@@ -57,6 +57,20 @@ def test_pull_model_family_delegates_each_source(mocker):
         "mlx-community/Real-ESRGAN-x2plus",
         "mlx-community/Real-ESRGAN-x4plus",
     ]
+
+
+def test_pull_forwards_progress_with_the_repo_id(mocker):
+    class ReportingSource(FakeModelSource):
+        def pull(self, model_id, *, revision=None, on_progress=None):
+            on_progress(10, 100)
+            return super().pull(model_id)
+
+    mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
+    reports = []
+
+    models_handler.pull("depth-pro", on_progress=lambda *report: reports.append(report))
+
+    assert reports == [("apple/DepthPro-hf", 10, 100)]
 
 
 def test_pull_unknown_model_raises(mocker):

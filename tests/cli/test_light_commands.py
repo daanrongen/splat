@@ -36,6 +36,7 @@ print(json.dumps(sorted({heavy!r} & {{m.split(".")[0] for m in sys.modules}})))
         ["env"],
         ["manifest", "list"],
         ["models", "list"],
+        ["models", "pull", "--help"],
         ["gaussian", "--help"],
         ["mesh", "--help"],
         ["export", "--help"],

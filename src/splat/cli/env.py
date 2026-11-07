@@ -30,6 +30,13 @@ _NON_OPTION_VARS: list[tuple[str, str, str, str, str]] = [
     ),
     (
         "global",
+        "client",
+        "SPLAT_MODEL_SOURCE",
+        "huggingface",
+        "Where `models pull` fetches weights from; `stub` fakes a slow download",
+    ),
+    (
+        "global",
         "cache",
         "SPLAT_MODEL_CACHE_DIR",
         "",

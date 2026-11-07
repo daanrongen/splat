@@ -8,6 +8,7 @@ import hashlib
 import json
 import tempfile
 import warnings
+from collections.abc import Callable
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
@@ -40,6 +41,7 @@ from splat.http._schemas import (
     InfoResponse,
     ManifestDetail,
     ModelInfoResponse,
+    PullEvent,
     UpscaleBody,
     ValidationResponse,
 )
@@ -444,9 +446,26 @@ class RemoteSplatClient:
             for r in rows
         ]
 
-    def models_pull(self, name: str) -> None:
-        response = self._client.post(f"/models/{name}/pull")
-        _raise_for_domain_error(response)
+    def models_pull(
+        self, name: str, *, on_progress: Callable[[str, int, int], None] | None = None
+    ) -> None:
+        with self._client.stream("POST", f"/models/{name}/pull") as response:
+            if not response.is_success:
+                response.read()
+                _raise_for_domain_error(response)
+            for line in response.iter_lines():
+                event = PullEvent.model_validate_json(line)
+                if event.code:
+                    raise SplatDomainError(
+                        event.detail
+                        if event.code == "domain_error"
+                        else f"server error: {event.detail}"
+                    )
+                if event.pulled:
+                    return
+                if on_progress is not None:
+                    on_progress(event.repo, event.done, event.total)
+        raise SplatDomainError("server closed the pull before it finished")
 
     def models_info(self, name: str) -> ModelInfo:
         response = self._client.get(f"/models/{name}")

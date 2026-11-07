@@ -167,7 +167,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 **`splat mcp`** runs an MCP server over stdio. Tools: `diffuse`, `caption`, `embed`, `segment`, `depth`, `upscale`, `gaussian`, `render` (returns the image), `mesh`, `export`, `info`, `validate`, `models_list`, `models_info`, `models_pull`, `models_rm`, `manifest_list`, `manifest_get`, `manifest_label`, `manifest_delete`.
 
-**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, with no authentication, so bind it only to trusted interfaces. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull`, `GET /version`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
+**`splat http [--host 127.0.0.1:8000]`** serves the same operations over HTTP, with no authentication, so bind it only to trusted interfaces. Routes: `POST /diffuse /caption /embed /segment /depth /upscale /gaussian /render /mesh /export /info /validate`, `GET /models`, `GET|DELETE /models/{name}`, `POST /models/{name}/pull` (streams progress as NDJSON), `GET /version`, `GET /assets/{id}`, `GET /manifests`, `GET|DELETE /manifests/{id}`.
 
 **`SPLAT_URL=http://host:8000`** makes the model-backed stages in the CLI, SDK and MCP server run on that `splat http` server. `render`, `mesh` and `export` always run locally. The client checks the server version once per process: a minor mismatch warns, a major one fails.
 

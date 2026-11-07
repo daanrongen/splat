@@ -1,7 +1,12 @@
+import asyncio
+import json
+import threading
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from splat.domain.errors import SplatDomainError
+from splat.http import models as models_route
 from splat.http.app import app
 
 client = TestClient(app)
@@ -12,7 +17,7 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None) -> Path:
+    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 
@@ -56,3 +61,80 @@ def test_rm_delegates_to_model_source(mocker):
 
     assert response.status_code == 200
     assert len(fake.removed) == 1
+
+
+class ReportingSource(FakeModelSource):
+    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
+        on_progress(50, 100)
+        on_progress(100, 100)
+        return super().pull(model_id)
+
+
+def _events(response) -> list[dict]:
+    return [json.loads(line) for line in response.text.splitlines()]
+
+
+def test_pull_streams_progress_then_pulled(mocker):
+    mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
+
+    response = client.post("/models/depth-pro/pull")
+
+    assert response.status_code == 200
+    assert _events(response) == [
+        {"repo": "apple/DepthPro-hf", "done": 50, "total": 100},
+        {"repo": "apple/DepthPro-hf", "done": 100, "total": 100},
+        {"pulled": "depth-pro"},
+    ]
+
+
+def test_pull_reports_a_domain_error_as_the_last_event(mocker):
+    class FailingSource(FakeModelSource):
+        def pull(self, model_id, *, revision=None, on_progress=None):
+            raise SplatDomainError("repo gated")
+
+    mocker.patch("splat.handlers.models.get_model_source", return_value=FailingSource())
+
+    response = client.post("/models/depth-pro/pull")
+
+    assert _events(response) == [{"code": "domain_error", "detail": "repo gated"}]
+
+
+def test_pull_reports_an_unexpected_error_as_the_last_event(mocker):
+    class BrokenSource(FakeModelSource):
+        def pull(self, model_id, *, revision=None, on_progress=None):
+            raise RuntimeError("boom")
+
+    mocker.patch("splat.handlers.models.get_model_source", return_value=BrokenSource())
+
+    response = client.post("/models/depth-pro/pull")
+
+    assert _events(response) == [{"code": "internal_error", "detail": "RuntimeError: boom"}]
+
+
+def test_closing_the_stream_stops_the_download(mocker):
+    stopped = threading.Event()
+    first_report = threading.Event()
+    resume = threading.Event()
+
+    class SlowSource(FakeModelSource):
+        def pull(self, model_id, *, revision=None, on_progress=None):
+            on_progress(1, 100)
+            first_report.set()
+            resume.wait(5)
+            try:
+                on_progress(2, 100)
+            except Exception:
+                stopped.set()
+                raise
+
+    mocker.patch("splat.handlers.models.get_model_source", return_value=SlowSource())
+
+    async def disconnect_after_first_event():
+        events = models_route._pull_events("depth-pro")
+        await anext(events)
+        await events.aclose()
+
+    asyncio.run(disconnect_after_first_event())
+    resume.set()
+
+    assert stopped.wait(5)
