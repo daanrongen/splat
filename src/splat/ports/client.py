@@ -9,8 +9,9 @@ transmitted and land in the local asset cache. Read-only
 methods return summaries because the HTTP wire schema intentionally exposes
 presentation data, not every internal domain detail.
 
-`splat mesh` and `splat export` aren't part of this contract yet: they call
-their handlers directly, unaffected by SPLAT_URL.
+Every stage that runs a handler is on this contract, so SPLAT_URL redirects
+all of them. `mesh` of a depth map and `export` of a non-cloud asset stay on
+the client over HTTP: the server routes take only a Gaussian cloud.
 
 `splat models prune` is deliberately not on this contract either: it deletes
 weights from whichever machine's disk it runs on, and a route that lets a
@@ -27,7 +28,9 @@ from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
+from splat.handlers.export import ExportRequest, ExportResult
 from splat.handlers.gaussian import GaussianRequest
+from splat.handlers.mesh import MeshRequest
 from splat.handlers.render import RenderRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.upscale import UpscaleRequest
@@ -105,6 +108,10 @@ class SplatClient(Protocol):
     def render(
         self, request: RenderRequest, *, on_progress: Callable[[str], None] | None = None
     ) -> list[Manifest]: ...
+
+    def mesh(self, request: MeshRequest) -> list[Manifest]: ...
+
+    def export(self, request: ExportRequest) -> ExportResult: ...
 
     def info(self, path: Path) -> InfoSummary: ...
 

@@ -6,8 +6,8 @@ from splat.cli._console import console, error
 from splat.cli._pipeline_io import export_output, prepare_output, report, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
-from splat.handlers.mesh import MeshRequest, handle
-from splat.registry.wiring import get_manifest_repository
+from splat.handlers.mesh import MeshRequest
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def mesh(
@@ -46,7 +46,7 @@ def mesh(
     try:
         prepare_output(output)
         inputs = resolve_inputs(input, cache, default_kind=ManifestKind.GAUSSIAN_CLOUD)
-        results = handle(
+        results = get_client().mesh(
             MeshRequest(
                 inputs=inputs,
                 model=model,

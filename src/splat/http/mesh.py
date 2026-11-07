@@ -1,3 +1,6 @@
+import json
+from dataclasses import asdict
+
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
 from splat.domain.manifest import ManifestKind
@@ -11,6 +14,7 @@ router = APIRouter()
 @router.post("/mesh")
 def mesh(
     cloud: UploadFile = File(...),
+    model: str | None = Form(None),
     format: str = Form("glb"),
     resolution: int = Form(192),
     opacity_threshold: float = Form(0.1),
@@ -19,11 +23,18 @@ def mesh(
     with saved_upload(cloud) as path:
         asset = cache.put_external(path, kind=ManifestKind.GAUSSIAN_CLOUD)
     request = MeshRequest(
-        inputs=[asset], format=format, resolution=resolution, opacity_threshold=opacity_threshold
+        inputs=[asset],
+        model=model,
+        format=format,
+        resolution=resolution,
+        opacity_threshold=opacity_threshold,
     )
     result = handle(request)[0]
     return Response(
         content=result.content_path.read_bytes(),
         media_type="application/octet-stream",
-        headers={"X-Splat-Asset-Id": result.id},
+        headers={
+            "X-Splat-Asset-Id": result.id,
+            "X-Splat-Metadata": json.dumps(asdict(result.metadata)),
+        },
     )

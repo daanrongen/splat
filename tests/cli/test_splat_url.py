@@ -166,3 +166,40 @@ def test_local_flag_renders_here_even_when_splat_url_is_set(
 
     local_render.assert_called_once()
     assert server_backend.calls == 0
+
+
+def test_splat_url_meshes_and_exports_on_the_server(
+    mocker, tmp_path, monkeypatch, live_server_url, synthetic_cloud
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    local_mesh = mocker.patch("splat.adapters.client.local.LocalSplatClient.mesh")
+    local_export = mocker.patch("splat.adapters.client.local.LocalSplatClient.export")
+    cloud_path = tmp_path / "cloud.ply"
+    PlyWriter().write(synthetic_cloud, cloud_path)
+    env = {"SPLAT_URL": live_server_url}
+
+    mesh_path = tmp_path / "mesh.glb"
+    meshed = runner.invoke(
+        app,
+        [
+            "mesh",
+            str(cloud_path),
+            "--resolution",
+            "24",
+            "--opacity-threshold",
+            "0",
+            "-o",
+            str(mesh_path),
+        ],
+        env=env,
+    )
+    exported = runner.invoke(
+        app, ["export", str(cloud_path), "-o", str(tmp_path / "cloud.splat")], env=env
+    )
+
+    assert meshed.exit_code == 0, meshed.output
+    assert exported.exit_code == 0, exported.output
+    assert mesh_path.stat().st_size > 0
+    assert (tmp_path / "cloud.splat").stat().st_size > 0
+    local_mesh.assert_not_called()
+    local_export.assert_not_called()

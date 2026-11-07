@@ -1,3 +1,4 @@
+import json
 import tempfile
 from pathlib import Path
 
@@ -37,5 +38,5 @@ def export(
     if result.point_count is not None:
         headers["X-Splat-Point-Count"] = str(result.point_count)
     if result.warnings:
-        headers["X-Splat-Warnings"] = "; ".join(result.warnings)
+        headers["X-Splat-Warnings"] = json.dumps(result.warnings)
     return Response(content=content, media_type="application/octet-stream", headers=headers)

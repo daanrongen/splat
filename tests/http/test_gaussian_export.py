@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from splat.adapters.formats.ply import PlyWriter
@@ -81,3 +83,20 @@ def test_export_without_a_profile_converts_the_cloud(tmp_path, monkeypatch, synt
 
     assert response.status_code == 200, response.text
     assert response.headers["X-Splat-Point-Count"] == str(synthetic_cloud.point_count)
+
+
+def test_export_sends_warnings_as_a_json_list(tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+
+    with ply_path.open("rb") as f:
+        response = client.post(
+            "/export",
+            files={"input": ("in.ply", f, "application/octet-stream")},
+            data={"to": "splat"},
+        )
+
+    warnings = json.loads(response.headers["X-Splat-Warnings"])
+    assert isinstance(warnings, list)
+    assert warnings

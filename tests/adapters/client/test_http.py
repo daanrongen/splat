@@ -10,13 +10,16 @@ from splat.adapters.formats.image import read_rgb_or_rgba
 from splat.adapters.formats.ply import PlyWriter
 from splat.domain.errors import RenderBackendError, SplatDomainError
 from splat.domain.image_space import DepthMap, Sticker
-from splat.domain.manifest import ManifestKind
+from splat.domain.manifest import Manifest, ManifestKind
+from splat.domain.manifest_metadata import DepthMetadata
 from splat.domain.value_objects import CC_BY_NC_SA_4_0, MIT
 from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest
 from splat.handlers.embed import EmbedRequest
+from splat.handlers.export import ExportRequest
 from splat.handlers.gaussian import GaussianRequest
+from splat.handlers.mesh import MeshRequest
 from splat.handlers.render import RenderRequest
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.upscale import UpscaleRequest
@@ -351,6 +354,66 @@ def test_render_surfaces_the_servers_missing_blender_message(
 
     with pytest.raises(SplatDomainError, match="Blender not found"):
         remote_client.render(RenderRequest(inputs=[cloud]))
+
+
+def test_mesh_stores_the_servers_mesh_with_its_counts(
+    tmp_path, monkeypatch, synthetic_cloud, remote_client
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    cloud = _cloud_asset(tmp_path, synthetic_cloud)
+
+    [mesh] = remote_client.mesh(MeshRequest(inputs=[cloud], resolution=24, opacity_threshold=0.0))
+
+    assert mesh.kind == ManifestKind.SHAPE_3D
+    assert mesh.parent_ids == [cloud.id]
+    assert mesh.created_by == "mesh:isosurface"
+    assert mesh.metadata.vertex_count > 0
+    assert mesh.metadata.face_count > 0
+
+
+def test_mesh_of_a_depth_map_points_to_local(remote_client):
+    depth = Manifest(
+        id="depth1",
+        kind=ManifestKind.DEPTH_MAP,
+        content_path=Path("/tmp/depth.npy"),
+        metadata=DepthMetadata(),
+    )
+
+    with pytest.raises(SplatDomainError, match="--local"):
+        remote_client.mesh(MeshRequest(inputs=[depth]))
+
+
+def test_export_writes_the_servers_file_with_a_sidecar(
+    tmp_path, monkeypatch, synthetic_cloud, remote_client
+):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    cloud = _cloud_asset(tmp_path, synthetic_cloud)
+    out = tmp_path / "out.splat"
+
+    result = remote_client.export(ExportRequest(input=cloud, output_path=out))
+
+    assert out.stat().st_size > 0
+    assert (tmp_path / "out.splat.manifest.json").exists()
+    assert result.point_count == synthetic_cloud.point_count
+    assert result.warnings
+
+
+def test_export_of_a_non_cloud_asset_copies_it_without_asking_the_server(tmp_path, monkeypatch):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    image = get_manifest_repository().put_external(_sample_image(tmp_path), kind=ManifestKind.IMAGE)
+
+    def server_must_not_be_called(request):
+        raise AssertionError("export of an image should not reach the server")
+
+    client = RemoteSplatClient("http://splat.test")
+    client._client = httpx.Client(
+        base_url="http://splat.test", transport=httpx.MockTransport(server_must_not_be_called)
+    )
+    out = tmp_path / "copy.png"
+
+    client.export(ExportRequest(input=image, output_path=out))
+
+    assert out.read_bytes() == image.content_path.read_bytes()
 
 
 class ReportingSource:

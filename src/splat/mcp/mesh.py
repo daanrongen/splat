@@ -1,10 +1,10 @@
 import mcp.types as types
 
 from splat.domain.manifest import ManifestKind
-from splat.handlers.mesh import MeshRequest, handle
+from splat.handlers.mesh import MeshRequest
 from splat.mcp._content import resource_content, text_content
 from splat.mcp._inputs import resolve_input_asset
-from splat.registry.wiring import get_manifest_repository
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def mesh(
@@ -25,7 +25,7 @@ def mesh(
         resolution=resolution,
         opacity_threshold=opacity_threshold,
     )
-    result = handle(request)[0]
+    result = get_client().mesh(request)[0]
     mesh = result.metadata
     return [
         text_content(

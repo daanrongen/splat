@@ -25,6 +25,7 @@ from splat.domain.manifest_metadata import (
     DepthMetadata,
     EmbeddingMetadata,
     ManifestMetadata,
+    MeshMetadata,
     RasterMetadata,
     StickerMetadata,
 )
@@ -32,7 +33,10 @@ from splat.handlers.caption import CaptionRequest
 from splat.handlers.depth import DepthRequest
 from splat.handlers.diffuse import DiffuseRequest, DiffuseResult
 from splat.handlers.embed import EmbedRequest
+from splat.handlers.export import ExportRequest, ExportResult
+from splat.handlers.export import handle as handle_export
 from splat.handlers.gaussian import GaussianRequest
+from splat.handlers.mesh import MeshRequest
 from splat.handlers.render import RenderRequest, render_params
 from splat.handlers.segment import SegmentRequest
 from splat.handlers.upscale import UpscaleRequest
@@ -433,6 +437,61 @@ class RemoteSplatClient:
                 )
             )
         return results
+
+    def mesh(self, request: MeshRequest) -> list[Manifest]:
+        results: list[Manifest] = []
+        for asset in request.inputs:
+            if asset.kind != ManifestKind.GAUSSIAN_CLOUD:
+                raise SplatDomainError(
+                    f"mesh of a {asset.kind.value} isn't supported over SPLAT_URL; "
+                    "pass --local to run it here."
+                )
+            files = {"cloud": (asset.content_path.name, asset.content_path.read_bytes())}
+            form = {
+                "format": request.format,
+                "resolution": request.resolution,
+                "opacity_threshold": request.opacity_threshold,
+            }
+            if request.model is not None:
+                form["model"] = request.model
+            response = self._client.post("/mesh", files=files, data=form)
+            _raise_for_domain_error(response)
+            results.append(
+                self._store_asset(
+                    response.headers["X-Splat-Asset-Id"],
+                    kind=ManifestKind.SHAPE_3D,
+                    content=response.content,
+                    ext=request.format,
+                    metadata=MeshMetadata(**json.loads(response.headers["X-Splat-Metadata"])),
+                    params={k: v for k, v in form.items() if k != "model"},
+                    parent_ids=[asset.id],
+                    created_by=f"mesh:{request.model or 'isosurface'}",
+                )
+            )
+        return results
+
+    def export(self, request: ExportRequest) -> ExportResult:
+        asset = request.input
+        if asset.kind != ManifestKind.GAUSSIAN_CLOUD:
+            return handle_export(request)  # a plain file copy, nothing to run on the server
+        files = {"input": (asset.content_path.name, asset.content_path.read_bytes())}
+        form = {"to": request.output_path.suffix.lstrip(".")}
+        optional = {
+            "profile": request.profile,
+            "pruning": request.pruning,
+            "target_count": request.target_count,
+        }
+        form.update({k: v for k, v in optional.items() if v is not None})
+        response = self._client.post("/export", files=files, data=form)
+        _raise_for_domain_error(response)
+        request.output_path.write_bytes(response.content)
+        get_manifest_repository().write_sidecar(asset.id, request.output_path)
+        points = response.headers.get("X-Splat-Point-Count")
+        return ExportResult(
+            path=request.output_path,
+            point_count=int(points) if points is not None else None,
+            warnings=json.loads(response.headers.get("X-Splat-Warnings", "[]")),
+        )
 
     def info(self, path: Path) -> InfoSummary:
         files = {"input": (path.name, path.read_bytes())}

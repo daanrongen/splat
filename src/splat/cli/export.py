@@ -7,8 +7,8 @@ from splat.cli._console import console, error, warn
 from splat.cli._pipeline_io import prepare_output, resolve_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import ManifestKind
-from splat.handlers.export import ExportRequest, handle
-from splat.registry.wiring import get_manifest_repository
+from splat.handlers.export import ExportRequest
+from splat.registry.wiring import get_client, get_manifest_repository
 
 
 def export(
@@ -40,7 +40,7 @@ def export(
         )
         if len(inputs) != 1:
             raise SplatDomainError(f"export writes one asset, got {len(inputs)}.")
-        result = handle(
+        result = get_client().export(
             ExportRequest(
                 input=inputs[0],
                 output_path=output,
