@@ -194,3 +194,14 @@ def test_sdk_exposes_every_request_option(stage):
     options = {f.name for f in dataclasses.fields(request)} - {"inputs"}
 
     assert options <= set(inspect.signature(getattr(splat, stage)).parameters)
+
+
+def test_export_without_a_profile_converts_the_cloud(tmp_path, monkeypatch, synthetic_cloud):
+    from splat.adapters.formats.ply import PlyWriter
+
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    PlyWriter().write(synthetic_cloud, tmp_path / "in.ply")
+
+    result = splat.export(tmp_path / "in.ply", tmp_path / "out.splat")
+
+    assert result.point_count == synthetic_cloud.point_count

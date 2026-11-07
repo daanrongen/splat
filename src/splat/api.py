@@ -260,7 +260,7 @@ def export(
     output_path: str | Path,
     *,
     profile: str | None = None,
-    pruning: str = "threshold",
+    pruning: str | None = None,
     target_count: int | None = None,
 ) -> ExportResult:
     from splat.handlers.export import ExportRequest

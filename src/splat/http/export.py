@@ -16,7 +16,7 @@ def export(
     input: UploadFile = File(...),
     to: str = Form(...),
     profile: str | None = Form(None),
-    pruning: str = Form("threshold"),
+    pruning: str | None = Form(None),
     target_count: int | None = Form(None),
 ) -> Response:
     with saved_upload(input) as path:

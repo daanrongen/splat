@@ -65,3 +65,19 @@ def test_export_converts_and_compresses(tmp_path, monkeypatch, synthetic_cloud):
     assert response.status_code == 200, response.text
     assert len(response.content) > 0
     assert "X-Splat-Point-Count" in response.headers
+
+
+def test_export_without_a_profile_converts_the_cloud(tmp_path, monkeypatch, synthetic_cloud):
+    monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "cache"))
+    ply_path = tmp_path / "in.ply"
+    PlyWriter().write(synthetic_cloud, ply_path)
+
+    with ply_path.open("rb") as f:
+        response = client.post(
+            "/export",
+            files={"input": ("in.ply", f, "application/octet-stream")},
+            data={"to": "splat"},
+        )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["X-Splat-Point-Count"] == str(synthetic_cloud.point_count)

@@ -10,7 +10,7 @@ def export(
     input: str,
     output_path: str,
     profile: str | None = None,
-    pruning: str = "threshold",
+    pruning: str | None = None,
     target_count: int | None = None,
 ) -> dict:
     """Write an asset (path or @<asset-id>) to output_path in the format of its extension,
