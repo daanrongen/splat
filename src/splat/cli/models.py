@@ -1,7 +1,20 @@
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+
 import typer
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TaskID,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 
 from splat.cli import _table as table
-from splat.cli._console import console, error, warn
+from splat.cli._console import console, err_console, error, warn
 from splat.domain.errors import SplatDomainError
 from splat.registry.wiring import get_client
 
@@ -31,11 +44,38 @@ def list_models() -> None:
     )
 
 
+@contextmanager
+def _pull_progress() -> Iterator[Callable[[str, int, int], None] | None]:
+    """One bar per repo on stderr, gone once the pull ends; none when stderr isn't a terminal."""
+    if not err_console.is_terminal:
+        yield None
+        return
+
+    tasks: dict[str, TaskID] = {}
+    columns = (
+        TextColumn("[dim]{task.description}[/dim]"),
+        BarColumn(),
+        TaskProgressColumn(),
+        DownloadColumn(),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+    )
+    with Progress(*columns, console=err_console, transient=True) as progress:
+
+        def on_progress(repo_id: str, done: int, total: int) -> None:
+            if repo_id not in tasks:
+                tasks[repo_id] = progress.add_task(repo_id, total=total)
+            progress.update(tasks[repo_id], total=total, completed=done)
+
+        yield on_progress
+
+
 @models_app.command("pull")
 def pull(name: str = typer.Argument(...)) -> None:
     """Download a model's weights from HuggingFace Hub."""
     try:
-        get_client().models_pull(name)
+        with _pull_progress() as on_progress:
+            get_client().models_pull(name, on_progress=on_progress)
     except SplatDomainError as exc:
         error(str(exc))
         raise typer.Exit(code=1) from exc
