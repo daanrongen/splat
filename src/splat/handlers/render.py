@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from splat.application.pipeline import run_render
 from splat.domain.contracts import validate_inputs
+from splat.domain.errors import RenderBackendError
 from splat.domain.manifest import Manifest
 from splat.registry.render import RENDER_CONTRACT
 from splat.registry.wiring import get_manifest_repository, get_render_backend
@@ -24,6 +25,13 @@ class RenderRequest:
     fov: float | None = None
     look_at: str | None = None
     view: int | None = None
+
+
+def locate(model: str = "blender") -> str | None:
+    try:
+        return get_render_backend(model).locate()
+    except RenderBackendError:
+        return None
 
 
 def render_params(request: RenderRequest) -> dict:

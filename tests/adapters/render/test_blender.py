@@ -320,3 +320,18 @@ def test_render_works_without_a_progress_callback(monkeypatch, tmp_path, synthet
     BlenderBackend().render(synthetic_cloud, tmp_path / "render.png")
 
     assert (tmp_path / "render.png").read_bytes() == b"fake png"
+
+
+def test_locate_returns_the_resolved_blender(monkeypatch):
+    monkeypatch.delenv("SPLAT_BLENDER_BIN", raising=False)
+    monkeypatch.setattr("shutil.which", lambda name: "/path/blender")
+
+    assert BlenderBackend().locate() == "/path/blender"
+
+
+def test_locate_raises_when_blender_is_missing(monkeypatch):
+    monkeypatch.delenv("SPLAT_BLENDER_BIN", raising=False)
+    monkeypatch.setattr("shutil.which", lambda name: None)
+
+    with pytest.raises(RenderBackendError):
+        BlenderBackend().locate()

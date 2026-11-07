@@ -221,6 +221,9 @@ def _timeout_message(timeout: float | None) -> str:
 class BlenderBackend:
     name = "blender"
 
+    def locate(self) -> str:
+        return _resolve_blender_bin(None)
+
     def render(
         self,
         cloud: GaussianCloud,

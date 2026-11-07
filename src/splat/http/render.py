@@ -1,11 +1,16 @@
 from fastapi import APIRouter, File, Form, Response, UploadFile
 
 from splat.domain.manifest import ManifestKind
-from splat.handlers.render import RenderRequest, handle
+from splat.handlers.render import RenderRequest, handle, locate
 from splat.http._files import saved_upload
 from splat.registry.wiring import get_manifest_repository
 
 router = APIRouter()
+
+
+@router.get("/render/blender")
+def blender() -> dict:
+    return {"path": locate()}
 
 
 @router.post("/render")

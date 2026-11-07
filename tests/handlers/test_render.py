@@ -3,9 +3,9 @@ import pytest
 
 from splat.adapters.formats.image import encode_png
 from splat.adapters.formats.ply import PlyWriter
-from splat.domain.errors import SplatDomainError
+from splat.domain.errors import RenderBackendError, SplatDomainError
 from splat.domain.manifest import ManifestKind
-from splat.handlers.render import RenderRequest, handle, render_params
+from splat.handlers.render import RenderRequest, handle, locate, render_params
 from splat.registry.wiring import get_manifest_repository
 from tests.image_helpers import write_sample_png
 
@@ -77,3 +77,19 @@ def test_handle_rejects_non_gaussian_input(mocker, tmp_path, monkeypatch, synthe
 def test_render_params_leave_out_view_unless_it_is_set():
     assert "view" not in render_params(RenderRequest(inputs=[]))
     assert render_params(RenderRequest(inputs=[], view=2))["view"] == 2
+
+
+def test_locate_returns_the_backends_executable(mocker):
+    backend = mocker.Mock()
+    backend.locate.return_value = "/path/blender"
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
+
+    assert locate() == "/path/blender"
+
+
+def test_locate_is_none_when_the_backend_is_missing(mocker):
+    backend = mocker.Mock()
+    backend.locate.side_effect = RenderBackendError("no blender")
+    mocker.patch("splat.handlers.render.get_render_backend", return_value=backend)
+
+    assert locate() is None

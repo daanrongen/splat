@@ -50,3 +50,15 @@ def test_render_forwards_the_model_to_the_backend(mocker, tmp_path, monkeypatch,
     )
 
     get_backend.assert_called_once_with("fake-render")
+
+
+def test_blender_route_reports_the_servers_executable(mocker):
+    mocker.patch("splat.http.render.locate", return_value="/path/blender")
+
+    assert client.get("/render/blender").json() == {"path": "/path/blender"}
+
+
+def test_blender_route_reports_null_when_it_is_missing(mocker):
+    mocker.patch("splat.http.render.locate", return_value=None)
+
+    assert client.get("/render/blender").json() == {"path": None}
