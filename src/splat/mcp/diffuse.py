@@ -10,7 +10,7 @@ from splat.registry.wiring import get_client, get_manifest_repository
 def diffuse(
     prompt: str,
     image: str | None = None,
-    model: str = "sdxl-turbo-mlx",
+    model: str = "sd15-coreml",
     negative_prompt: str = "",
     steps: int | None = None,
     strength: float | None = None,

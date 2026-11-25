@@ -46,7 +46,7 @@ def diffuse(
     prompt: str,
     image: ManifestLike | None = None,
     *,
-    model: str = "sdxl-turbo-mlx",
+    model: str = "sd15-coreml",
     negative_prompt: str = "",
     steps: int | None = None,
     strength: float | None = None,

@@ -13,7 +13,7 @@ from splat.domain.manifest import Manifest
 
 class DiffuseBody(BaseModel):
     prompt: str
-    model: str = "sdxl-turbo-mlx"
+    model: str = "sd15-coreml"
     negative_prompt: str = ""
     steps: int | None = None
     strength: float | None = None

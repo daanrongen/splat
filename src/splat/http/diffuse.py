@@ -12,7 +12,7 @@ router = APIRouter()
 def diffuse(
     prompt: str = Form(...),
     image: UploadFile | None = File(None),
-    model: str = Form("sdxl-turbo-mlx"),
+    model: str = Form("sd15-coreml"),
     negative_prompt: str = Form(""),
     steps: int | None = Form(None),
     strength: float | None = Form(None),
