@@ -1,9 +1,9 @@
 from collections.abc import Callable
-from typing import Any
 
 from splat.application.models_admin import (
     ListModelsUseCase,
     ModelInfoUseCase,
+    ModelStatus,
     OrphanedWeights,
     PruneModelsUseCase,
     PullModelUseCase,
@@ -12,7 +12,7 @@ from splat.application.models_admin import (
 from splat.registry.wiring import get_model_source
 
 
-def list_models() -> list[tuple[Any, bool]]:
+def list_models() -> list[ModelStatus]:
     return ListModelsUseCase(get_model_source()).execute()
 
 
@@ -20,7 +20,7 @@ def pull(name: str, *, on_progress: Callable[[str, int, int], None] | None = Non
     PullModelUseCase(get_model_source()).execute(name, on_progress)
 
 
-def info(name: str) -> Any:
+def info(name: str):
     return ModelInfoUseCase().execute(name)
 
 

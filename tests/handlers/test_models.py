@@ -27,6 +27,9 @@ class FakeModelSource:
     def list_cached(self) -> list[str]:
         return self.pulled
 
+    def size_on_disk(self, model_id: str) -> int:
+        return 0
+
 
 def test_list_models_reports_cached_flag(mocker):
     fake = FakeModelSource()
@@ -35,7 +38,7 @@ def test_list_models_reports_cached_flag(mocker):
     rows = models_handler.list_models()
 
     assert len(rows) > 0
-    assert all(isinstance(cached, bool) for _, cached in rows)
+    assert all(isinstance(row.cached, bool) for row in rows)
 
 
 def test_pull_delegates_to_model_source(mocker):

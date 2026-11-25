@@ -48,21 +48,59 @@ def _lookup(name: str) -> ModelDescriptor:
     return lookup(_all_catalogs(), name)
 
 
+@dataclass(frozen=True)
+class ModelStatus:
+    name: str
+    stage: str
+    runtime: str
+    license: str  # SPDX id only; `commercial` says whether use is restricted
+    commercial: bool
+    cached: bool
+    size_bytes: int
+    managed: bool = True
+
+
 class ListModelsUseCase:
+    """The catalog with what is installed and how big it is, then every store directory
+    no catalog entry uses."""
+
     def __init__(self, model_source: ModelSource) -> None:
         self._model_source = model_source
 
-    def execute(self) -> list[tuple[ModelDescriptor, bool]]:
-        return [
-            (
-                descriptor,
-                all(
-                    self._model_source.is_cached(source, descriptor.files(source))
-                    for source in descriptor.hf_repo_ids
-                ),
+    def _catalog_row(self, descriptor: ModelDescriptor) -> ModelStatus:
+        source = self._model_source
+        return ModelStatus(
+            name=descriptor.name,
+            stage=model_stage(descriptor.name),
+            runtime=descriptor.runtime,
+            license=descriptor.license.spdx_id,
+            commercial=descriptor.license.is_commercial,
+            cached=all(
+                source.is_cached(repo, descriptor.files(repo)) for repo in descriptor.hf_repo_ids
+            ),
+            size_bytes=sum(source.size_on_disk(repo) for repo in descriptor.hf_repo_ids),
+        )
+
+    def execute(self) -> list[ModelStatus]:
+        catalog = [self._catalog_row(descriptor) for descriptor in _all_catalogs().values()]
+        wanted = {
+            repo for descriptor in _all_catalogs().values() for repo in descriptor.hf_repo_ids
+        }
+        unmanaged = [
+            ModelStatus(
+                name=name,
+                stage="-",
+                runtime="-",
+                license="-",
+                commercial=True,
+                cached=True,
+                size_bytes=self._model_source.size_on_disk(name),
+                managed=False,
             )
-            for descriptor in _all_catalogs().values()
+            for name in self._model_source.list_cached()
+            if name not in wanted
         ]
+        return catalog + unmanaged
 
 
 def _for_repo(

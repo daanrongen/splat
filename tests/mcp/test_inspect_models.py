@@ -29,6 +29,9 @@ class FakeModelSource:
     def list_cached(self) -> list[str]:
         return self.pulled
 
+    def size_on_disk(self, model_id: str) -> int:
+        return 0
+
 
 def test_info_reports_point_count(tmp_path, synthetic_cloud, call_tool):
     ply_path = tmp_path / "a.ply"

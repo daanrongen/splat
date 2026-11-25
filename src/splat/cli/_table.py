@@ -21,6 +21,7 @@ def render(
     rows: Iterable[Sequence[str]],
     *,
     flex: int | None = None,
+    keep: Sequence[int] = (),
     ellipsis: int | None = None,
     group_by: int | None = None,
     title: str | None = None,
@@ -29,6 +30,8 @@ def render(
     """`flex` names the column that absorbs the leftover width, so the others
     keep their natural size instead of every column shrinking proportionally
     and wrapping the short identifiers you actually type.
+
+    `keep` names columns that never fold, for identifiers you type or copy.
 
     `ellipsis` names a free-text column cut with `…` to the width the other
     columns leave over, so a long prompt stays on one line instead of
@@ -52,7 +55,9 @@ def render(
     for index, column in enumerate(columns):
         if index == group_by:
             continue
-        table.add_column(column, overflow="fold", ratio=1 if index == flex else None)
+        table.add_column(
+            column, overflow="fold", ratio=1 if index == flex else None, no_wrap=index in keep
+        )
     width = len(columns) - (1 if group_by is not None else 0)
     previous = None
     for row in rows:

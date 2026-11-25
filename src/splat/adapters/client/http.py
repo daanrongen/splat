@@ -523,17 +523,7 @@ class RemoteSplatClient:
         response = self._client.get("/models")
         _raise_for_domain_error(response)
         rows = [WireModelSummary.model_validate(item) for item in response.json()]
-        return [
-            ModelSummary(
-                name=r.name,
-                stage=r.stage,
-                runtime=r.runtime,
-                license=r.license,
-                commercial=r.commercial,
-                cached=r.cached,
-            )
-            for r in rows
-        ]
+        return [ModelSummary(**row.model_dump()) for row in rows]
 
     def models_pull(
         self, name: str, *, on_progress: Callable[[str, int, int], None] | None = None
