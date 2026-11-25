@@ -26,7 +26,9 @@ def test_list_shows_the_size_of_an_installed_model(mocker):
 
 
 def test_list_shows_a_dash_for_a_model_that_is_not_installed(mocker):
-    row = ModelSummary("depth-pro", "depth", "torch", "Apple-ASCL", False, False, 0)
+    row = ModelSummary(
+        "sdxl-turbo-mlx", "diffuse", "mlx", "StabilityAI-NC-Community", False, False, 0
+    )
 
     output = _list(mocker, row)
 
@@ -50,3 +52,27 @@ def test_list_shows_a_dash_for_a_model_without_weights(mocker):
     row = ModelSummary("mlx3d-capture", "gaussian", "mlx", "MIT", True, True, 0)
 
     assert "0.0 B" not in _list(mocker, row)
+
+
+def test_list_marks_an_installed_model(mocker):
+    row = ModelSummary("sd15-coreml", "diffuse", "coreml", "OpenRAIL-M", True, True, 911_000_000)
+
+    assert "installed" in _list(mocker, row)
+
+
+def test_list_marks_a_model_that_is_not_installed(mocker):
+    row = ModelSummary("sdxl-turbo-mlx", "diffuse", "mlx", "SAI", False, False, 0)
+
+    assert "not installed" in _list(mocker, row)
+
+
+def test_list_marks_a_model_that_needs_no_weights(mocker):
+    row = ModelSummary("mlx3d-capture", "gaussian", "mlx", "MIT", True, True, 0)
+
+    assert "no weights" in _list(mocker, row)
+
+
+def test_list_marks_an_unmanaged_directory(mocker):
+    row = ModelSummary("mlx-sam", "-", "-", "-", True, True, 358_000_000, managed=False)
+
+    assert "unmanaged" in _list(mocker, row)

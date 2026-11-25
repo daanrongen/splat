@@ -23,25 +23,36 @@ models_app = typer.Typer(help="Manage locally cached model weights.", no_args_is
 
 @models_app.command("list")
 def list_models() -> None:
-    """List catalog models, the stage each serves, and how much disk they use."""
+    """List catalog models with what is installed, then directories no model uses."""
     rows = get_client().models_list()
     # license last: it is the widest and least scanned column, so it wraps at
     # the right edge instead of pushing the names around.
     table.render(
-        ("model", "for", "runtime", "size", "license"),
+        ("model", "for", "runtime", "status", "size", "license"),
         (_row(row) for row in rows),
-        flex=4,
+        flex=5,
         keep=(0,),
-        caption="red = research use only, yellow = not in the catalog (`models prune` removes it)",
+        caption=(
+            "`splat models pull NAME` installs a model, `models prune` removes yellow rows; "
+            "red = research use only"
+        ),
     )
+
+
+def _status(row) -> str:
+    if not row.managed:
+        return "[yellow]unmanaged[/yellow]"
+    if not row.size_bytes and row.cached:
+        return "[dim]no weights[/dim]"
+    return "[green]installed[/green]" if row.cached else "not installed"
 
 
 def _row(row) -> tuple[str, ...]:
     size = _human_bytes(row.size_bytes) if row.size_bytes else "[dim]-[/dim]"
     if not row.managed:
-        return (f"[yellow]{row.name}[/yellow]", "-", "-", size, "-")
+        return (f"[yellow]{row.name}[/yellow]", "-", "-", _status(row), size, "-")
     license = row.license if row.commercial else f"[red]{row.license}[/red]"
-    return (row.name, row.stage, row.runtime, size, license)
+    return (row.name, row.stage, row.runtime, _status(row), size, license)
 
 
 @contextmanager
