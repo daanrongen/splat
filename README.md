@@ -158,8 +158,8 @@ Every model is one directory of real files at `$SPLAT_MODEL_CACHE_DIR/<org>--<na
 | `diffuse` | `sd21-coreml` | Core ML | OpenRAIL-M |
 | `caption` | `fastvlm-0.5b` | torch | Apple ML Research (research only) |
 | `embed` | `mobileclip2-s0` | torch | Apple ML Research (research only) |
-| `segment` | `sam2-coreml` | CoreML | Apache-2.0 |
 | `segment` | `sam2-coreml` | Core ML | Apache-2.0 |
+| `segment` | `sam-mlx` | MLX | Apache-2.0 |
 | `depth` | `depth-pro-2` | torch | Apple AMLR (research only) |
 | `depth` | `depth-anything-v2-coreml` | Core ML | Apache-2.0 (relative disparity) |
 | `upscale` | `realesrgan-mlx` | MLX | BSD-3-Clause |
