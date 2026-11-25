@@ -15,14 +15,12 @@ from pathlib import Path
 
 import coremltools as ct
 import numpy as np
-from huggingface_hub import snapshot_download
 from PIL import Image
 
 from splat.adapters.formats.image import read_rgb, resize
 from splat.domain.errors import SplatDomainError
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
-from splat.paths import model_cache_dir
 
 _INPUT_SIZE = (1024, 1024)  # (W, H), fixed by Apple's conversion
 
@@ -69,8 +67,10 @@ def _build_point_grid(points_per_side: int, width: int, height: int) -> np.ndarr
 class CoreMLSam2Backend:
     name = "coreml-sam2"
 
-    def __init__(self, *, hf_repo_id: str, license: ModelLicense, device: str = "auto") -> None:
-        self._hf_repo_id = hf_repo_id
+    def __init__(
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
+    ) -> None:
+        (self._weights_path,) = weights_paths
         self.license = license
         self._compute_unit = (
             ct.ComputeUnit.CPU_ONLY if device == "cpu" else ct.ComputeUnit.CPU_AND_GPU
@@ -79,21 +79,10 @@ class CoreMLSam2Backend:
         self._prompt_encoder = None
         self._mask_decoder = None
 
-    def _weights_dir(self) -> Path:
-        target = model_cache_dir() / "coreml-sam2" / self._hf_repo_id.replace("/", "--")
-        # local_dir= materializes real files (reusing already-downloaded blobs via
-        # hardlink, no re-fetch) instead of the default symlinked cache — the
-        # CoreML compiler cannot stage a symlinked weight.bin during compilation.
-        if not any(target.glob("*.mlpackage")):
-            snapshot_download(
-                repo_id=self._hf_repo_id, local_dir=target, allow_patterns=["*.mlpackage/**"]
-            )
-        return target
-
     def _load(self) -> None:
         if self._image_encoder is not None:
             return
-        packages = sorted((self._weights_dir()).glob("*.mlpackage"))
+        packages = sorted(self._weights_path.glob("*.mlpackage"))
         by_role = {}
         for package in packages:
             if "ImageEncoder" in package.name:

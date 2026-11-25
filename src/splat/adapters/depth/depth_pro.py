@@ -13,6 +13,7 @@ from transformers import DepthProForDepthEstimation, DepthProImageProcessor
 from splat.adapters.formats.image import read_rgb
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import ModelLicense
+from splat.paths import repo_id
 
 
 def _resolve_device(device: str) -> str:
@@ -26,8 +27,10 @@ def _resolve_device(device: str) -> str:
 class DepthProBackend:
     name = "depth-pro"
 
-    def __init__(self, *, hf_repo_id: str, license: ModelLicense, device: str = "auto") -> None:
-        self._hf_repo_id = hf_repo_id
+    def __init__(
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
+    ) -> None:
+        (self._weights_path,) = weights_paths
         self.license = license
         self._device = _resolve_device(device)
         self._model: DepthProForDepthEstimation | None = None
@@ -35,8 +38,8 @@ class DepthProBackend:
 
     def _load(self) -> None:
         if self._model is None:
-            self._processor = DepthProImageProcessor.from_pretrained(self._hf_repo_id)
-            self._model = DepthProForDepthEstimation.from_pretrained(self._hf_repo_id).to(
+            self._processor = DepthProImageProcessor.from_pretrained(str(self._weights_path))
+            self._model = DepthProForDepthEstimation.from_pretrained(str(self._weights_path)).to(
                 self._device
             )
             self._model.eval()
@@ -61,5 +64,5 @@ class DepthProBackend:
             depth=depth,
             focal_length_px=float(focal_length) if focal_length is not None else None,
             field_of_view_deg=float(field_of_view) if field_of_view is not None else None,
-            metadata={"source_model": self._hf_repo_id, "device": self._device},
+            metadata={"source_model": repo_id(self._weights_path), "device": self._device},
         )

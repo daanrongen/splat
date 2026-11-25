@@ -13,47 +13,34 @@ from pathlib import Path
 
 import coremltools as ct
 import numpy as np
-from huggingface_hub import snapshot_download
 from PIL import Image
 
 from splat.adapters.formats.image import read_rgb
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import ModelLicense
-from splat.paths import model_cache_dir
+from splat.paths import repo_id
 
 _INPUT_SIZE = (518, 392)  # (W, H), fixed by Apple's conversion
+_PACKAGE = "DepthAnythingV2SmallF16.mlpackage"
 
 
 class CoreMLDepthAnythingV2Backend:
     name = "depth-anything-v2-coreml"
 
-    def __init__(self, *, hf_repo_id: str, license: ModelLicense, device: str = "auto") -> None:
-        self._hf_repo_id = hf_repo_id
+    def __init__(
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
+    ) -> None:
+        (self._weights_path,) = weights_paths
         self.license = license
         self._compute_unit = (
             ct.ComputeUnit.CPU_ONLY if device == "cpu" else ct.ComputeUnit.CPU_AND_GPU
         )
         self._model: ct.models.MLModel | None = None
 
-    def _weights_dir(self) -> Path:
-        target = (
-            model_cache_dir() / "coreml-depth-anything-v2" / self._hf_repo_id.replace("/", "--")
-        )
-        # local_dir= materializes real files (reusing already-downloaded blobs via
-        # hardlink, no re-fetch) instead of the default symlinked cache — the
-        # CoreML compiler cannot stage a symlinked weight.bin during compilation.
-        if not any(target.glob("*.mlpackage")):
-            snapshot_download(
-                repo_id=self._hf_repo_id,
-                local_dir=target,
-                allow_patterns=["DepthAnythingV2SmallF16.mlpackage/**"],
-            )
-        return target
-
     def _load(self) -> None:
         if self._model is not None:
             return
-        package = next(self._weights_dir().glob("*.mlpackage"))
+        package = self._weights_path / _PACKAGE
         self._model = ct.models.MLModel(str(package), compute_units=self._compute_unit)
 
     def estimate(self, image_path: Path, **params) -> DepthMap:
@@ -71,5 +58,5 @@ class CoreMLDepthAnythingV2Backend:
             focal_length_px=None,
             field_of_view_deg=None,
             units="disparity",
-            metadata={"source_model": self._hf_repo_id},
+            metadata={"source_model": repo_id(self._weights_path)},
         )

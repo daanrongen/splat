@@ -24,8 +24,10 @@ def _resolve_device(device: str) -> str:
 class MobileCLIPOpenCLIPBackend:
     name = "mobileclip2-s0"
 
-    def __init__(self, *, hf_repo_id: str, license: ModelLicense, device: str = "auto") -> None:
-        self._hf_repo_id = hf_repo_id
+    def __init__(
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
+    ) -> None:
+        (self._weights_path,) = weights_paths
         self.license = license
         self._device = _resolve_device(device)
         self._model: Any | None = None
@@ -39,7 +41,7 @@ class MobileCLIPOpenCLIPBackend:
         import open_clip
         from timm.utils import reparameterize_model
 
-        model_name = f"hf-hub:{self._hf_repo_id}"
+        model_name = f"local-dir:{self._weights_path}"
         model, _, preprocess = open_clip.create_model_and_transforms(model_name)
         model.eval()
         with suppress(Exception):

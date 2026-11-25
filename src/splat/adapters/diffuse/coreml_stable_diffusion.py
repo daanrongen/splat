@@ -16,13 +16,11 @@ from pathlib import Path
 
 import coremltools as ct
 import numpy as np
-from huggingface_hub import snapshot_download
 
 from splat.adapters.diffuse._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
 from splat.adapters.formats.image import resize, write_png
 from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import ModelLicense
-from splat.paths import model_cache_dir
 
 _SUBFOLDER = "original/packages"
 _TOKENIZER_SUBFOLDER = "original/compiled"
@@ -31,7 +29,6 @@ _BETA_START, _BETA_END, _NUM_TRAIN_STEPS = 0.00085, 0.012, 1000
 _MAX_TOKENS = 77
 _SIZE = 512
 _DEFAULT_STRENGTH = 0.7
-_COMPONENTS = ["text_encoder", "unet", "vae_decoder", "vae_encoder"]
 
 
 def _scaled_linear_sigmas() -> np.ndarray:
@@ -60,7 +57,7 @@ class CoreMLStableDiffusionBackend:
     def __init__(
         self,
         *,
-        hf_repo_id: str,
+        weights_paths: tuple[Path, ...],
         package_prefix: str,
         sdxl: bool,
         license: ModelLicense,
@@ -68,7 +65,7 @@ class CoreMLStableDiffusionBackend:
     ) -> None:
         if sdxl:
             raise NotImplementedError("CoreMLStableDiffusionBackend only supports SD 1.x and 2.x.")
-        self._hf_repo_id = hf_repo_id
+        (self._weights_path,) = weights_paths
         self._package_prefix = package_prefix
         self.license = license
         self._compute_unit = (
@@ -83,31 +80,11 @@ class CoreMLStableDiffusionBackend:
     def _package_path(self, component: str) -> str:
         return f"{_SUBFOLDER}/{self._package_prefix}_{component}.mlpackage"
 
-    def _local_dir(self) -> Path:
-        return model_cache_dir() / "coreml-stable-diffusion" / self._hf_repo_id.replace("/", "--")
-
     def _load(self) -> None:
         if self._unet is not None:
             return
 
-        components = _COMPONENTS
-        local_dir = self._local_dir()
-        have_tokenizer = (local_dir / _TOKENIZER_SUBFOLDER / "vocab.json").exists()
-        have_packages = all((local_dir / self._package_path(c)).exists() for c in components)
-        if not (have_tokenizer and have_packages):
-            # local_dir= materializes real files (reusing already-downloaded blobs via
-            # hardlink, no re-fetch) instead of the default symlinked cache — the
-            # CoreML compiler cannot stage a symlinked weight.bin during compilation.
-            snapshot_download(
-                self._hf_repo_id,
-                local_dir=local_dir,
-                allow_patterns=[
-                    f"{_TOKENIZER_SUBFOLDER}/vocab.json",
-                    f"{_TOKENIZER_SUBFOLDER}/merges.txt",
-                    *[f"{self._package_path(c)}/**" for c in components],
-                ],
-            )
-
+        local_dir = self._weights_path
         vocab = json.loads((local_dir / _TOKENIZER_SUBFOLDER / "vocab.json").read_text())
         merges_text = (local_dir / _TOKENIZER_SUBFOLDER / "merges.txt").read_text()
         bpe_merges = merges_text.strip().split("\n")[1 : 49152 - 256 - 2 + 1]

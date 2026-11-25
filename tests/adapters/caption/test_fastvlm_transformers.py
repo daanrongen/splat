@@ -1,5 +1,6 @@
 import sys
 import types
+from pathlib import Path
 
 import torch
 
@@ -51,7 +52,7 @@ class FakeModel:
 
     @classmethod
     def from_pretrained(cls, repo_id, *, torch_dtype, trust_remote_code):
-        assert repo_id == "apple/FastVLM-0.5B"
+        assert repo_id == "/models/apple--FastVLM-0.5B"
         assert torch_dtype == torch.float32
         assert trust_remote_code is True
         return cls()
@@ -83,7 +84,7 @@ def test_fastvlm_transformers_backend_generates_caption(monkeypatch, tmp_path):
 
     image_path = write_sample_png(tmp_path / "scene.png", (2, 2))
     backend = FastVLMTransformersBackend(
-        hf_repo_id="apple/FastVLM-0.5B", license=APPLE_AMLR, device="cpu"
+        weights_paths=(Path("/models/apple--FastVLM-0.5B"),), license=APPLE_AMLR, device="cpu"
     )
 
     result = backend.caption(

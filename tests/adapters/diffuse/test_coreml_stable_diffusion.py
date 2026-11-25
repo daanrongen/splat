@@ -1,5 +1,5 @@
 import json
-import shutil
+from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
@@ -19,9 +19,11 @@ _COMPONENTS = ["text_encoder", "unet", "vae_decoder", "vae_encoder"]
 
 class FakeMLModel:
     calls: ClassVar[list[tuple[str, dict]]] = []
+    paths: ClassVar[list[str]] = []
 
     def __init__(self, path, compute_units=None) -> None:
         self.path = path
+        FakeMLModel.paths.append(path)
 
     def predict(self, inputs):
         name = next(c for c in _COMPONENTS if self.path.endswith(f"_{c}.mlpackage"))
@@ -54,52 +56,37 @@ def _write_packages(local_dir):
 
 
 def _make_backend(mocker, tmp_path):
-    mocker.patch(
-        "splat.adapters.diffuse.coreml_stable_diffusion.model_cache_dir",
-        return_value=tmp_path,
-    )
     mocker.patch("splat.adapters.diffuse.coreml_stable_diffusion.ct.models.MLModel", FakeMLModel)
     FakeMLModel.calls = []
+    FakeMLModel.paths = []
     backend = CoreMLStableDiffusionBackend(
-        hf_repo_id="apple/coreml-stable-diffusion-v1-5-palettized",
+        weights_paths=(tmp_path,),
         package_prefix=_PREFIX,
         sdxl=False,
         license=APPLE_ASCL,
     )
-    local_dir = backend._local_dir()
-    _write_tokenizer_files(local_dir)
-    _write_packages(local_dir)
+    _write_tokenizer_files(tmp_path)
+    _write_packages(tmp_path)
     return backend
 
 
-def test_load_skips_download_when_files_present(mocker, tmp_path):
+def test_load_opens_the_four_packages_from_the_weights_path(mocker, tmp_path):
     backend = _make_backend(mocker, tmp_path)
-    mock_download = mocker.patch("splat.adapters.diffuse.coreml_stable_diffusion.snapshot_download")
 
     backend._load()
 
-    mock_download.assert_not_called()
-    assert backend._unet is not None
+    assert [Path(m).name for m in FakeMLModel.paths] == [
+        f"{_PREFIX}_{c}.mlpackage" for c in _COMPONENTS
+    ]
 
 
-def test_load_downloads_when_files_missing(mocker, tmp_path):
+def test_load_only_opens_the_packages_once(mocker, tmp_path):
     backend = _make_backend(mocker, tmp_path)
-    local_dir = backend._local_dir()
-    shutil.rmtree(local_dir)
-
-    def _fake_download(*args, **kwargs):
-        _write_tokenizer_files(local_dir)
-        _write_packages(local_dir)
-
-    mock_download = mocker.patch(
-        "splat.adapters.diffuse.coreml_stable_diffusion.snapshot_download",
-        side_effect=_fake_download,
-    )
 
     backend._load()
+    backend._load()
 
-    mock_download.assert_called_once()
-    assert backend._unet is not None
+    assert len(FakeMLModel.paths) == 4
 
 
 def _names():
@@ -147,23 +134,3 @@ def test_diffuse_rejects_non_default_resolution(mocker, tmp_path):
 
     with pytest.raises(SplatDomainError, match="fixed 512x512"):
         backend.diffuse("a", output_path=tmp_path / "out.png", width=768)
-
-
-def test_load_only_downloads_once_per_process(mocker, tmp_path):
-    backend = _make_backend(mocker, tmp_path)
-    local_dir = backend._local_dir()
-    shutil.rmtree(local_dir)
-
-    def _fake_download(*args, **kwargs):
-        _write_tokenizer_files(local_dir)
-        _write_packages(local_dir)
-
-    mock_download = mocker.patch(
-        "splat.adapters.diffuse.coreml_stable_diffusion.snapshot_download",
-        side_effect=_fake_download,
-    )
-
-    backend._load()
-    backend._load()
-
-    mock_download.assert_called_once()

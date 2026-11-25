@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -7,8 +8,8 @@ from splat.adapters.depth.depth_pro_2 import DepthPro2Backend, _resolve_device
 from splat.domain.value_objects import APPLE_AMLR
 from tests.image_helpers import write_sample_png
 
-H = "apple/DepthPro2-H"
-FOCAL = "apple/DepthPro2-focal"
+H = Path("models/apple--DepthPro2-H")
+FOCAL = Path("models/apple--DepthPro2-focal")
 
 
 class FakeFov:
@@ -44,13 +45,12 @@ class FakeModel:
 def _patch_runtime(mocker, model):
     from_pretrained = mocker.patch("depth_pro_2.DepthPro2.from_pretrained", return_value=model)
     mocker.patch("depth_pro_2.network.fov.FOVEstimator", FakeFov)
-    download = mocker.patch("huggingface_hub.hf_hub_download", return_value="focal.safetensors")
     load_file = mocker.patch("safetensors.torch.load_file", return_value={"w": 1})
-    return from_pretrained, download, load_file
+    return from_pretrained, load_file
 
 
 def _backend():
-    return DepthPro2Backend(hf_repo_id=H, focal_repo_id=FOCAL, license=APPLE_AMLR, device="cpu")
+    return DepthPro2Backend(weights_paths=(H, FOCAL), license=APPLE_AMLR, device="cpu")
 
 
 def _image(tmp_path):
@@ -75,17 +75,16 @@ def test_auto_device_falls_back_to_cpu(mocker):
     assert _resolve_device("auto") == "cpu"
 
 
-def test_load_pulls_both_repos_once(mocker, tmp_path):
+def test_load_reads_both_weight_dirs_once(mocker, tmp_path):
     model = FakeModel(torch.zeros((8, 10)), 10.0)
-    from_pretrained, download, load_file = _patch_runtime(mocker, model)
+    from_pretrained, load_file = _patch_runtime(mocker, model)
     backend = _backend()
 
     backend.estimate(_image(tmp_path))
     backend.estimate(_image(tmp_path))
 
-    from_pretrained.assert_called_once_with(H, precision=torch.float32)
-    download.assert_called_once_with(FOCAL, "model.safetensors")
-    load_file.assert_called_once_with("focal.safetensors")
+    from_pretrained.assert_called_once_with(str(H), precision=torch.float32)
+    load_file.assert_called_once_with(FOCAL / "model.safetensors")
     assert model.fov.state == {"w": 1}
     assert model.to_device == "cpu"
     assert model.eval_called is True
@@ -116,4 +115,8 @@ def test_estimate_records_effective_params(mocker, tmp_path):
 
     result = _backend().estimate(_image(tmp_path))
 
-    assert result.metadata == {"source_model": H, "device": "cpu", "precision": "float32"}
+    assert result.metadata == {
+        "source_model": "apple/DepthPro2-H",
+        "device": "cpu",
+        "precision": "float32",
+    }

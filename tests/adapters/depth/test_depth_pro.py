@@ -1,9 +1,13 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 
 from splat.adapters.depth.depth_pro import DepthProBackend, _resolve_device
 from splat.domain.value_objects import APPLE_ASCL
 from tests.image_helpers import write_sample_png
+
+WEIGHTS = Path("models/apple--DepthPro-hf")
 
 
 class FakeBatchFeature(dict):
@@ -74,14 +78,13 @@ def test_resolve_device_explicit_passthrough(mocker):
 
 
 def test_init_resolves_device_and_stores_fields():
-    backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
-    assert backend._hf_repo_id == "apple/DepthPro-hf"
+    backend = DepthProBackend(weights_paths=(WEIGHTS,), license=APPLE_ASCL, device="cpu")
     assert backend.license is APPLE_ASCL
     assert backend._device == "cpu"
     assert backend.name == "depth-pro"
 
 
-def test_load_only_downloads_weights_once(mocker, tmp_path):
+def test_load_only_loads_weights_once(mocker, tmp_path):
     depth = torch.zeros((8, 10))
     processor = FakeProcessor(
         [{"predicted_depth": depth, "focal_length": None, "field_of_view": None}]
@@ -92,12 +95,12 @@ def test_load_only_downloads_weights_once(mocker, tmp_path):
     image_path = tmp_path / "scene.png"
     write_sample_png(image_path, (10, 8))
 
-    backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
+    backend = DepthProBackend(weights_paths=(WEIGHTS,), license=APPLE_ASCL, device="cpu")
     backend.estimate(image_path)
     backend.estimate(image_path)
 
-    processor_ctor.assert_called_once_with("apple/DepthPro-hf")
-    model_ctor.assert_called_once_with("apple/DepthPro-hf")
+    processor_ctor.assert_called_once_with(str(WEIGHTS))
+    model_ctor.assert_called_once_with(str(WEIGHTS))
     assert model.to_device == "cpu"
     assert model.eval_called is True
 
@@ -113,7 +116,7 @@ def test_estimate_returns_populated_depth_map(mocker, tmp_path):
     image_path = tmp_path / "scene.png"
     write_sample_png(image_path, (10, 8))
 
-    backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
+    backend = DepthProBackend(weights_paths=(WEIGHTS,), license=APPLE_ASCL, device="cpu")
     result = backend.estimate(image_path)
 
     assert result.depth.shape == (8, 10)
@@ -134,7 +137,7 @@ def test_estimate_handles_missing_focal_length_and_fov(mocker, tmp_path):
     image_path = tmp_path / "scene.png"
     write_sample_png(image_path, (10, 8))
 
-    backend = DepthProBackend(hf_repo_id="apple/DepthPro-hf", license=APPLE_ASCL, device="cpu")
+    backend = DepthProBackend(weights_paths=(WEIGHTS,), license=APPLE_ASCL, device="cpu")
     result = backend.estimate(image_path)
 
     assert result.focal_length_px is None

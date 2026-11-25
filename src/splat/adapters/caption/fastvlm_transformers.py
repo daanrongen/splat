@@ -31,8 +31,10 @@ def _resolve_device(device: str) -> str:
 class FastVLMTransformersBackend:
     name = "fastvlm-transformers"
 
-    def __init__(self, *, hf_repo_id: str, license: ModelLicense, device: str = "auto") -> None:
-        self._hf_repo_id = hf_repo_id
+    def __init__(
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
+    ) -> None:
+        (self._weights_path,) = weights_paths
         self.license = license
         self._device = _resolve_device(device)
         self._model: Any | None = None
@@ -46,11 +48,11 @@ class FastVLMTransformersBackend:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self._tokenizer = AutoTokenizer.from_pretrained(
-            self._hf_repo_id,
+            str(self._weights_path),
             trust_remote_code=True,
         )
         self._model = AutoModelForCausalLM.from_pretrained(
-            self._hf_repo_id,
+            str(self._weights_path),
             torch_dtype=torch.float32,
             trust_remote_code=True,
         ).to(self._device)

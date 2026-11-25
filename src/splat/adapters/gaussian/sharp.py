@@ -89,9 +89,9 @@ class SharpBackend:
     provides_metric_scale = True
 
     def __init__(
-        self, *, weights_path: Path | None = None, device: str = "auto", license: ModelLicense
+        self, *, weights_paths: tuple[Path, ...], device: str = "auto", license: ModelLicense
     ) -> None:
-        self._weights_path = weights_path
+        (self._weights_path,) = weights_paths
         self._device = device
         self.license = license
         self._predictor = None
@@ -101,10 +101,6 @@ class SharpBackend:
         return (1, 1)
 
     def _checkpoint(self) -> Path:
-        if self._weights_path is None:
-            raise ReconstructionBackendError(
-                "SHARP needs its checkpoint. Run `splat models pull sharp`."
-            )
         try:
             return next(iter(sorted(self._weights_path.glob("*.pt"))))
         except StopIteration as exc:

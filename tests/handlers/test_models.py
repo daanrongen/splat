@@ -11,14 +11,14 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
+    def pull(self, model_id: str, *, files: tuple[str, ...] = (), on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 
-    def is_cached(self, model_id: str) -> bool:
+    def is_cached(self, model_id: str, files: tuple[str, ...] = ()) -> bool:
         return model_id in self.pulled
 
-    def local_path(self, model_id: str) -> Path | None:
+    def local_path(self, model_id: str, files: tuple[str, ...] = ()) -> Path | None:
         return None
 
     def remove(self, model_id: str) -> None:
@@ -61,7 +61,7 @@ def test_pull_model_family_delegates_each_source(mocker):
 
 def test_pull_forwards_progress_with_the_repo_id(mocker):
     class ReportingSource(FakeModelSource):
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             on_progress(10, 100)
             return super().pull(model_id)
 

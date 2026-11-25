@@ -9,6 +9,7 @@ import torch
 from splat.adapters.formats.image import read_rgb
 from splat.domain.image_space import DepthMap
 from splat.domain.value_objects import ModelLicense
+from splat.paths import repo_id
 
 
 def _resolve_device(device: str) -> str:
@@ -23,10 +24,9 @@ class DepthPro2Backend:
     name = "depth-pro-2"
 
     def __init__(
-        self, *, hf_repo_id: str, focal_repo_id: str, license: ModelLicense, device: str = "auto"
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
     ) -> None:
-        self._hf_repo_id = hf_repo_id
-        self._focal_repo_id = focal_repo_id
+        self._weights_path, self._focal_path = weights_paths
         self.license = license
         self._device = _resolve_device(device)
         self._precision = torch.float32 if self._device == "cpu" else torch.bfloat16
@@ -39,13 +39,11 @@ class DepthPro2Backend:
         from depth_pro_2 import DepthPro2
         from depth_pro_2.model import to_normalized_tensor
         from depth_pro_2.network.fov import FOVEstimator
-        from huggingface_hub import hf_hub_download
         from safetensors.torch import load_file
 
-        model = DepthPro2.from_pretrained(self._hf_repo_id, precision=self._precision)
+        model = DepthPro2.from_pretrained(str(self._weights_path), precision=self._precision)
         model.fov = FOVEstimator(self._precision)
-        weights = hf_hub_download(self._focal_repo_id, "model.safetensors")
-        model.fov.load_state_dict(load_file(weights))
+        model.fov.load_state_dict(load_file(self._focal_path / "model.safetensors"))
         self._model = model.to(self._device).eval()
         device = torch.device(self._device)
         self._transform = lambda image: to_normalized_tensor(image, device)
@@ -64,7 +62,7 @@ class DepthPro2Backend:
             focal_length_px=focal,
             field_of_view_deg=fov,
             metadata={
-                "source_model": self._hf_repo_id,
+                "source_model": repo_id(self._weights_path),
                 "device": self._device,
                 "precision": str(self._precision).removeprefix("torch."),
             },

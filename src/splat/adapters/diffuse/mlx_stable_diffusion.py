@@ -41,19 +41,18 @@ def _encode_init_image(
     return mx.array(normalized, dtype=model.dtype)
 
 
-# The vendored loader only recognizes repo ids it has an explicit path-map
-# entry for (see _vendor/mlx_stable_diffusion/model_io.py's `_MODELS`) —
-# "stabilityai/sdxl-turbo" is one of the two it ships with, so no patching
-# is needed here.
-
-
 class MLXStableDiffusionBackend:
     name = "mlx-stable-diffusion"
 
     def __init__(
-        self, *, hf_repo_id: str, sdxl: bool, license: ModelLicense, device: str = "auto"
+        self,
+        *,
+        weights_paths: tuple[Path, ...],
+        sdxl: bool,
+        license: ModelLicense,
+        device: str = "auto",
     ) -> None:
-        self._hf_repo_id = hf_repo_id
+        (self._weights_path,) = weights_paths
         self._sdxl = sdxl
         self.license = license
         self._model: StableDiffusion | StableDiffusionXL | None = None
@@ -61,7 +60,7 @@ class MLXStableDiffusionBackend:
     def _load(self) -> StableDiffusion:
         if self._model is None:
             cls = StableDiffusionXL if self._sdxl else StableDiffusion
-            self._model = cls(self._hf_repo_id, float16=True)
+            self._model = cls(str(self._weights_path), float16=True)
         return self._model
 
     def diffuse(

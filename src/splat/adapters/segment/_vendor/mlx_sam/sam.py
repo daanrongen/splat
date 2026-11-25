@@ -180,7 +180,7 @@ class Sam(nn.Module):
         return x
 
 
-def load(model_path):
+def load(model_path, weights=None):
     model_path = Path(model_path)
     with open(model_path / "config.json") as fid:
         config = json.load(fid)
@@ -226,5 +226,7 @@ def load(model_path):
             iou_head_hidden_dim=256,
         ),
     )
-    sam.load_weights(str(model_path / "model.safetensors"), strict=True)
+    sam.load_weights(
+        list(weights.items()) if weights else str(model_path / "model.safetensors"), strict=True
+    )
     return sam

@@ -4,7 +4,7 @@ from splat.application.pipeline import run_diffuse
 from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
 from splat.registry.diffuse import DIFFUSE_CONTRACT
-from splat.registry.wiring import get_diffusion_backend, get_manifest_repository
+from splat.registry.wiring import get_diffusion_backend, get_manifest_repository, get_model_source
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,9 @@ class DiffuseResult:
 
 def handle(request: DiffuseRequest) -> DiffuseResult:
     validate_inputs(DIFFUSE_CONTRACT, request.inputs)
-    backend = get_diffusion_backend(request.model, device=request.device)
+    backend = get_diffusion_backend(
+        request.model, model_source=get_model_source(), device=request.device
+    )
     warning = (
         None if backend.license.is_commercial else f"{request.model} license: {backend.license}"
     )

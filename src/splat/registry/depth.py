@@ -14,14 +14,20 @@ DEPTH_CATALOG = {
         name="depth-pro-2",
         backend="splat.adapters.depth.depth_pro_2:DepthPro2Backend",
         hf_repo_ids=("apple/DepthPro2-H", "apple/DepthPro2-focal"),
+        hf_files={
+            "apple/DepthPro2-H": ("config.json", "model.safetensors"),
+            "apple/DepthPro2-focal": ("model.safetensors",),
+        },
         license=APPLE_AMLR,
         runtime="torch",
-        backend_kwargs={"focal_repo_id": "apple/DepthPro2-focal"},
     ),
     "depth-pro": ModelDescriptor(
         name="depth-pro",
         backend="splat.adapters.depth.depth_pro:DepthProBackend",
         hf_repo_ids=("apple/DepthPro-hf",),
+        hf_files={
+            "apple/DepthPro-hf": ("config.json", "preprocessor_config.json", "model.safetensors")
+        },
         license=APPLE_ASCL,
         runtime="torch",
     ),
@@ -29,6 +35,9 @@ DEPTH_CATALOG = {
         name="depth-anything-v2-coreml",
         backend="splat.adapters.depth.coreml_depth_anything_v2:CoreMLDepthAnythingV2Backend",
         hf_repo_ids=("apple/coreml-depth-anything-v2-small",),
+        hf_files={
+            "apple/coreml-depth-anything-v2-small": ("DepthAnythingV2SmallF16.mlpackage/**",)
+        },
         license=APACHE_2_0,
         runtime="coreml",
     ),

@@ -4,9 +4,7 @@ from splat.adapters.model_sources.stub import StubModelSource
 
 
 @pytest.fixture(autouse=True)
-def stub_cache(tmp_path, monkeypatch, mocker):
-    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hub"))
-    monkeypatch.setenv("SPLAT_MODEL_CACHE_DIR", str(tmp_path / "models"))
+def stub_cache(mocker):
     mocker.patch("splat.adapters.model_sources.stub.time.sleep")
 
 

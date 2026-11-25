@@ -20,6 +20,11 @@ def _resolve(env_var: str, default: Path) -> Path:
     return path
 
 
+def repo_id(model_dir: Path) -> str:
+    """The Hugging Face repo id a model store directory (`<org>--<name>`) holds."""
+    return model_dir.name.replace("--", "/", 1)
+
+
 def hf_home_dir() -> Path:
     return _resolve("HF_HOME", _xdg_cache_home() / "huggingface")
 

@@ -18,6 +18,17 @@ EMBEDDING_CATALOG = {
         name="mobileclip2-s0",
         backend="splat.adapters.embed.mobileclip:MobileCLIPOpenCLIPBackend",
         hf_repo_ids=("timm/MobileCLIP2-S0-OpenCLIP",),
+        hf_files={
+            "timm/MobileCLIP2-S0-OpenCLIP": (
+                "open_clip_config.json",
+                "open_clip_model.safetensors",
+                "tokenizer.json",
+                "tokenizer_config.json",
+                "special_tokens_map.json",
+                "vocab.json",
+                "merges.txt",
+            )
+        },
         license=APPLE_AMLR,
         runtime="torch",
         dimension=512,

@@ -14,6 +14,19 @@ CAPTION_CATALOG = {
         name="fastvlm-0.5b",
         backend="splat.adapters.caption.fastvlm_transformers:FastVLMTransformersBackend",
         hf_repo_ids=("apple/FastVLM-0.5B",),
+        hf_files={
+            "apple/FastVLM-0.5B": (
+                "config.json",
+                "generation_config.json",
+                "model.safetensors",
+                "llava_qwen.py",
+                "tokenizer_config.json",
+                "vocab.json",
+                "merges.txt",
+                "added_tokens.json",
+                "special_tokens_map.json",
+            )
+        },
         license=APPLE_AMLR,
         runtime="torch",
     ),

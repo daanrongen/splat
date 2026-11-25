@@ -4,7 +4,7 @@ from splat.application.pipeline import run_upscale
 from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
 from splat.registry.upscale import UPSCALE_CONTRACT
-from splat.registry.wiring import get_manifest_repository, get_upscale_backend
+from splat.registry.wiring import get_manifest_repository, get_model_source, get_upscale_backend
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class UpscaleRequest:
 def handle(request: UpscaleRequest) -> list[Manifest]:
     validate_inputs(UPSCALE_CONTRACT, request.inputs)
     cache = get_manifest_repository()
-    backend = get_upscale_backend(request.model)
+    backend = get_upscale_backend(request.model, model_source=get_model_source())
     results = []
     for asset in request.inputs:
         results.append(

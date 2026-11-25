@@ -17,14 +17,14 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
+    def pull(self, model_id: str, *, files: tuple[str, ...] = (), on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 
-    def is_cached(self, model_id: str) -> bool:
+    def is_cached(self, model_id: str, files: tuple[str, ...] = ()) -> bool:
         return model_id in self.pulled
 
-    def local_path(self, model_id: str) -> Path | None:
+    def local_path(self, model_id: str, files: tuple[str, ...] = ()) -> Path | None:
         return None
 
     def remove(self, model_id: str) -> None:
@@ -64,7 +64,7 @@ def test_rm_delegates_to_model_source(mocker):
 
 
 class ReportingSource(FakeModelSource):
-    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
+    def pull(self, model_id: str, *, files: tuple[str, ...] = (), on_progress=None) -> Path:
         on_progress(50, 100)
         on_progress(100, 100)
         return super().pull(model_id)
@@ -89,7 +89,7 @@ def test_pull_streams_progress_then_pulled(mocker):
 
 def test_pull_reports_a_domain_error_as_the_last_event(mocker):
     class FailingSource(FakeModelSource):
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             raise SplatDomainError("repo gated")
 
     mocker.patch("splat.handlers.models.get_model_source", return_value=FailingSource())
@@ -101,7 +101,7 @@ def test_pull_reports_a_domain_error_as_the_last_event(mocker):
 
 def test_pull_reports_an_unexpected_error_as_the_last_event(mocker):
     class BrokenSource(FakeModelSource):
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             raise RuntimeError("boom")
 
     mocker.patch("splat.handlers.models.get_model_source", return_value=BrokenSource())
@@ -117,7 +117,7 @@ def test_closing_the_stream_stops_the_download(mocker):
     resume = threading.Event()
 
     class SlowSource(FakeModelSource):
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             on_progress(1, 100)
             first_report.set()
             resume.wait(5)

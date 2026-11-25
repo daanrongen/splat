@@ -417,7 +417,7 @@ def test_export_of_a_non_cloud_asset_copies_it_without_asking_the_server(tmp_pat
 
 
 class ReportingSource:
-    def pull(self, model_id, *, revision=None, on_progress=None):
+    def pull(self, model_id, *, files=(), on_progress=None):
         on_progress(50, 100)
         on_progress(100, 100)
 
@@ -439,7 +439,7 @@ def test_models_pull_without_a_callback_still_completes(mocker, remote_client):
 
 def test_models_pull_raises_the_error_the_server_sent_mid_stream(mocker, remote_client):
     class FailingSource:
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             raise SplatDomainError("repo gated")
 
     mocker.patch("splat.handlers.models.get_model_source", return_value=FailingSource())

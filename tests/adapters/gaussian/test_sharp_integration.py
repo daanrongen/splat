@@ -24,7 +24,7 @@ pytestmark = [
 @pytest.fixture
 def weights_path():
     source = HuggingFaceModelSource()
-    path = source.local_path("apple/Sharp")
+    path = source.local_path("apple/Sharp", ("*.pt",))
     if path is None:
         pytest.skip("apple/Sharp not cached; run `splat models pull sharp`")
     return path
@@ -35,7 +35,7 @@ def test_reconstructs_a_valid_metric_cloud_from_one_image(tmp_path, weights_path
 
     image = write_sample_png(tmp_path / "in.png", (64, 64))
 
-    cloud = SharpBackend(weights_path=weights_path, license=APPLE_AMLR).reconstruct([image])
+    cloud = SharpBackend(weights_paths=(weights_path,), license=APPLE_AMLR).reconstruct([image])
 
     # GaussianCloud's own invariants run in __post_init__, so constructing it
     # at all proves the opacity clamp worked - Apple's save_ply writes +inf

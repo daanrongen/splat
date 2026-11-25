@@ -45,9 +45,8 @@ class MLX3DCaptureBackend:
     provides_metric_scale = False
 
     def __init__(
-        self, *, weights_path: Path | None = None, device: str = "auto", license: ModelLicense
+        self, *, weights_paths: tuple[Path, ...] = (), device: str = "auto", license: ModelLicense
     ) -> None:
-        self._weights_path = weights_path
         self._device = device
         self.license = license
 
