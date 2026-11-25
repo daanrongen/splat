@@ -157,6 +157,15 @@ def test_list_legacy_counts_hub_blobs_once(hub):
     assert HuggingFaceModelSource().list_legacy() == {"org/name": 1024}
 
 
+def test_list_legacy_does_not_count_blobs_the_store_links_to(hub, mocker):
+    add_hub_file(hub, "org/name", "config.json", b"w" * 10)
+    add_hub_file(hub, "org/name", "model.bin", b"w" * 1000)
+    mocker.patch("huggingface_hub.snapshot_download")
+    HuggingFaceModelSource().pull("org/name", files=("config.json",))
+
+    assert HuggingFaceModelSource().list_legacy() == {"org/name": 1000}
+
+
 def test_list_legacy_skips_repos_without_a_snapshot(hub):
     (hub / "models--org--name").mkdir(parents=True)
 

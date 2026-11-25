@@ -135,11 +135,12 @@ class HuggingFaceModelSource:
         )
 
     def list_legacy(self) -> dict[str, int]:
+        """Hub repos with the bytes removing them frees: blobs the store links to stay put."""
         return {
             repo.name.removeprefix("models--").replace("--", "/", 1): sum(
                 entry.stat().st_size
                 for entry in repo.rglob("*")
-                if entry.is_file() and not entry.is_symlink()
+                if entry.is_file() and not entry.is_symlink() and entry.stat().st_nlink == 1
             )
             for repo in sorted(hub_cache_dir().glob("models--*"))
             if any((repo / "snapshots").glob("*"))
