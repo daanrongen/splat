@@ -85,7 +85,7 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 
 **`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam-mlx`), `--max-stickers` (20), `--device`, `--point x,y` and `--not-point x,y` (repeatable) or `--box x0,y0,x1,y1` to cut out one prompted object (`sam2-coreml` takes a box or up to 2 points), `--foreground` (one cutout of the main subject), `--drop-background` (drop masks that cover the frame or its border), `-o DIR` or `-o file.png` for a single sticker.
 
-**`splat depth INPUT`** estimates per-pixel depth: `--model` (`depth-pro`, metric), `--device`, `-o` (a viewable PNG, near is bright).
+**`splat depth INPUT`** estimates per-pixel depth: `--model` (`depth-pro-2`, metric), `--device`, `-o` (a viewable PNG, near is bright).
 
 **`splat upscale INPUT`** super-resolves images or stickers: `--factor` (2 or 4, default 4), `--model` (`realesrgan-mlx`), `--tile` (0 disables tiling), `-o`.
 
@@ -157,6 +157,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `embed` | `mobileclip2-s0` | torch | Apple ML Research (research only) |
 | `segment` | `sam-mlx` | MLX | Apache-2.0 |
 | `segment` | `sam2-coreml` | Core ML | Apache-2.0 |
+| `depth` | `depth-pro-2` | torch | Apple AMLR (research only) |
 | `depth` | `depth-pro` | torch | Apple ASCL |
 | `depth` | `depth-anything-v2-coreml` | Core ML | Apache-2.0 (relative disparity) |
 | `upscale` | `realesrgan-mlx` | MLX | BSD-3-Clause |
