@@ -1,12 +1,12 @@
-"""Text-to-image generation via Apple's official CoreML Stable Diffusion
-conversion (`apple/coreml-stable-diffusion-2-1-base`), driven directly
+"""Text-to-image and image-to-image generation via Apple's official CoreML Stable
+Diffusion conversions (`apple/coreml-stable-diffusion-*`), driven directly
 through `coremltools` rather than Apple's `python_coreml_stable_diffusion`
 reference package — that package requires torch + diffusers==0.30.2 +
 transformers==4.44.2 (pinned old), which would conflict with this project's
 `transformers` (used by the DepthPro adapter) without actually avoiding
 torch. This reuses the vendored MLX Stable Diffusion's tokenizer (pure
 regex BPE, no mlx dependency) and a NumPy port of its Euler sampler math,
-calling the three CoreML .mlpackage files (text_encoder, unet, vae_decoder)
+calling the CoreML .mlpackage files (text_encoder, unet, vae_decoder, vae_encoder)
 directly. I/O tensor names/shapes were confirmed against the real model
 specs, not guessed — see coremltools' `load_spec()` on each package.
 """
@@ -19,17 +19,19 @@ import numpy as np
 from huggingface_hub import snapshot_download
 
 from splat.adapters.diffuse._vendor.mlx_stable_diffusion.tokenizer import Tokenizer
-from splat.adapters.formats.image import write_png
+from splat.adapters.formats.image import resize, write_png
 from splat.domain.errors import SplatDomainError
 from splat.domain.value_objects import ModelLicense
 from splat.paths import model_cache_dir
 
-_PACKAGE_PREFIX = "Stable_Diffusion_version_stabilityai_stable-diffusion-2-1-base"
 _SUBFOLDER = "original/packages"
 _TOKENIZER_SUBFOLDER = "original/compiled"
 _VAE_SCALING_FACTOR = 0.18215
 _BETA_START, _BETA_END, _NUM_TRAIN_STEPS = 0.00085, 0.012, 1000
 _MAX_TOKENS = 77
+_SIZE = 512
+_DEFAULT_STRENGTH = 0.7
+_COMPONENTS = ["text_encoder", "unet", "vae_decoder", "vae_encoder"]
 
 
 def _scaled_linear_sigmas() -> np.ndarray:
@@ -56,11 +58,18 @@ class CoreMLStableDiffusionBackend:
     name = "coreml-stable-diffusion"
 
     def __init__(
-        self, *, hf_repo_id: str, sdxl: bool, license: ModelLicense, device: str = "auto"
+        self,
+        *,
+        hf_repo_id: str,
+        package_prefix: str,
+        sdxl: bool,
+        license: ModelLicense,
+        device: str = "auto",
     ) -> None:
         if sdxl:
-            raise NotImplementedError("CoreMLStableDiffusionBackend only supports SD2.1-base.")
+            raise NotImplementedError("CoreMLStableDiffusionBackend only supports SD 1.x and 2.x.")
         self._hf_repo_id = hf_repo_id
+        self._package_prefix = package_prefix
         self.license = license
         self._compute_unit = (
             ct.ComputeUnit.CPU_ONLY if device == "cpu" else ct.ComputeUnit.CPU_AND_GPU
@@ -69,9 +78,10 @@ class CoreMLStableDiffusionBackend:
         self._text_encoder = None
         self._unet = None
         self._vae_decoder = None
+        self._vae_encoder = None
 
     def _package_path(self, component: str) -> str:
-        return f"{_SUBFOLDER}/{_PACKAGE_PREFIX}_{component}.mlpackage"
+        return f"{_SUBFOLDER}/{self._package_prefix}_{component}.mlpackage"
 
     def _local_dir(self) -> Path:
         return model_cache_dir() / "coreml-stable-diffusion" / self._hf_repo_id.replace("/", "--")
@@ -80,7 +90,7 @@ class CoreMLStableDiffusionBackend:
         if self._unet is not None:
             return
 
-        components = ["text_encoder", "unet", "vae_decoder"]
+        components = _COMPONENTS
         local_dir = self._local_dir()
         have_tokenizer = (local_dir / _TOKENIZER_SUBFOLDER / "vocab.json").exists()
         have_packages = all((local_dir / self._package_path(c)).exists() for c in components)
@@ -113,6 +123,9 @@ class CoreMLStableDiffusionBackend:
         self._vae_decoder = ct.models.MLModel(
             str(local_dir / self._package_path("vae_decoder")), compute_units=self._compute_unit
         )
+        self._vae_encoder = ct.models.MLModel(
+            str(local_dir / self._package_path("vae_encoder")), compute_units=self._compute_unit
+        )
 
     def _encode(self, text: str) -> np.ndarray:
         tokens = self._tokenizer.tokenize(text)
@@ -120,8 +133,16 @@ class CoreMLStableDiffusionBackend:
         tokens = (tokens + [pad_id] * _MAX_TOKENS)[:_MAX_TOKENS]
         input_ids = np.array([tokens], dtype=np.float32)
         out = self._text_encoder.predict({"input_ids": input_ids})
-        hidden = out["last_hidden_state"]  # (1, 77, 1024)
-        return hidden.transpose(0, 2, 1)[:, :, None, :]  # (1, 1024, 1, 77) — unet's expected layout
+        hidden = out["last_hidden_state"]  # (1, 77, hidden)
+        return hidden.transpose(0, 2, 1)[
+            :, :, None, :
+        ]  # (1, hidden, 1, 77), unet's expected layout
+
+    def _encode_image(self, image: np.ndarray) -> np.ndarray:
+        resized = resize(image[..., :3], (_SIZE, _SIZE))
+        sample = (resized.astype(np.float32) / 127.5 - 1.0).transpose(2, 0, 1)[None]
+        latent = self._vae_encoder.predict({"z": sample.astype(np.float16)})["latent"]
+        return latent[:, :4].astype(np.float32) * _VAE_SCALING_FACTOR  # mean of the latent dist
 
     def diffuse(
         self,
@@ -138,11 +159,9 @@ class CoreMLStableDiffusionBackend:
         height: int | None = None,
         **params,
     ) -> Path:
-        if image is not None:
-            raise SplatDomainError("sd21-coreml does not support image-to-image (no VAE encoder).")
-        if (width is not None and width != 512) or (height is not None and height != 512):
+        if (width is not None and width != _SIZE) or (height is not None and height != _SIZE):
             raise SplatDomainError(
-                "sd21-coreml is compiled for a fixed 512x512 output and cannot honor "
+                "This model is compiled for a fixed 512x512 output and cannot honor "
                 "--width/--height; use --model sdxl-turbo-mlx for other resolutions."
             )
         self._load()
@@ -157,8 +176,14 @@ class CoreMLStableDiffusionBackend:
         sigmas = _scaled_linear_sigmas()
         timesteps = _euler_timesteps(sigmas, steps)
 
-        latents = rng.standard_normal((1, 4, 64, 64)).astype(np.float32)
-        latents = latents * sigmas[-1] / np.sqrt(sigmas[-1] ** 2 + 1)
+        noise = rng.standard_normal((1, 4, 64, 64)).astype(np.float32)
+        if image is None:
+            sigma_start, init = sigmas[-1], 0.0
+        else:
+            strength = _DEFAULT_STRENGTH if strength is None else strength
+            timesteps = timesteps[min(int(steps * (1 - strength)), steps - 1) :]
+            sigma_start, init = _sigma_at(sigmas, timesteps[0][0]), self._encode_image(image)
+        latents = (init + noise * sigma_start) / np.sqrt(sigma_start**2 + 1)
 
         for t, t_prev in timesteps:
             sigma = _sigma_at(sigmas, t)

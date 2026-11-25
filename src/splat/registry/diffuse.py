@@ -26,6 +26,21 @@ DIFFUSION_CATALOG = {
         hf_repo_ids=("apple/coreml-stable-diffusion-2-1-base",),
         license=OPENRAIL_M,
         runtime="coreml",
-        backend_kwargs={"sdxl": False},
+        backend_kwargs={
+            "sdxl": False,
+            "package_prefix": "Stable_Diffusion_version_stabilityai_stable-diffusion-2-1-base",
+        },
+    ),
+    "sd15-coreml": ModelDescriptor(
+        name="sd15-coreml",
+        backend="splat.adapters.diffuse.coreml_stable_diffusion:CoreMLStableDiffusionBackend",
+        hf_repo_ids=("apple/coreml-stable-diffusion-v1-5-palettized",),
+        license=OPENRAIL_M,
+        runtime="coreml",
+        backend_kwargs={
+            "sdxl": False,
+            "package_prefix": "Stable_Diffusion_version_runwayml_stable-diffusion-v1-5",
+        },
+        notes="6-bit palettized SD 1.5, fixed 512x512, supports image-to-image",
     ),
 }
