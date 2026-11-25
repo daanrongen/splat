@@ -1,6 +1,6 @@
 [project]
 name = "splat"
-version = "0.1.12"
+version = "0.1.13"
 description = "A universal converter for Gaussian Splatting files and models."
 readme = "README.md"
 license = "MIT"
