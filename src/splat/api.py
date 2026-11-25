@@ -95,7 +95,7 @@ def caption(
 def segment(
     inputs: ManifestLike | list[ManifestLike],
     *,
-    model: str = "sam-mlx",
+    model: str = "sam2-coreml",
     max_stickers: int = 20,
     device: str = "auto",
     foreground: bool = False,

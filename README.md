@@ -83,7 +83,7 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 
 **`splat embed [INPUT] [--text TEXT]`** embeds images or a text query as a normalized vector: `--model` (`mobileclip2-s0`), `--device`, `-o` (`.npy`).
 
-**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam-mlx`), `--max-stickers` (20), `--device`, `--point x,y` and `--not-point x,y` (repeatable) or `--box x0,y0,x1,y1` to cut out one prompted object (`sam2-coreml` takes a box or up to 2 points), `--foreground` (one cutout of the main subject), `--drop-background` (drop masks that cover the frame or its border), `-o DIR` or `-o file.png` for a single sticker.
+**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam2-coreml`), `--max-stickers` (20), `--device`, `--point x,y` and `--not-point x,y` (repeatable) or `--box x0,y0,x1,y1` to cut out one prompted object (`sam2-coreml` takes a box or up to 2 points), `--foreground` (one cutout of the main subject), `--drop-background` (drop masks that cover the frame or its border), `-o DIR` or `-o file.png` for a single sticker.
 
 **`splat depth INPUT`** estimates per-pixel depth: `--model` (`depth-pro-2`, metric), `--device`, `-o` (a viewable PNG, near is bright).
 
@@ -158,7 +158,7 @@ Every model is one directory of real files at `$SPLAT_MODEL_CACHE_DIR/<org>--<na
 | `diffuse` | `sd21-coreml` | Core ML | OpenRAIL-M |
 | `caption` | `fastvlm-0.5b` | torch | Apple ML Research (research only) |
 | `embed` | `mobileclip2-s0` | torch | Apple ML Research (research only) |
-| `segment` | `sam-mlx` | MLX | Apache-2.0 |
+| `segment` | `sam2-coreml` | CoreML | Apache-2.0 |
 | `segment` | `sam2-coreml` | Core ML | Apache-2.0 |
 | `depth` | `depth-pro-2` | torch | Apple AMLR (research only) |
 | `depth` | `depth-anything-v2-coreml` | Core ML | Apache-2.0 (relative disparity) |

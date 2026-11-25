@@ -9,7 +9,7 @@ from splat.registry.wiring import get_client, get_manifest_repository
 
 def segment(
     image: str,
-    model: str = "sam-mlx",
+    model: str = "sam2-coreml",
     max_stickers: int = 20,
     device: str = "auto",
     foreground: bool = False,

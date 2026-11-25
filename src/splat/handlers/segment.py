@@ -15,7 +15,7 @@ from splat.registry.wiring import (
 @dataclass(frozen=True)
 class SegmentRequest:
     inputs: list[Manifest]
-    model: str = "sam-mlx"
+    model: str = "sam2-coreml"
     max_stickers: int = 20
     device: str = "auto"
     foreground: bool = False
