@@ -144,10 +144,12 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 | Command | |
 |---|---|
-| `splat models list` | every catalogued model, its stage, runtime, license and whether it's cached |
+| `splat models list` | every catalogued model with its stage, runtime, size on disk and license, then any directory in the store that no model uses |
 | `splat models info NAME` | license, source repo, input counts and notes |
-| `splat models pull NAME` / `rm NAME` | download or remove weights |
-| `splat models prune [--yes]` | report, or delete, cached weights no model uses |
+| `splat models pull NAME` / `rm NAME` | download or remove weights, only the files the model needs |
+| `splat models prune [--yes]` | report, or delete, unmanaged store directories and hub-cache copies the store already holds |
+
+Every model is one directory of real files at `$SPLAT_MODEL_CACHE_DIR/<org>--<name>/`. `pull` reuses files from an older Hugging Face hub cache by hardlink, so nothing downloads twice.
 
 | Stage | Model | Runtime | License |
 |---|---|---|---|
@@ -182,7 +184,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | Variable | |
 |---|---|
 | `SPLAT_MANIFEST_CACHE_DIR` | manifest cache, default `$XDG_CACHE_HOME/splat/manifests` |
-| `SPLAT_MODEL_CACHE_DIR` | model cache, default `$XDG_CACHE_HOME/splat/models` |
+| `SPLAT_MODEL_CACHE_DIR` | model weights, one `<org>--<name>` directory per repo, default `$XDG_CACHE_HOME/splat/models` |
 | `SPLAT_URL` | remote `splat http` server |
 | `SPLAT_LOCAL` | run here even when `SPLAT_URL` is set, same as `splat --local` |
 | `SPLAT_BLENDER_BIN` | Blender executable, on the server when `SPLAT_URL` is set |

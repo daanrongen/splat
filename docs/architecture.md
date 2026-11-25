@@ -85,13 +85,29 @@ A model-backed command follows this order:
 3. Validate `StageContract` from lightweight metadata.
 4. Validate output paths before expensive compute.
 5. Resolve model source and backend adapter.
-6. Pull/load weights only if needed.
+6. Resolve the weights directory (pulling what is missing) and load them.
 7. Run the use case.
 8. Store a manifest with effective params, metadata, parent ids, size, hash, and
    creation time.
 
 The important rule is that invalid input fails before backend import or model
 weight loading whenever the required information is available from descriptors.
+
+## Model Store
+
+Every model's weights are one directory of real files per Hugging Face repo, at
+`$SPLAT_MODEL_CACHE_DIR/<org>--<name>/` (default `~/.cache/splat/models`), holding
+only the files its descriptor lists in `hf_files`. There is no other copy: no hub
+cache, no per-runtime subfolder, no symlinks (Core ML cannot compile a symlinked
+`weight.bin`).
+
+- A repo is installed when every pattern in `hf_files` matches a file in its directory.
+- `ModelSource.pull` downloads only the missing files. Files an older version left in
+  the Hugging Face hub cache are hardlinked in instead, so migrating needs no network.
+- Registry wiring (`resolve_weights`) hands each backend a `weights_paths` tuple in
+  `hf_repo_ids` order. Adapters never download, and never look a path up themselves.
+- `models list` shows the size on disk and every store directory no catalog entry
+  uses; `models prune` removes those and the hub copies the store already holds.
 
 ## Manifests And Cache
 

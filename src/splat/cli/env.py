@@ -40,7 +40,7 @@ _NON_OPTION_VARS: list[tuple[str, str, str, str, str]] = [
         "cache",
         "SPLAT_MODEL_CACHE_DIR",
         "",
-        "Converted/compiled model artifacts; defaults to $XDG_CACHE_HOME/splat/models",
+        "Model weights, one directory per repo; defaults to $XDG_CACHE_HOME/splat/models",
     ),
     (
         "global",
