@@ -57,10 +57,10 @@ splat depth kettle.png --model depth-anything-v2-coreml -o depth-anything.png
 
 ![The image, depth-pro, and depth-anything-v2-coreml (near is bright)](images/04-depth.png)
 
-`depth-pro` is metric: the `depth_map` is in metres and records the focal length (1846 px, a 15.8 degree field of view). `depth-anything-v2-coreml` is faster but only relative disparity, with no focal length. Both are cached losslessly as `.npy`, and `-o` writes a viewable PNG of them. Only the metric one can become geometry, and `mesh` says so if you hand it the other:
+`depth-pro-2` is the default and also metric (research-only license, needs `models pull depth-pro-2` for the H+ and focal weights). `depth-pro` is metric: the `depth_map` is in metres and records the focal length (1846 px, a 15.8 degree field of view). `depth-anything-v2-coreml` is faster but only relative disparity, with no focal length. Both are cached losslessly as `.npy`, and `-o` writes a viewable PNG of them. Only the metric one can become geometry, and `mesh` says so if you hand it the other:
 
 ```text
-error: heightfield needs metric depth in metres, but 69163aee51908296 is relative disparity (depth:depth-anything-v2-coreml); use a metric model such as depth-pro.
+error: heightfield needs metric depth in metres, but 69163aee51908296 is relative disparity (depth:depth-anything-v2-coreml); use a metric model such as depth-pro-2.
 ```
 
 ## 5. Upscale

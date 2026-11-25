@@ -33,6 +33,7 @@ dependencies = [
     "mlx3d[capture]>=0.3.0",
     "pymcubes>=0.1.6",
     "scipy>=1.18.1",
+    "depth-pro-2",
 ]
 
 [project.scripts]
@@ -88,6 +89,7 @@ omit = ["*/_vendor/*"]
 
 [tool.uv.sources]
 realesrgan-mlx = { git = "https://github.com/xocialize/realesrgan-mlx.git" }
+depth-pro-2 = { git = "https://github.com/apple-aiml-research/ml-depth-pro-2" }
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]

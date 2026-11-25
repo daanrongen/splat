@@ -52,7 +52,7 @@ def _heightfield(asset: Manifest, fmt: str, cache: ManifestRepository) -> Manife
     if asset.metadata.units != "metres":
         raise SplatDomainError(
             f"heightfield needs metric depth in metres, but {asset.id} is relative "
-            f"{asset.metadata.units} ({asset.created_by}); use a metric model such as depth-pro."
+            f"{asset.metadata.units} ({asset.created_by}); use a metric model such as depth-pro-2."
         )
     if not asset.parent_ids:
         raise SplatDomainError(f"Depth asset {asset.id} has no source image to texture with.")

@@ -14,7 +14,15 @@ from splat.registry.catalog import ModelDescriptor
 RUNTIME_PACKAGES = {
     "mlx": {"mlx", "mlx3d", "realesrgan_mlx"},
     "coreml": {"coremltools"},
-    "torch": {"torch", "torchvision", "transformers", "timm", "open_clip"},
+    "torch": {
+        "torch",
+        "torchvision",
+        "transformers",
+        "timm",
+        "open_clip",
+        "depth_pro_2",
+        "safetensors",
+    },
 }
 SHARED = {"numpy", "PIL", "huggingface_hub", "splat"} | set(sys.stdlib_module_names)
 HEAVY = {"cv2", "scipy", "trimesh", "open3d", "huggingface_hub"}.union(*RUNTIME_PACKAGES.values())

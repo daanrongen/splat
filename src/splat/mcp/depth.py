@@ -9,7 +9,7 @@ from splat.registry.wiring import get_client, get_manifest_repository
 
 def depth(
     image: str,
-    model: str = "depth-pro",
+    model: str = "depth-pro-2",
     device: str = "auto",
 ) -> list[types.ContentBlock]:
     """Estimate per-pixel metric depth for an image (path or @<asset-id>)."""

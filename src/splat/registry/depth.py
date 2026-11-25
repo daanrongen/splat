@@ -1,6 +1,6 @@
 from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
-from splat.domain.value_objects import APACHE_2_0, APPLE_ASCL
+from splat.domain.value_objects import APACHE_2_0, APPLE_AMLR, APPLE_ASCL
 from splat.registry.catalog import ModelDescriptor
 
 DEPTH_CONTRACT = StageContract(
@@ -10,6 +10,14 @@ DEPTH_CONTRACT = StageContract(
 )
 
 DEPTH_CATALOG = {
+    "depth-pro-2": ModelDescriptor(
+        name="depth-pro-2",
+        backend="splat.adapters.depth.depth_pro_2:DepthPro2Backend",
+        hf_repo_ids=("apple/DepthPro2-H", "apple/DepthPro2-focal"),
+        license=APPLE_AMLR,
+        runtime="torch",
+        backend_kwargs={"focal_repo_id": "apple/DepthPro2-focal"},
+    ),
     "depth-pro": ModelDescriptor(
         name="depth-pro",
         backend="splat.adapters.depth.depth_pro:DepthProBackend",

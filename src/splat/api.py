@@ -118,7 +118,7 @@ def segment(
 
 
 def depth(
-    inputs: ManifestLike | list[ManifestLike], *, model: str = "depth-pro", device: str = "auto"
+    inputs: ManifestLike | list[ManifestLike], *, model: str = "depth-pro-2", device: str = "auto"
 ) -> list[Manifest]:
     return get_client().depth(DepthRequest(inputs=_resolve_all(inputs), model=model, device=device))
 

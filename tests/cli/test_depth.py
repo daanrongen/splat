@@ -46,7 +46,7 @@ def test_depth_file_path_input_ndjson_output(mocker, tmp_path, monkeypatch):
     line = json.loads(result.output.strip().splitlines()[-1])
     assert line["kind"] == "depth_map"
     assert line["metadata"]["focal_length_px"] == 1234.5
-    assert line["created_by"] == "depth:depth-pro"
+    assert line["created_by"] == "depth:depth-pro-2"
 
 
 def test_depth_human_output(mocker, tmp_path, monkeypatch):
