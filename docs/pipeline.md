@@ -12,7 +12,7 @@ splat diffuse "a single stainless steel kettle with a black handle, centered, pl
 
 ![The diffused kettle](images/01-diffuse.png)
 
-The default model is `sdxl-turbo-mlx`, which renders 512 px in a few seconds. Its license is non-commercial, and `splat` prints that on every run. A plain backdrop and a single centred subject matter: every later stage does better on an image like this, and the rest of this page keeps using this one file.
+The default model is `sd15-coreml`, a 6-bit palettized SD 1.5 that renders 512 px and supports image-to-image (`sdxl-turbo-mlx` is the faster alternative, with a non-commercial license that `splat` prints on every run). A plain backdrop and a single centred subject matter: every later stage does better on an image like this, and the rest of this page keeps using this one file.
 
 ## 2. Caption and embed
 
