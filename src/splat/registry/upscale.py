@@ -14,6 +14,10 @@ UPSCALE_CATALOG = {
         name="realesrgan-mlx",
         backend="splat.adapters.upscale.realesrgan_mlx:RealESRGANMLXBackend",
         hf_repo_ids=("mlx-community/Real-ESRGAN-x2plus", "mlx-community/Real-ESRGAN-x4plus"),
+        hf_files={
+            "mlx-community/Real-ESRGAN-x2plus": ("model.safetensors",),
+            "mlx-community/Real-ESRGAN-x4plus": ("model.safetensors",),
+        },
         license=BSD_3_CLAUSE,
         runtime="mlx",
     ),

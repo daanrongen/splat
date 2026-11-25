@@ -13,14 +13,14 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
+    def pull(self, model_id: str, *, files: tuple[str, ...] = (), on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 
-    def is_cached(self, model_id: str) -> bool:
+    def is_cached(self, model_id: str, files: tuple[str, ...] = ()) -> bool:
         return model_id in self.pulled
 
-    def local_path(self, model_id: str) -> Path | None:
+    def local_path(self, model_id: str, files: tuple[str, ...] = ()) -> Path | None:
         return None
 
     def remove(self, model_id: str) -> None:
@@ -28,6 +28,9 @@ class FakeModelSource:
 
     def list_cached(self) -> list[str]:
         return self.pulled
+
+    def size_on_disk(self, model_id: str) -> int:
+        return 0
 
 
 def test_info_reports_point_count(tmp_path, synthetic_cloud, call_tool):

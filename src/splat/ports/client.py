@@ -75,6 +75,8 @@ class ModelSummary:
     license: str  # SPDX id only; see `commercial` for the use restriction
     commercial: bool = True
     cached: bool | None = None
+    size_bytes: int = 0
+    managed: bool = True
 
 
 @dataclass(frozen=True)

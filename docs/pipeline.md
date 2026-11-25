@@ -12,7 +12,7 @@ splat diffuse "a single stainless steel kettle with a black handle, centered, pl
 
 ![The diffused kettle](images/01-diffuse.png)
 
-The default model is `sd15-coreml`, a 6-bit palettized SD 1.5 that renders 512 px in about 35 s here, model load included, and supports image-to-image (`sdxl-turbo-mlx` is the alternative, with a non-commercial license that `splat` prints on every run). A plain backdrop and a single centred subject matter: every later stage does better on an image like this, and the rest of this page keeps using this one file.
+The default model is `sd15-coreml`, a 6-bit palettized SD 1.5 that renders 512 px in about 30 s here, model load included, and supports image-to-image (`sdxl-turbo-mlx` is the alternative, with a non-commercial license that `splat` prints on every run). A plain backdrop and a single centred subject matter: every later stage does better on an image like this, and the rest of this page keeps using this one file.
 
 ## 2. Caption and embed
 
@@ -26,13 +26,13 @@ The caption is `A shiny silver tea kettle with a black handle and lid.` (`fastvl
 ## 3. Segment
 
 ```sh
-splat segment kettle.png --model sam-mlx --max-stickers 8 -o stickers/
-splat segment kettle.png --model sam2-coreml --max-stickers 8 -o stickers/
+splat segment kettle.png --max-stickers 8 -o stickers/
+splat segment kettle.png --model sam-mlx --max-stickers 8 -o stickers-mlx/
 ```
 
 ![Automatic stickers from sam-mlx (top) and sam2-coreml (bottom)](images/02-segment-auto.png)
 
-Automatic segmentation fans out into one RGBA `sticker` per mask, largest first. `sam2-coreml` (bottom) starts with the frame sized mask, shown as the backdrop with the kettle cut out, then finds the kettle, the handle, the body, the spout and the lid. `sam-mlx` (top) finds the handle and the backdrop inside it, then slices of the body's highlights and shadows. `--drop-background` removes the masks that cover most of the frame or span part of its edge.
+Automatic segmentation fans out into one RGBA `sticker` per mask, largest first. `sam2-coreml` is the default: it is about twice as fast as `sam-mlx` and a fifth of the size. In the picture it (bottom) starts with the frame sized mask, shown as the backdrop with the kettle cut out, then finds the kettle, the handle, the body, the spout and the lid. `sam-mlx` (top) finds the handle and the backdrop inside it, then slices of the body's highlights and shadows. `--drop-background` removes the masks that cover most of the frame or span part of its edge.
 
 To say which object you mean, prompt the model instead:
 
@@ -44,7 +44,7 @@ splat segment kettle.png --foreground -o kettle-cutout.png
 
 ![A point on the spout, a box around the kettle, and --foreground](images/03-segment-prompts.png)
 
-`--point x,y` (and `--not-point x,y` for background, both repeatable) and `--box x0,y0,x1,y1` take pixel coordinates in the source image and return one sticker. `--foreground` needs no prompt: it finds the box around the masks that are not background and box-prompts the model with it, which gives one cutout of the kettle, though the cloudy backdrop inside the handle is only partly removed. For the box prompt, `sam-mlx` returns `(58, 102, 345, 390)` and `sam2-coreml` `(57, 103, 347, 400)` as `x, y, width, height`, within ten pixels of each other. `sam2-coreml` takes a box or up to two points, because its converted prompt encoder takes exactly two.
+`--point x,y` (and `--not-point x,y` for background, both repeatable) and `--box x0,y0,x1,y1` take pixel coordinates in the source image and return one sticker. `--foreground` needs no prompt: it finds the box around the masks that are not background and box-prompts the model with it, which gives one cutout of the kettle (347 by 409 px). For the box prompt, `sam-mlx` returns `(58, 102, 345, 390)` and `sam2-coreml` `(57, 103, 347, 400)` as `x, y, width, height`, within ten pixels of each other. `sam2-coreml` takes a box or up to two points, because its converted prompt encoder takes exactly two; use `--model sam-mlx` for more points.
 
 A sticker is a tight crop. Its `bbox` in the manifest places it back in the source image, which is how a sticker works as a mask for the next stages.
 
@@ -79,7 +79,7 @@ splat upscale kettle.png -o kettle-x4.png
 splat gaussian kettle.png --score -o kettle.ply
 ```
 
-`sharp` reconstructs a Gaussian splat from the single image: 1,179,648 Gaussians, an 80 MB `.ply` in the OpenGL convention (+Y up), SH degree 0, in metres. It takes about 75 s here, model load included. `--score` renders source view 0 with Blender and records the comparison against the photo in the cloud's `quality`: PSNR 38.09 and SSIM 0.9719, plus floater statistics. `splat manifest get <id>` prints them.
+`sharp` reconstructs a Gaussian splat from the single image: 1,179,648 Gaussians, an 80 MB `.ply` in the OpenGL convention (+Y up), SH degree 0, in metres. It takes about 50 s here, model load included. `--score` renders source view 0 with Blender and records the comparison against the photo in the cloud's `quality`: PSNR 38.09 and SSIM 0.9719, plus floater statistics. `splat manifest get <id>` prints them.
 
 A single photo has a backdrop, and SHARP reconstructs that too, as a wall behind the subject. Hand `gaussian` the cutout from step 3 and it keeps only the Gaussians that project inside it:
 
@@ -87,7 +87,7 @@ A single photo has a backdrop, and SHARP reconstructs that too, as a wall behind
 splat gaussian kettle.png --mask kettle-cutout.png -o kettle-masked.ply
 ```
 
-That is 304,158 Gaussians, a 21 MB file. Gaussians that project inside the mask but sit more than half a subject size behind its nearest surface are dropped too, since they belong to the wall in line with the subject. The masked cloud is a cached child of the full one, so changing the mask does not repeat the reconstruction.
+That is 335,586 Gaussians, a 23 MB file. Gaussians that project inside the mask but sit more than half a subject size behind its nearest surface are dropped too, since they belong to the wall in line with the subject. The masked cloud is a cached child of the full one, so changing the mask does not repeat the reconstruction.
 
 ## 7. Render
 
@@ -111,7 +111,7 @@ splat mesh kettle-masked.ply -o kettle.glb
 
 ![The heightfield from depth-pro-2 (left) and the isosurface of the masked cloud (right)](images/07-mesh.png)
 
-`mesh` has two paths. A metric depth map becomes a textured heightfield, a relief of everything in the photo (262,144 vertices, 512,782 faces, 11.6 MB). A Gaussian cloud becomes an isosurface of its density field with per-vertex colours (65,847 vertices, 131,316 faces, 2.6 MB), which is the kettle alone because the backdrop was masked out. Both are `shape_3d` manifests with typed counts, written as `.glb`, `.obj`, `.ply` or `.gltf` by the extension.
+`mesh` has two paths. A metric depth map becomes a textured heightfield, a relief of everything in the photo (262,144 vertices, 512,782 faces, 11.6 MB). A Gaussian cloud becomes an isosurface of its density field with per-vertex colours (68,904 vertices, 137,612 faces, 2.8 MB), which is the kettle alone because the backdrop was masked out. Both are `shape_3d` manifests with typed counts, written as `.glb`, `.obj`, `.ply` or `.gltf` by the extension.
 
 ## 9. Export
 
@@ -120,18 +120,18 @@ splat export kettle-masked.ply -o kettle.spz
 splat export kettle-masked.ply -o kettle.web.splat --profile web-delivery
 ```
 
-`export` writes any manifest in the format of the extension, with a sidecar. For the masked cloud: `.ply` 20.7 MB, `.spz` 3.0 MB, `.web.splat` 9.7 MB (304,030 points after compression). `splat validate kettle-masked.ply --strict` checks a cloud's invariants and `splat info` prints its count, SH degree, bounds and cameras.
+`export` writes any manifest in the format of the extension, with a sidecar. For the masked cloud: `.ply` 22.8 MB, `.spz` 3.3 MB, `.web.splat` 10.7 MB (335,346 points after compression). `splat validate kettle-masked.ply --strict` checks a cloud's invariants and `splat info` prints its count, SH degree, bounds and cameras.
 
 ## Lineage
 
 Every output remembers its parents, so `splat manifest get <id>` on the mesh shows how it was made, down to the prompt, with each model's license:
 
 ```text
-32b758ab004bad29  shape_3d  mesh:isosurface
-└── f8a3df4c69a567ed  gaussian_cloud  mask
+44797c671f155897  shape_3d  mesh:isosurface
+└── 5217881b851af4c9  gaussian_cloud  mask
     ├── e5b2e55cd308fdc6  gaussian_cloud  gaussian:sharp  Apple-ML-Research
     │   └── fe498117241c9aec  image  diffuse:sd15-coreml  OpenRAIL-M
-    └── 5db18ceaa1189c71-000  sticker  segment:sam-mlx  Apache-2.0
+    └── 0c9722fff85ac5a1-000  sticker  segment:sam2-coreml  Apache-2.0
         └── fe498117241c9aec  image  diffuse:sd15-coreml  OpenRAIL-M
 ```
 

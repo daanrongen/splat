@@ -11,14 +11,14 @@ class FakeModelSource:
         self.pulled: list[str] = []
         self.removed: list[str] = []
 
-    def pull(self, model_id: str, *, revision: str | None = None, on_progress=None) -> Path:
+    def pull(self, model_id: str, *, files: tuple[str, ...] = (), on_progress=None) -> Path:
         self.pulled.append(model_id)
         return Path("/fake")
 
-    def is_cached(self, model_id: str) -> bool:
+    def is_cached(self, model_id: str, files: tuple[str, ...] = ()) -> bool:
         return model_id in self.pulled
 
-    def local_path(self, model_id: str) -> Path | None:
+    def local_path(self, model_id: str, files: tuple[str, ...] = ()) -> Path | None:
         return None
 
     def remove(self, model_id: str) -> None:
@@ -26,6 +26,9 @@ class FakeModelSource:
 
     def list_cached(self) -> list[str]:
         return self.pulled
+
+    def size_on_disk(self, model_id: str) -> int:
+        return 0
 
 
 def test_list_models_reports_cached_flag(mocker):
@@ -35,14 +38,14 @@ def test_list_models_reports_cached_flag(mocker):
     rows = models_handler.list_models()
 
     assert len(rows) > 0
-    assert all(isinstance(cached, bool) for _, cached in rows)
+    assert all(isinstance(row.cached, bool) for row in rows)
 
 
 def test_pull_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    models_handler.pull("depth-pro")
+    models_handler.pull("depth-anything-v2-coreml")
 
     assert len(fake.pulled) == 1
 
@@ -61,16 +64,18 @@ def test_pull_model_family_delegates_each_source(mocker):
 
 def test_pull_forwards_progress_with_the_repo_id(mocker):
     class ReportingSource(FakeModelSource):
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             on_progress(10, 100)
             return super().pull(model_id)
 
     mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
     reports = []
 
-    models_handler.pull("depth-pro", on_progress=lambda *report: reports.append(report))
+    models_handler.pull(
+        "depth-anything-v2-coreml", on_progress=lambda *report: reports.append(report)
+    )
 
-    assert reports == [("apple/DepthPro-hf", 10, 100)]
+    assert reports == [("apple/coreml-depth-anything-v2-small", 10, 100)]
 
 
 def test_pull_unknown_model_raises(mocker):
@@ -85,7 +90,7 @@ def test_rm_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    models_handler.rm("depth-pro")
+    models_handler.rm("depth-anything-v2-coreml")
 
     assert len(fake.removed) == 1
 

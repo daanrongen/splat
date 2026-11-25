@@ -15,6 +15,8 @@ class ModelDescriptor:
     license: ModelLicense
     runtime: Runtime
     hf_repo_ids: tuple[str, ...] = ()
+    # Glob patterns of the files each repo must provide; a repo left out is pulled whole.
+    hf_files: dict[str, tuple[str, ...]] = field(default_factory=dict)
     min_images: int | None = None
     max_images: int | None = None
     dimension: int | None = None
@@ -27,6 +29,9 @@ class ModelDescriptor:
     @property
     def hf_repo_id(self) -> str | None:
         return self.hf_repo_ids[0] if self.hf_repo_ids else None
+
+    def files(self, repo_id: str) -> tuple[str, ...]:
+        return self.hf_files.get(repo_id, ())
 
     @property
     def backend_cls(self) -> type[Any]:

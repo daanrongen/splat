@@ -2,11 +2,12 @@ import asyncio
 import threading
 import time
 from collections.abc import AsyncIterator
+from dataclasses import asdict
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from splat.application.models_admin import model_source_label, model_stage
+from splat.application.models_admin import model_source_label
 from splat.domain.errors import SplatDomainError
 from splat.handlers import models as models_handler
 from splat.http._schemas import ModelInfoResponse, ModelSummary, PullEvent
@@ -16,18 +17,7 @@ router = APIRouter()
 
 @router.get("/models")
 def list_models() -> list[ModelSummary]:
-    rows = models_handler.list_models()
-    return [
-        ModelSummary(
-            name=descriptor.name,
-            stage=model_stage(descriptor.name),
-            runtime=descriptor.runtime,
-            license=descriptor.license.spdx_id,
-            commercial=descriptor.license.is_commercial,
-            cached=cached,
-        )
-        for descriptor, cached in rows
-    ]
+    return [ModelSummary(**asdict(status)) for status in models_handler.list_models()]
 
 
 class _ClientGone(Exception):

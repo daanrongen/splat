@@ -6,7 +6,6 @@ from typing import Optional, Tuple
 import mlx.core as mx
 
 from .model_io import (
-    _DEFAULT_MODEL,
     load_autoencoder,
     load_diffusion_config,
     load_text_encoder,
@@ -17,7 +16,7 @@ from .sampler import SimpleEulerAncestralSampler, SimpleEulerSampler
 
 
 class StableDiffusion:
-    def __init__(self, model: str = _DEFAULT_MODEL, float16: bool = False):
+    def __init__(self, model: str, float16: bool = False):
         self.dtype = mx.float16 if float16 else mx.float32
         self.diffusion_config = load_diffusion_config(model)
         self.unet = load_unet(model, float16)
@@ -156,7 +155,7 @@ class StableDiffusion:
 
 
 class StableDiffusionXL(StableDiffusion):
-    def __init__(self, model: str = _DEFAULT_MODEL, float16: bool = False):
+    def __init__(self, model: str, float16: bool = False):
         super().__init__(model, float16)
 
         self.sampler = SimpleEulerAncestralSampler(self.diffusion_config)

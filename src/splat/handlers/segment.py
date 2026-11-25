@@ -5,13 +5,17 @@ from splat.domain.contracts import validate_inputs
 from splat.domain.manifest import Manifest
 from splat.domain.prompts import parse_box, parse_points
 from splat.registry.segment import SEGMENT_CONTRACT
-from splat.registry.wiring import get_manifest_repository, get_segmentation_backend
+from splat.registry.wiring import (
+    get_manifest_repository,
+    get_model_source,
+    get_segmentation_backend,
+)
 
 
 @dataclass(frozen=True)
 class SegmentRequest:
     inputs: list[Manifest]
-    model: str = "sam-mlx"
+    model: str = "sam2-coreml"
     max_stickers: int = 20
     device: str = "auto"
     foreground: bool = False
@@ -23,7 +27,9 @@ class SegmentRequest:
 def handle(request: SegmentRequest) -> list[Manifest]:
     validate_inputs(SEGMENT_CONTRACT, request.inputs)
     cache = get_manifest_repository()
-    backend = get_segmentation_backend(request.model, device=request.device)
+    backend = get_segmentation_backend(
+        request.model, model_source=get_model_source(), device=request.device
+    )
     params: dict = {"max_stickers": request.max_stickers}
     if request.points:
         params["points"] = parse_points(list(request.points))

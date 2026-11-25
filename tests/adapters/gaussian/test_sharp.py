@@ -24,24 +24,19 @@ def test_declares_metric_scale():
 
 def test_reconstruct_rejects_multiple_images(tmp_path):
     with pytest.raises(ReconstructionBackendError, match="exactly one image, got 2"):
-        _backend(weights_path=tmp_path).reconstruct([tmp_path / "a.png", tmp_path / "b.png"])
+        _backend(weights_paths=(tmp_path,)).reconstruct([tmp_path / "a.png", tmp_path / "b.png"])
 
 
 def test_checkpoint_error_names_the_pull_command(tmp_path):
     with pytest.raises(ReconstructionBackendError, match="models pull sharp"):
-        _backend(weights_path=tmp_path)._checkpoint()
-
-
-def test_checkpoint_error_when_weights_were_never_resolved():
-    with pytest.raises(ReconstructionBackendError, match="models pull sharp"):
-        _backend()._checkpoint()
+        _backend(weights_paths=(tmp_path,))._checkpoint()
 
 
 def test_checkpoint_found_in_the_snapshot_dir(tmp_path):
     (tmp_path / "sharp_2572gikvuh.pt").write_bytes(b"")
     (tmp_path / "README.md").write_text("not a checkpoint")
 
-    assert _backend(weights_path=tmp_path)._checkpoint().name == "sharp_2572gikvuh.pt"
+    assert _backend(weights_paths=(tmp_path,))._checkpoint().name == "sharp_2572gikvuh.pt"
 
 
 def test_resolve_device_rejects_unknown_values():

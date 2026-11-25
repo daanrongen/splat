@@ -10,127 +10,193 @@ def hub(tmp_path, monkeypatch):
     return tmp_path / "hub"
 
 
-def add_snapshot(hub, repo_id: str):
-    snapshot = hub / f"models--{repo_id.replace('/', '--')}" / "snapshots" / "rev"
-    snapshot.mkdir(parents=True)
-    return snapshot
+def add_hub_file(hub, repo_id: str, name: str, data: bytes = b"w"):
+    repo = hub / f"models--{repo_id.replace('/', '--')}"
+    blob = repo / "blobs" / name.replace("/", "_")
+    blob.parent.mkdir(parents=True, exist_ok=True)
+    blob.write_bytes(data)
+    link = repo / "snapshots" / "rev" / name
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(blob)
 
 
-def add_bespoke(tmp_path, kind: str, repo_id: str, *, empty: bool = False):
-    directory = tmp_path / "models" / kind / repo_id.replace("/", "--")
-    directory.mkdir(parents=True)
-    if not empty:
-        (directory / "some_file.json").write_text("{}")
-    return directory
+def add_stored(tmp_path, repo_id: str, name: str = "weights.bin", data: bytes = b"w"):
+    path = tmp_path / "models" / repo_id.replace("/", "--") / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return path
 
 
-def test_pull_calls_snapshot_download(mocker, tmp_path):
-    mock_download = mocker.patch("huggingface_hub.snapshot_download", return_value=str(tmp_path))
+def test_pull_downloads_into_the_store_as_real_files(hub, mocker, tmp_path):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
 
     result = HuggingFaceModelSource().pull("some/model")
 
-    assert result == tmp_path
-    mock_download.assert_called_once()
-    assert mock_download.call_args.kwargs["repo_id"] == "some/model"
+    assert result == tmp_path / "models" / "some--model"
+    assert mock_download.call_args.kwargs["local_dir"] == result
     assert "cache_dir" not in mock_download.call_args.kwargs
 
 
-def test_is_cached_true_when_hub_snapshot_exists(hub):
-    add_snapshot(hub, "some/model")
-    assert HuggingFaceModelSource().is_cached("some/model") is True
+def test_pull_asks_only_for_the_files_a_model_needs(hub, mocker):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
+
+    HuggingFaceModelSource().pull("some/model", files=("*.json", "unet/*.safetensors"))
+
+    assert mock_download.call_args.kwargs["allow_patterns"] == ["*.json", "unet/*.safetensors"]
 
 
-def test_is_cached_false_when_not_found_anywhere(hub):
+def test_pull_of_a_whole_repo_sets_no_pattern(hub, mocker):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
+
+    HuggingFaceModelSource().pull("some/model")
+
+    assert mock_download.call_args.kwargs["allow_patterns"] is None
+
+
+def test_pull_skips_the_network_when_the_files_are_present(hub, mocker, tmp_path):
+    add_stored(tmp_path, "some/model", "config.json")
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
+
+    HuggingFaceModelSource().pull("some/model", files=("*.json",))
+
+    mock_download.assert_not_called()
+
+
+def test_pull_hardlinks_files_from_the_hub_cache(hub, mocker, tmp_path):
+    add_hub_file(hub, "some/model", "config.json", b"{}")
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
+
+    HuggingFaceModelSource().pull("some/model", files=("config.json",))
+
+    stored = tmp_path / "models" / "some--model" / "config.json"
+    assert stored.read_bytes() == b"{}"
+    assert stored.stat().st_nlink == 2
+    mock_download.assert_not_called()
+
+
+def test_pull_adopts_only_the_files_asked_for(hub, mocker, tmp_path):
+    add_hub_file(hub, "some/model", "config.json")
+    add_hub_file(hub, "some/model", "pytorch_model.bin")
+    mocker.patch("huggingface_hub.snapshot_download")
+
+    HuggingFaceModelSource().pull("some/model", files=("config.json",))
+
+    assert not (tmp_path / "models" / "some--model" / "pytorch_model.bin").exists()
+
+
+def test_pull_downloads_what_the_hub_cache_lacks(hub, mocker):
+    add_hub_file(hub, "some/model", "config.json")
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
+
+    HuggingFaceModelSource().pull("some/model", files=("config.json", "model.safetensors"))
+
+    mock_download.assert_called_once()
+
+
+def test_is_cached_needs_every_pattern_to_match(hub, tmp_path):
+    add_stored(tmp_path, "some/model", "config.json")
+
+    assert HuggingFaceModelSource().is_cached("some/model", ("*.json", "*.safetensors")) is False
+
+
+def test_is_cached_matches_files_below_a_package_directory(hub, tmp_path):
+    add_stored(tmp_path, "some/model", "a.mlpackage/Data/weights/weight.bin")
+
+    assert HuggingFaceModelSource().is_cached("some/model", ("a.mlpackage/**",)) is True
+
+
+def test_is_cached_ignores_the_download_metadata_directory(hub, tmp_path):
+    add_stored(tmp_path, "some/model", ".cache/huggingface/download/x.metadata")
+
     assert HuggingFaceModelSource().is_cached("some/model") is False
 
 
-def test_is_cached_false_for_repo_dir_without_snapshots(hub):
-    (hub / "models--some--model").mkdir(parents=True)
+def test_is_cached_false_when_not_in_the_store(hub):
     assert HuggingFaceModelSource().is_cached("some/model") is False
 
 
-def test_is_cached_true_for_bespoke_local_dir_layout(hub, tmp_path):
-    add_bespoke(tmp_path, "coreml-stable-diffusion", "apple/coreml-stable-diffusion-2-1-base")
-    assert HuggingFaceModelSource().is_cached("apple/coreml-stable-diffusion-2-1-base") is True
+def test_local_path_is_the_store_directory(hub, tmp_path):
+    add_stored(tmp_path, "some/model")
+
+    assert HuggingFaceModelSource().local_path("some/model") == tmp_path / "models" / "some--model"
 
 
-def test_is_cached_false_for_empty_bespoke_local_dir(hub, tmp_path):
-    add_bespoke(
-        tmp_path, "coreml-stable-diffusion", "apple/coreml-stable-diffusion-2-1-base", empty=True
-    )
-    assert HuggingFaceModelSource().is_cached("apple/coreml-stable-diffusion-2-1-base") is False
+def test_remove_deletes_the_model_directory(hub, tmp_path):
+    stored = add_stored(tmp_path, "some/model")
+
+    HuggingFaceModelSource().remove("some/model")
+
+    assert not stored.parent.exists()
 
 
-def test_remove_deletes_model_root(hub):
-    snapshot = add_snapshot(hub, "org/name")
-    (snapshot / "weights.bin").write_bytes(b"data")
+def test_remove_noop_when_not_cached(hub):
+    HuggingFaceModelSource().remove("some/model")  # should not raise
 
-    HuggingFaceModelSource().remove("org/name")
+
+def test_list_cached_names_every_store_directory(hub, tmp_path):
+    add_stored(tmp_path, "org/a")
+    add_stored(tmp_path, "mlx-sam", "old/model.safetensors")
+
+    assert HuggingFaceModelSource().list_cached() == ["mlx-sam", "org/a"]
+
+
+def test_size_on_disk_sums_the_files(hub, tmp_path):
+    add_stored(tmp_path, "some/model", "a.bin", b"w" * 1024)
+    add_stored(tmp_path, "some/model", "b/c.bin", b"w" * 24)
+
+    assert HuggingFaceModelSource().size_on_disk("some/model") == 1048
+
+
+def test_size_on_disk_zero_when_not_cached(hub):
+    assert HuggingFaceModelSource().size_on_disk("some/model") == 0
+
+
+def test_list_legacy_counts_hub_blobs_once(hub):
+    add_hub_file(hub, "org/name", "model.safetensors", b"w" * 1024)
+
+    assert HuggingFaceModelSource().list_legacy() == {"org/name": 1024}
+
+
+def test_list_legacy_does_not_count_blobs_the_store_links_to(hub, mocker):
+    add_hub_file(hub, "org/name", "config.json", b"w" * 10)
+    add_hub_file(hub, "org/name", "model.bin", b"w" * 1000)
+    mocker.patch("huggingface_hub.snapshot_download")
+    HuggingFaceModelSource().pull("org/name", files=("config.json",))
+
+    assert HuggingFaceModelSource().list_legacy() == {"org/name": 1000}
+
+
+def test_list_legacy_skips_repos_without_a_snapshot(hub):
+    (hub / "models--org--name").mkdir(parents=True)
+
+    assert HuggingFaceModelSource().list_legacy() == {}
+
+
+def test_remove_legacy_deletes_the_hub_repo(hub):
+    add_hub_file(hub, "org/name", "model.safetensors")
+
+    HuggingFaceModelSource().remove_legacy("org/name")
 
     assert not (hub / "models--org--name").exists()
 
 
-def test_remove_deletes_bespoke_local_dir_without_deleting_model_cache(hub, tmp_path):
-    bespoke = add_bespoke(
-        tmp_path, "coreml-stable-diffusion", "apple/coreml-stable-diffusion-2-1-base"
-    )
-
-    HuggingFaceModelSource().remove("apple/coreml-stable-diffusion-2-1-base")
-
-    assert (tmp_path / "models").exists()
-    assert not bespoke.exists()
-
-
-def test_remove_noop_when_not_cached(hub):
-    HuggingFaceModelSource().remove("org/name")  # should not raise
-
-
-def test_list_cached(hub):
-    add_snapshot(hub, "org/a")
-    add_snapshot(hub, "org/b")
-    assert HuggingFaceModelSource().list_cached() == ["org/a", "org/b"]
-
-
-def test_list_cached_includes_bespoke_converted_dirs(hub, tmp_path):
-    add_bespoke(tmp_path, "coreml-sam2", "apple/coreml-sam2.1-tiny")
-    add_snapshot(hub, "org/a")
-
-    assert HuggingFaceModelSource().list_cached() == ["apple/coreml-sam2.1-tiny", "org/a"]
-
-
-def test_size_on_disk_counts_blobs_once_not_through_snapshot_symlinks(hub):
-    repo = hub / "models--org--name"
-    blobs = repo / "blobs"
-    blobs.mkdir(parents=True)
-    (blobs / "deadbeef").write_bytes(b"w" * 1024)
-    snapshot = repo / "snapshots" / "abc123"
-    snapshot.mkdir(parents=True)
-    (snapshot / "model.safetensors").symlink_to(blobs / "deadbeef")
-
-    assert HuggingFaceModelSource().size_on_disk("org/name") == 1024
-
-
-def test_size_on_disk_zero_when_not_cached(hub):
-    assert HuggingFaceModelSource().size_on_disk("org/name") == 0
-
-
-def _bar_class(mocker, tmp_path, reports):
-    mock_download = mocker.patch("huggingface_hub.snapshot_download", return_value=str(tmp_path))
+def _bar_class(mocker, hub, reports):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
     HuggingFaceModelSource().pull("some/model", on_progress=lambda *report: reports.append(report))
     return mock_download.call_args.kwargs["tqdm_class"]
 
 
-def test_pull_without_a_callback_passes_no_progress_class(mocker, tmp_path):
-    mock_download = mocker.patch("huggingface_hub.snapshot_download", return_value=str(tmp_path))
+def test_pull_without_a_callback_passes_no_progress_class(mocker, hub):
+    mock_download = mocker.patch("huggingface_hub.snapshot_download")
 
     HuggingFaceModelSource().pull("some/model")
 
     assert "tqdm_class" not in mock_download.call_args.kwargs
 
 
-def test_progress_reports_the_second_byte_bar(mocker, tmp_path):
+def test_progress_reports_the_second_byte_bar(mocker, hub):
     reports = []
-    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class = _bar_class(mocker, hub, reports)
     bar_class(total=0, unit="B")  # transfer bar
     reconstruct = bar_class(total=0, unit="B")
 
@@ -141,9 +207,9 @@ def test_progress_reports_the_second_byte_bar(mocker, tmp_path):
     assert reports == [(40, 100), (100, 100)]
 
 
-def test_progress_ignores_the_transfer_bar(mocker, tmp_path):
+def test_progress_ignores_the_transfer_bar(mocker, hub):
     reports = []
-    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class = _bar_class(mocker, hub, reports)
     transfer = bar_class(total=0, unit="B")
     bar_class(total=0, unit="B")
 
@@ -152,9 +218,9 @@ def test_progress_ignores_the_transfer_bar(mocker, tmp_path):
     assert reports == []
 
 
-def test_progress_ignores_the_file_count_bar(mocker, tmp_path):
+def test_progress_ignores_the_file_count_bar(mocker, hub):
     reports = []
-    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class = _bar_class(mocker, hub, reports)
     bar_class(total=0, unit="B")
     bar_class(total=0, unit="B")
 
@@ -163,10 +229,10 @@ def test_progress_ignores_the_file_count_bar(mocker, tmp_path):
     assert reports == []
 
 
-def test_progress_survives_disabled_hub_bars(mocker, tmp_path, monkeypatch):
+def test_progress_survives_disabled_hub_bars(mocker, hub, monkeypatch):
     monkeypatch.setenv("HF_HUB_DISABLE_PROGRESS_BARS", "1")
     reports = []
-    bar_class = _bar_class(mocker, tmp_path, reports)
+    bar_class = _bar_class(mocker, hub, reports)
     bar_class(total=0, unit="B")
     reconstruct = bar_class(total=50, unit="B")
 

@@ -3,24 +3,21 @@
 no PyTorch, no CUDA.
 
 Meta's original `facebook/sam-vit-base` checkpoint (Apache-2.0) is not
-MLX-native, so its weights are converted once on first use (logic adapted
+MLX-native, so its weights are converted in memory on load (logic adapted
 from mlx-examples' `convert.py`: a handful of conv weights need transposing
-to MLX's channel-last layout) and cached under SPLAT_MODEL_CACHE_DIR.
+to MLX's channel-last layout).
 """
 
-import shutil
 from pathlib import Path
 
 import mlx.core as mx
 import numpy as np
-from huggingface_hub import snapshot_download
 
 from splat.adapters.formats.image import read_rgb
 from splat.adapters.segment._vendor.mlx_sam import SamAutomaticMaskGenerator, sam
 from splat.adapters.segment._vendor.mlx_sam.predictor import SamPredictor
 from splat.domain.image_space import Sticker
 from splat.domain.value_objects import ModelLicense
-from splat.paths import model_cache_dir
 
 _TRANSPOSE_TO_NHWC = {
     "vision_encoder.patch_embed.projection.weight",
@@ -36,44 +33,31 @@ _TRANSPOSE_DECODER_UPSCALE = {
 }
 
 
-def _convert_to_mlx(hf_repo_id: str, mlx_dir: Path) -> None:
-    if (mlx_dir / "model.safetensors").exists():
-        return
-
-    hf_path = Path(
-        snapshot_download(repo_id=hf_repo_id, allow_patterns=["*.safetensors", "*.json"])
-    )
-    weights = mx.load(str(hf_path / "model.safetensors"))
-
-    mlx_weights = {}
+def _mlx_weights(weights_path: Path) -> dict[str, mx.array]:
+    weights = mx.load(str(weights_path / "model.safetensors"))
+    converted = {}
     for key, value in weights.items():
         if key in _TRANSPOSE_TO_NHWC:
             value = value.transpose(0, 2, 3, 1)
         elif key in _TRANSPOSE_DECODER_UPSCALE:
             value = value.transpose(1, 2, 3, 0)
-        mlx_weights[key] = value
-
-    mlx_dir.mkdir(parents=True, exist_ok=True)
-    mx.save_safetensors(str(mlx_dir / "model.safetensors"), mlx_weights)
-    shutil.copy(hf_path / "config.json", mlx_dir / "config.json")
+        converted[key] = value
+    return converted
 
 
 class MLXSamBackend:
     name = "mlx-sam"
 
-    def __init__(self, *, hf_repo_id: str, license: ModelLicense, device: str = "auto") -> None:
-        self._hf_repo_id = hf_repo_id
+    def __init__(
+        self, *, weights_paths: tuple[Path, ...], license: ModelLicense, device: str = "auto"
+    ) -> None:
+        (self._weights_path,) = weights_paths
         self.license = license
         self._model = None
 
-    def _mlx_weights_dir(self) -> Path:
-        return model_cache_dir() / "mlx-sam" / self._hf_repo_id.replace("/", "--")
-
     def _load(self):
         if self._model is None:
-            mlx_dir = self._mlx_weights_dir()
-            _convert_to_mlx(self._hf_repo_id, mlx_dir)
-            self._model = sam.load(str(mlx_dir))
+            self._model = sam.load(self._weights_path, _mlx_weights(self._weights_path))
         return self._model
 
     def _prompted(self, image: np.ndarray, points: list, box: list | None) -> list[Sticker]:

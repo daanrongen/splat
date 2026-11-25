@@ -1,6 +1,6 @@
 from splat.domain.contracts import Requirement, StageContract
 from splat.domain.manifest import ManifestKind
-from splat.domain.value_objects import APACHE_2_0, APPLE_AMLR, APPLE_ASCL
+from splat.domain.value_objects import APACHE_2_0, APPLE_AMLR
 from splat.registry.catalog import ModelDescriptor
 
 DEPTH_CONTRACT = StageContract(
@@ -14,21 +14,20 @@ DEPTH_CATALOG = {
         name="depth-pro-2",
         backend="splat.adapters.depth.depth_pro_2:DepthPro2Backend",
         hf_repo_ids=("apple/DepthPro2-H", "apple/DepthPro2-focal"),
+        hf_files={
+            "apple/DepthPro2-H": ("config.json", "model.safetensors"),
+            "apple/DepthPro2-focal": ("model.safetensors",),
+        },
         license=APPLE_AMLR,
-        runtime="torch",
-        backend_kwargs={"focal_repo_id": "apple/DepthPro2-focal"},
-    ),
-    "depth-pro": ModelDescriptor(
-        name="depth-pro",
-        backend="splat.adapters.depth.depth_pro:DepthProBackend",
-        hf_repo_ids=("apple/DepthPro-hf",),
-        license=APPLE_ASCL,
         runtime="torch",
     ),
     "depth-anything-v2-coreml": ModelDescriptor(
         name="depth-anything-v2-coreml",
         backend="splat.adapters.depth.coreml_depth_anything_v2:CoreMLDepthAnythingV2Backend",
         hf_repo_ids=("apple/coreml-depth-anything-v2-small",),
+        hf_files={
+            "apple/coreml-depth-anything-v2-small": ("DepthAnythingV2SmallF16.mlpackage/**",)
+        },
         license=APACHE_2_0,
         runtime="coreml",
     ),

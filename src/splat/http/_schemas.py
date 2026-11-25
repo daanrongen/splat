@@ -77,6 +77,8 @@ class ModelSummary(BaseModel):
     license: str
     commercial: bool = True
     cached: bool | None = None
+    size_bytes: int = 0
+    managed: bool = True
 
 
 class ModelInfoResponse(BaseModel):

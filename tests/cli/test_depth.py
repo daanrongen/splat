@@ -17,7 +17,7 @@ runner = CliRunner()
 
 
 class FakeDepthBackend:
-    name = "depth-pro"
+    name = "depth-pro-2"
     license = APPLE_ASCL
 
     def estimate(self, image_path, **params) -> DepthMap:

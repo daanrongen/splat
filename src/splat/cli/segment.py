@@ -17,7 +17,7 @@ def segment(
     output: Path | None = typer.Option(
         None, "-o", "--output", help="Export stickers to this directory, or one sticker to a .png."
     ),
-    model: str = typer.Option("sam-mlx", "--model", envvar="SPLAT_SEGMENT_MODEL"),
+    model: str = typer.Option("sam2-coreml", "--model", envvar="SPLAT_SEGMENT_MODEL"),
     max_stickers: int = typer.Option(20, "--max-stickers", envvar="SPLAT_SEGMENT_MAX_STICKERS"),
     device: str = typer.Option(
         "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_SEGMENT_DEVICE"

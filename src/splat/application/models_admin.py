@@ -48,18 +48,59 @@ def _lookup(name: str) -> ModelDescriptor:
     return lookup(_all_catalogs(), name)
 
 
+@dataclass(frozen=True)
+class ModelStatus:
+    name: str
+    stage: str
+    runtime: str
+    license: str  # SPDX id only; `commercial` says whether use is restricted
+    commercial: bool
+    cached: bool
+    size_bytes: int
+    managed: bool = True
+
+
 class ListModelsUseCase:
+    """The catalog with what is installed and how big it is, then every store directory
+    no catalog entry uses."""
+
     def __init__(self, model_source: ModelSource) -> None:
         self._model_source = model_source
 
-    def execute(self) -> list[tuple[ModelDescriptor, bool]]:
-        return [
-            (
-                descriptor,
-                all(self._model_source.is_cached(source) for source in descriptor.hf_repo_ids),
+    def _catalog_row(self, descriptor: ModelDescriptor) -> ModelStatus:
+        source = self._model_source
+        return ModelStatus(
+            name=descriptor.name,
+            stage=model_stage(descriptor.name),
+            runtime=descriptor.runtime,
+            license=descriptor.license.spdx_id,
+            commercial=descriptor.license.is_commercial,
+            cached=all(
+                source.is_cached(repo, descriptor.files(repo)) for repo in descriptor.hf_repo_ids
+            ),
+            size_bytes=sum(source.size_on_disk(repo) for repo in descriptor.hf_repo_ids),
+        )
+
+    def execute(self) -> list[ModelStatus]:
+        catalog = [self._catalog_row(descriptor) for descriptor in _all_catalogs().values()]
+        wanted = {
+            repo for descriptor in _all_catalogs().values() for repo in descriptor.hf_repo_ids
+        }
+        unmanaged = [
+            ModelStatus(
+                name=name,
+                stage="-",
+                runtime="-",
+                license="-",
+                commercial=True,
+                cached=True,
+                size_bytes=self._model_source.size_on_disk(name),
+                managed=False,
             )
-            for descriptor in _all_catalogs().values()
+            for name in self._model_source.list_cached()
+            if name not in wanted
         ]
+        return catalog + unmanaged
 
 
 def _for_repo(
@@ -75,8 +116,11 @@ class PullModelUseCase:
     def execute(
         self, name: str, on_progress: Callable[[str, int, int], None] | None = None
     ) -> None:
-        for source in _lookup(name).hf_repo_ids:
-            self._model_source.pull(source, on_progress=_for_repo(source, on_progress))
+        descriptor = _lookup(name)
+        for source in descriptor.hf_repo_ids:
+            self._model_source.pull(
+                source, files=descriptor.files(source), on_progress=_for_repo(source, on_progress)
+            )
 
 
 class ModelInfoUseCase:
@@ -88,30 +132,43 @@ class ModelInfoUseCase:
 class OrphanedWeights:
     repo_id: str
     size_bytes: int
+    legacy: bool = False
 
 
 class PruneModelsUseCase:
-    """Cached repos no catalog entry references any more - left behind when a
-    model is dropped from the catalog, since `models rm` can only address
-    names the catalog still knows."""
+    """Directories in the model store no catalog entry uses (left behind when a model is
+    dropped or an older layout changes), and hub-cache copies of catalogued repos the
+    store already holds in full."""
 
     def __init__(self, model_source: ModelSource) -> None:
         self._model_source = model_source
 
     def find(self) -> list[OrphanedWeights]:
-        wanted = {
-            source for descriptor in _all_catalogs().values() for source in descriptor.hf_repo_ids
+        files = {
+            source: descriptor.files(source)
+            for descriptor in _all_catalogs().values()
+            for source in descriptor.hf_repo_ids
         }
-        return [
-            OrphanedWeights(repo_id, self._model_source.size_on_disk(repo_id))
-            for repo_id in self._model_source.list_cached()
-            if repo_id not in wanted
+        source = self._model_source
+        unmanaged = [
+            OrphanedWeights(repo_id, source.size_on_disk(repo_id))
+            for repo_id in source.list_cached()
+            if repo_id not in files
         ]
+        redundant = [
+            OrphanedWeights(repo_id, size, legacy=True)
+            for repo_id, size in source.list_legacy().items()
+            if repo_id in files and source.is_cached(repo_id, files[repo_id])
+        ]
+        return unmanaged + redundant
 
     def execute(self) -> list[OrphanedWeights]:
         orphans = self.find()
         for orphan in orphans:
-            self._model_source.remove(orphan.repo_id)
+            remove = (
+                self._model_source.remove_legacy if orphan.legacy else self._model_source.remove
+            )
+            remove(orphan.repo_id)
         return orphans
 
 

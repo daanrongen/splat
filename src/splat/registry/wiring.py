@@ -87,37 +87,44 @@ def get_client() -> "SplatClient":
     return LocalSplatClient()
 
 
-def get_reconstruction_backend(
-    name: str, *, model_source: ModelSource, device: str = "auto"
-) -> ReconstructionBackend:
-    descriptor = lookup(GAUSSIAN_CATALOG, name)
-    weights_path: Path | None = None
-    if descriptor.hf_repo_id is not None:
-        weights_path = model_source.pull(descriptor.hf_repo_id)
-    return descriptor.backend_cls(
-        weights_path=weights_path, device=device, license=descriptor.license
+def resolve_weights(descriptor: ModelDescriptor, model_source: ModelSource) -> tuple[Path, ...]:
+    """Where each repo of a model lives, in `hf_repo_ids` order; pulls what is missing."""
+    return tuple(
+        model_source.local_path(repo, descriptor.files(repo))
+        or model_source.pull(repo, files=descriptor.files(repo))
+        for repo in descriptor.hf_repo_ids
     )
 
 
-def _hf_backend(descriptor: ModelDescriptor, device: str):
+def _backend(descriptor: ModelDescriptor, model_source: ModelSource, device: str):
     return descriptor.backend_cls(
-        hf_repo_id=descriptor.hf_repo_id,
+        weights_paths=resolve_weights(descriptor, model_source),
         license=descriptor.license,
         device=device,
         **descriptor.backend_kwargs,
     )
 
 
-def get_diffusion_backend(name: str, *, device: str = "auto") -> DiffusionBackend:
+def get_reconstruction_backend(
+    name: str, *, model_source: ModelSource, device: str = "auto"
+) -> ReconstructionBackend:
+    return _backend(lookup(GAUSSIAN_CATALOG, name), model_source, device)
+
+
+def get_diffusion_backend(
+    name: str, *, model_source: ModelSource, device: str = "auto"
+) -> DiffusionBackend:
     from splat.registry.diffuse import DIFFUSION_CATALOG
 
-    return _hf_backend(lookup(DIFFUSION_CATALOG, name, "diffusion "), device)
+    return _backend(lookup(DIFFUSION_CATALOG, name, "diffusion "), model_source, device)
 
 
-def get_segmentation_backend(name: str, *, device: str = "auto") -> SegmentationBackend:
+def get_segmentation_backend(
+    name: str, *, model_source: ModelSource, device: str = "auto"
+) -> SegmentationBackend:
     from splat.registry.segment import SEGMENTATION_CATALOG
 
-    return _hf_backend(lookup(SEGMENTATION_CATALOG, name, "segmentation "), device)
+    return _backend(lookup(SEGMENTATION_CATALOG, name, "segmentation "), model_source, device)
 
 
 def get_render_backend(name: str = "blender") -> RenderBackend:
@@ -128,26 +135,34 @@ def get_render_backend(name: str = "blender") -> RenderBackend:
     return BlenderBackend()
 
 
-def get_depth_backend(name: str, *, device: str = "auto") -> DepthEstimationBackend:
+def get_depth_backend(
+    name: str, *, model_source: ModelSource, device: str = "auto"
+) -> DepthEstimationBackend:
     from splat.registry.depth import DEPTH_CATALOG
 
-    return _hf_backend(lookup(DEPTH_CATALOG, name, "depth "), device)
+    return _backend(lookup(DEPTH_CATALOG, name, "depth "), model_source, device)
 
 
-def get_caption_backend(name: str, *, device: str = "auto") -> CaptioningBackend:
+def get_caption_backend(
+    name: str, *, model_source: ModelSource, device: str = "auto"
+) -> CaptioningBackend:
     from splat.registry.caption import CAPTION_CATALOG
 
-    return _hf_backend(lookup(CAPTION_CATALOG, name, "caption "), device)
+    return _backend(lookup(CAPTION_CATALOG, name, "caption "), model_source, device)
 
 
-def get_embedding_backend(name: str, *, device: str = "auto") -> EmbeddingBackend:
+def get_embedding_backend(
+    name: str, *, model_source: ModelSource, device: str = "auto"
+) -> EmbeddingBackend:
     from splat.registry.embed import EMBEDDING_CATALOG
 
-    return _hf_backend(lookup(EMBEDDING_CATALOG, name, "embedding "), device)
+    return _backend(lookup(EMBEDDING_CATALOG, name, "embedding "), model_source, device)
 
 
-def get_upscale_backend(name: str) -> UpscalingBackend:
+def get_upscale_backend(name: str, *, model_source: ModelSource) -> UpscalingBackend:
     from splat.registry.upscale import UPSCALE_CATALOG
 
     descriptor = lookup(UPSCALE_CATALOG, name, "upscale ")
-    return descriptor.backend_cls(license=descriptor.license)
+    return descriptor.backend_cls(
+        weights_paths=resolve_weights(descriptor, model_source), license=descriptor.license
+    )

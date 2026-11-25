@@ -83,7 +83,7 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 
 **`splat embed [INPUT] [--text TEXT]`** embeds images or a text query as a normalized vector: `--model` (`mobileclip2-s0`), `--device`, `-o` (`.npy`).
 
-**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam-mlx`), `--max-stickers` (20), `--device`, `--point x,y` and `--not-point x,y` (repeatable) or `--box x0,y0,x1,y1` to cut out one prompted object (`sam2-coreml` takes a box or up to 2 points), `--foreground` (one cutout of the main subject), `--drop-background` (drop masks that cover the frame or its border), `-o DIR` or `-o file.png` for a single sticker.
+**`splat segment INPUT`** cuts an image into RGBA stickers: `--model` (`sam2-coreml`), `--max-stickers` (20), `--device`, `--point x,y` and `--not-point x,y` (repeatable) or `--box x0,y0,x1,y1` to cut out one prompted object (`sam2-coreml` takes a box or up to 2 points), `--foreground` (one cutout of the main subject), `--drop-background` (drop masks that cover the frame or its border), `-o DIR` or `-o file.png` for a single sticker.
 
 **`splat depth INPUT`** estimates per-pixel depth: `--model` (`depth-pro-2`, metric), `--device`, `-o` (a viewable PNG, near is bright).
 
@@ -144,10 +144,12 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 | Command | |
 |---|---|
-| `splat models list` | every catalogued model, its stage, runtime, license and whether it's cached |
+| `splat models list` | every catalogued model with its stage, runtime, whether it is installed, its size on disk and license, then any directory in the store that no model uses |
 | `splat models info NAME` | license, source repo, input counts and notes |
-| `splat models pull NAME` / `rm NAME` | download or remove weights |
-| `splat models prune [--yes]` | report, or delete, cached weights no model uses |
+| `splat models pull NAME` / `rm NAME` | download or remove weights, only the files the model needs |
+| `splat models prune [--yes]` | report, or delete, unmanaged store directories and hub-cache copies the store already holds |
+
+Every model is one directory of real files at `$SPLAT_MODEL_CACHE_DIR/<org>--<name>/`. `pull` reuses files from an older Hugging Face hub cache by hardlink, so nothing downloads twice.
 
 | Stage | Model | Runtime | License |
 |---|---|---|---|
@@ -156,10 +158,9 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | `diffuse` | `sd21-coreml` | Core ML | OpenRAIL-M |
 | `caption` | `fastvlm-0.5b` | torch | Apple ML Research (research only) |
 | `embed` | `mobileclip2-s0` | torch | Apple ML Research (research only) |
-| `segment` | `sam-mlx` | MLX | Apache-2.0 |
 | `segment` | `sam2-coreml` | Core ML | Apache-2.0 |
+| `segment` | `sam-mlx` | MLX | Apache-2.0 |
 | `depth` | `depth-pro-2` | torch | Apple AMLR (research only) |
-| `depth` | `depth-pro` | torch | Apple ASCL |
 | `depth` | `depth-anything-v2-coreml` | Core ML | Apache-2.0 (relative disparity) |
 | `upscale` | `realesrgan-mlx` | MLX | BSD-3-Clause |
 | `gaussian` | `sharp` | torch | Apple ML Research (research only) |
@@ -182,7 +183,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 | Variable | |
 |---|---|
 | `SPLAT_MANIFEST_CACHE_DIR` | manifest cache, default `$XDG_CACHE_HOME/splat/manifests` |
-| `SPLAT_MODEL_CACHE_DIR` | model cache, default `$XDG_CACHE_HOME/splat/models` |
+| `SPLAT_MODEL_CACHE_DIR` | model weights, one `<org>--<name>` directory per repo, default `$XDG_CACHE_HOME/splat/models` |
 | `SPLAT_URL` | remote `splat http` server |
 | `SPLAT_LOCAL` | run here even when `SPLAT_URL` is set, same as `splat --local` |
 | `SPLAT_BLENDER_BIN` | Blender executable, on the server when `SPLAT_URL` is set |

@@ -28,6 +28,7 @@ GAUSSIAN_CATALOG = {
         name="sharp",
         backend="splat.adapters.gaussian.sharp:SharpBackend",
         hf_repo_ids=("apple/Sharp",),
+        hf_files={"apple/Sharp": ("*.pt",)},
         license=APPLE_AMLR,
         runtime="torch",
         min_images=1,

@@ -23,25 +23,36 @@ models_app = typer.Typer(help="Manage locally cached model weights.", no_args_is
 
 @models_app.command("list")
 def list_models() -> None:
-    """List catalog models, the stage each serves, and whether they're cached."""
+    """List catalog models with what is installed, then directories no model uses."""
     rows = get_client().models_list()
     # license last: it is the widest and least scanned column, so it wraps at
     # the right edge instead of pushing the names around.
     table.render(
-        ("model", "for", "runtime", "on disk", "license"),
-        (
-            (
-                row.name,
-                row.stage,
-                row.runtime,
-                "[green]yes[/green]" if row.cached else "[dim]no[/dim]",
-                row.license if row.commercial else f"[red]{row.license}[/red]",
-            )
-            for row in rows
+        ("model", "for", "runtime", "status", "size", "license"),
+        (_row(row) for row in rows),
+        flex=5,
+        keep=(0,),
+        caption=(
+            "`splat models pull NAME` installs a model, `models prune` removes yellow rows; "
+            "red = research use only"
         ),
-        flex=4,
-        caption="red license = non-commercial / research use only",
     )
+
+
+def _status(row) -> str:
+    if not row.managed:
+        return "[yellow]unmanaged[/yellow]"
+    if not row.size_bytes and row.cached:
+        return "[dim]no weights[/dim]"
+    return "[green]installed[/green]" if row.cached else "not installed"
+
+
+def _row(row) -> tuple[str, ...]:
+    size = _human_bytes(row.size_bytes) if row.size_bytes else "[dim]-[/dim]"
+    if not row.managed:
+        return (f"[yellow]{row.name}[/yellow]", "-", "-", _status(row), size, "-")
+    license = row.license if row.commercial else f"[red]{row.license}[/red]"
+    return (row.name, row.stage, row.runtime, _status(row), size, license)
 
 
 @contextmanager
@@ -118,7 +129,7 @@ def _human_bytes(size: int) -> str:
 def prune(
     yes: bool = typer.Option(False, "--yes", help="Actually delete; otherwise just report."),
 ) -> None:
-    """Report (or with --yes, delete) cached weights no catalog model uses."""
+    """Report (or with --yes, delete) unmanaged model directories and redundant hub copies."""
     from splat.handlers import models as models_handler
 
     orphans = models_handler.prune(apply=yes)
@@ -127,10 +138,12 @@ def prune(
         return
 
     for orphan in orphans:
-        verb = "removed" if yes else "orphaned"
+        verb = "removed" if yes else "found"
         color = "green" if yes else "yellow"
+        origin = "hub copy" if orphan.legacy else "unmanaged"
         console.print(
-            f"[{color}]{verb}[/{color}] {orphan.repo_id:48} {_human_bytes(orphan.size_bytes)}"
+            f"[{color}]{verb}[/{color}] {orphan.repo_id:48} {origin:10} "
+            f"{_human_bytes(orphan.size_bytes)}"
         )
 
     total = _human_bytes(sum(orphan.size_bytes for orphan in orphans))

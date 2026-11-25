@@ -12,7 +12,7 @@ router = APIRouter()
 @router.post("/segment")
 def segment(
     image: UploadFile = File(...),
-    model: str = Form("sam-mlx"),
+    model: str = Form("sam2-coreml"),
     max_stickers: int = Form(20),
     device: str = Form("auto"),
     foreground: bool = Form(False),

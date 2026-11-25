@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from splat.application.models_admin import model_source_label, model_stage
+from splat.application.models_admin import model_source_label
 from splat.ports.client import InfoSummary, ModelInfo, ModelSummary, ValidationSummary
 
 if TYPE_CHECKING:
@@ -106,17 +107,7 @@ class LocalSplatClient:
     def models_list(self) -> list[ModelSummary]:
         from splat.handlers import models as models_handler
 
-        return [
-            ModelSummary(
-                name=descriptor.name,
-                stage=model_stage(descriptor.name),
-                runtime=descriptor.runtime,
-                license=descriptor.license.spdx_id,
-                commercial=descriptor.license.is_commercial,
-                cached=cached,
-            )
-            for descriptor, cached in models_handler.list_models()
-        ]
+        return [ModelSummary(**asdict(status)) for status in models_handler.list_models()]
 
     def models_pull(
         self, name: str, *, on_progress: Callable[[str, int, int], None] | None = None

@@ -2,9 +2,15 @@ from splat.registry.wiring import get_client
 
 
 def list_models() -> list[dict]:
-    """List catalog models and whether their weights are cached locally."""
+    """List catalog models, whether their weights are cached locally, and their size on disk."""
     return [
-        {"name": row.name, "runtime": row.runtime, "license": row.license, "cached": row.cached}
+        {
+            "name": row.name,
+            "runtime": row.runtime,
+            "license": row.license,
+            "cached": row.cached,
+            "size_bytes": row.size_bytes,
+        }
         for row in get_client().models_list()
     ]
 

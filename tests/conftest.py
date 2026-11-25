@@ -9,6 +9,14 @@ def isolate_manifest_cache(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("SPLAT_MANIFEST_CACHE_DIR", str(tmp_path / "manifest-cache"))
 
 
+@pytest.fixture(autouse=True)
+def isolate_model_cache(request, tmp_path, monkeypatch) -> None:
+    if request.node.get_closest_marker("integration"):
+        return
+    monkeypatch.setenv("SPLAT_MODEL_CACHE_DIR", str(tmp_path / "model-cache"))
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hub-cache"))
+
+
 @pytest.fixture
 def synthetic_cloud() -> GaussianCloud:
     rng = np.random.default_rng(42)

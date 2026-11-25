@@ -5,7 +5,7 @@ from splat.domain.contracts import validate_inputs
 from splat.domain.errors import SplatDomainError
 from splat.domain.manifest import Manifest, ManifestKind
 from splat.registry.embed import EMBED_IMAGE_CONTRACT
-from splat.registry.wiring import get_embedding_backend, get_manifest_repository
+from splat.registry.wiring import get_embedding_backend, get_manifest_repository, get_model_source
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,9 @@ def handle(request: EmbedRequest) -> list[Manifest]:
         validate_inputs(EMBED_IMAGE_CONTRACT, request.inputs or [])
 
     cache = get_manifest_repository()
-    backend = get_embedding_backend(request.model, device=request.device)
+    backend = get_embedding_backend(
+        request.model, model_source=get_model_source(), device=request.device
+    )
     params = {"device": request.device}
 
     if has_text:

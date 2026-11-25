@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 from PIL import Image
@@ -33,7 +35,7 @@ class FakeMaskDecoder:
 
 
 def test_segment_passes_pil_image_to_image_encoder(tmp_path):
-    backend = CoreMLSam2Backend(hf_repo_id="apple/coreml-sam2.1-tiny", license=APACHE_2_0)
+    backend = CoreMLSam2Backend(weights_paths=(Path("weights"),), license=APACHE_2_0)
     encoder = FakeImageEncoder()
     backend._image_encoder = encoder
     backend._prompt_encoder = FakePromptEncoder()
@@ -64,7 +66,7 @@ class FullMaskDecoder:
 
 
 def _prompted_backend():
-    backend = CoreMLSam2Backend(hf_repo_id="apple/coreml-sam2.1-tiny", license=APACHE_2_0)
+    backend = CoreMLSam2Backend(weights_paths=(Path("weights"),), license=APACHE_2_0)
     backend._image_encoder = FakeImageEncoder()
     backend._prompt_encoder = RecordingPromptEncoder()
     backend._mask_decoder = FullMaskDecoder()
@@ -101,3 +103,21 @@ def test_too_many_points_or_box_with_points_are_rejected(tmp_path):
         backend.segment(image_path, points=[[1, 1, 1], [2, 2, 1], [3, 3, 1]])
     with pytest.raises(SplatDomainError):
         backend.segment(image_path, points=[[1, 1, 1]], box=[0, 0, 5, 5])
+
+
+def test_load_picks_each_model_by_its_role_from_the_weights_path(mocker, tmp_path):
+    loaded = []
+    mocker.patch(
+        "splat.adapters.segment.coreml_sam2.ct.models.MLModel",
+        side_effect=lambda path, compute_units: loaded.append(Path(path).name),
+    )
+    for role in ("ImageEncoder", "PromptEncoder", "MaskDecoder"):
+        (tmp_path / f"SAM2_1Tiny{role}FLOAT16.mlpackage").mkdir()
+
+    CoreMLSam2Backend(weights_paths=(tmp_path,), license=APACHE_2_0)._load()
+
+    assert loaded == [
+        "SAM2_1TinyImageEncoderFLOAT16.mlpackage",
+        "SAM2_1TinyPromptEncoderFLOAT16.mlpackage",
+        "SAM2_1TinyMaskDecoderFLOAT16.mlpackage",
+    ]

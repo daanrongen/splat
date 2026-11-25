@@ -4,9 +4,11 @@ from splat.application.models_admin import PullModelUseCase
 class FakeModelSource:
     def __init__(self) -> None:
         self.pulled: list[str] = []
+        self.files: dict[str, tuple[str, ...]] = {}
 
-    def pull(self, model_id, *, revision=None, on_progress=None):
+    def pull(self, model_id, *, files=(), on_progress=None):
         self.pulled.append(model_id)
+        self.files[model_id] = files
         if on_progress is not None:
             on_progress(5, 10)
 
@@ -36,9 +38,17 @@ def test_execute_without_a_callback_asks_the_source_for_none():
     seen = []
 
     class Source(FakeModelSource):
-        def pull(self, model_id, *, revision=None, on_progress=None):
+        def pull(self, model_id, *, files=(), on_progress=None):
             seen.append(on_progress)
 
-    PullModelUseCase(Source()).execute("depth-pro")
+    PullModelUseCase(Source()).execute("depth-anything-v2-coreml")
 
     assert seen == [None]
+
+
+def test_execute_asks_only_for_the_files_the_model_needs():
+    source = FakeModelSource()
+
+    PullModelUseCase(source).execute("sam-mlx")
+
+    assert source.files["facebook/sam-vit-base"] == ("model.safetensors", "config.json")

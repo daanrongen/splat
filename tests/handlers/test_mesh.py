@@ -30,7 +30,7 @@ def _depth_asset(tmp_path: Path, cache: FilesystemManifestRepository):
         ext="npy",
         metadata=DepthMetadata(focal_length_px=50.0, field_of_view_deg=30.0),
         parent_ids=[image_asset.id],
-        created_by="depth:depth-pro",
+        created_by="depth:depth-pro-2",
     )
     return depth_asset, image_asset
 

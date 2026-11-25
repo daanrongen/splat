@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from splat.domain.value_objects import ModelLicense
@@ -12,7 +14,8 @@ class RealESRGANMLXBackend:
     name = "realesrgan-mlx"
     supported_factors = tuple(sorted(_VARIANTS))
 
-    def __init__(self, *, license: ModelLicense) -> None:
+    def __init__(self, *, weights_paths: tuple[Path, ...], license: ModelLicense) -> None:
+        self._weights = dict(zip(self.supported_factors, weights_paths, strict=True))
         self.license = license
         self._upsamplers = {}
 
@@ -27,6 +30,7 @@ class RealESRGANMLXBackend:
             self._upsamplers[key] = make_upsampler(
                 variant=self.variant_for_factor(factor),
                 tile=tile,
+                weights_dir=str(self._weights[factor]),
             )
         return self._upsamplers[key]
 
