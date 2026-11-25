@@ -10,7 +10,7 @@ from splat.registry.wiring import get_depth_backend, get_manifest_repository
 @dataclass(frozen=True)
 class DepthRequest:
     inputs: list[Manifest]
-    model: str = "depth-pro"
+    model: str = "depth-pro-2"
     device: str = "auto"
 
 

@@ -19,7 +19,7 @@ def depth(
     output: Path | None = typer.Option(
         None, "-o", "--output", help="Render a viewable depth PNG here (near = bright)."
     ),
-    model: str = typer.Option("depth-pro", "--model", envvar="SPLAT_DEPTH_MODEL"),
+    model: str = typer.Option("depth-pro-2", "--model", envvar="SPLAT_DEPTH_MODEL"),
     device: str = typer.Option(
         "auto", "--device", help="auto | cpu | mps", envvar="SPLAT_DEPTH_DEVICE"
     ),

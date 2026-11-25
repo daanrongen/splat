@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/depth")
 def depth(
     image: UploadFile = File(...),
-    model: str = Form("depth-pro"),
+    model: str = Form("depth-pro-2"),
     device: str = Form("auto"),
 ) -> Response:
     cache = get_manifest_repository()
