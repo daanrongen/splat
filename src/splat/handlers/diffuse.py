@@ -11,7 +11,7 @@ from splat.registry.wiring import get_diffusion_backend, get_manifest_repository
 class DiffuseRequest:
     prompt: str
     inputs: list[Manifest] = field(default_factory=list)
-    model: str = "sdxl-turbo-mlx"
+    model: str = "sd15-coreml"
     negative_prompt: str = ""
     steps: int | None = None
     seed: int | None = None

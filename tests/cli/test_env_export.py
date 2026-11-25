@@ -39,5 +39,5 @@ def test_export_cli_flag_writes_the_template():
     result = runner.invoke(app, ["env", "--export"])
 
     assert result.exit_code == 0, result.output
-    assert "SPLAT_DIFFUSE_MODEL=sdxl-turbo-mlx" in result.output
+    assert "SPLAT_DIFFUSE_MODEL=sd15-coreml" in result.output
     assert "# --- gaussian ---" in result.output

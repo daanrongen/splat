@@ -39,7 +39,10 @@ def _sharp_orbit(image):
 
 
 SMOKE = {
-    "sdxl-turbo-mlx": lambda image: [splat.diffuse("a red chair", steps=1).asset],
+    "sdxl-turbo-mlx": lambda image: [
+        splat.diffuse("a red chair", model="sdxl-turbo-mlx", steps=1).asset
+    ],
+    "sd15-coreml": lambda image: [splat.diffuse("a red chair", steps=2).asset],
     "sd21-coreml": lambda image: [splat.diffuse("a red chair", model="sd21-coreml", steps=2).asset],
     "fastvlm-0.5b": lambda image: splat.caption(image),
     "mobileclip2-s0": lambda image: splat.embed(image) + splat.embed(text="a chair"),

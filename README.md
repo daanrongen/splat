@@ -71,10 +71,10 @@ Most options can also come from a `SPLAT_*` environment variable (`splat env` li
 
 | Option | Default | |
 |---|---|---|
-| `--model` | `sdxl-turbo-mlx` | see [Models](#models) |
+| `--model` | `sd15-coreml` | see [Models](#models) |
 | `--negative` | | negative prompt |
 | `--steps` | model default | denoising steps |
-| `--strength` | | image-to-image change, 0 to 1 |
+| `--strength` | 0.7 | image-to-image change, 0 to 1 |
 | `--seed` | | |
 | `--width`, `--height` | 512 | multiples of 64, MLX backend only |
 | `--device`, `-o` | | |
@@ -151,6 +151,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 | Stage | Model | Runtime | License |
 |---|---|---|---|
+| `diffuse` | `sd15-coreml` | Core ML | OpenRAIL-M |
 | `diffuse` | `sdxl-turbo-mlx` | MLX | Stability AI non-commercial |
 | `diffuse` | `sd21-coreml` | Core ML | OpenRAIL-M |
 | `caption` | `fastvlm-0.5b` | torch | Apple ML Research (research only) |

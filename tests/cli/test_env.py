@@ -27,7 +27,7 @@ def test_env_reports_defaults(monkeypatch):
     assert result.exit_code == 0, result.output
     assert "SPLAT_DIFFUSE_MODEL" in plain
     assert "SPLAT_UPSCALE_MODEL" in plain
-    assert "sdxl-turbo-mlx" in plain
+    assert "sd15-coreml" in plain
     assert "realesrgan-mlx" in plain
     assert "default" in plain
 

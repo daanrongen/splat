@@ -18,7 +18,7 @@ def diffuse(
         None, help="Edit instruction, when SOURCE is an image (image-to-image)."
     ),
     output: Path | None = typer.Option(None, "-o", "--output", help="Also export to this path."),
-    model: str = typer.Option("sdxl-turbo-mlx", "--model", envvar="SPLAT_DIFFUSE_MODEL"),
+    model: str = typer.Option("sd15-coreml", "--model", envvar="SPLAT_DIFFUSE_MODEL"),
     negative_prompt: str = typer.Option("", "--negative", envvar="SPLAT_DIFFUSE_NEGATIVE"),
     steps: int | None = typer.Option(
         None, "--steps", help="Denoising steps (model-dependent default)."
