@@ -45,7 +45,7 @@ def test_pull_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    models_handler.pull("depth-pro")
+    models_handler.pull("depth-anything-v2-coreml")
 
     assert len(fake.pulled) == 1
 
@@ -71,9 +71,11 @@ def test_pull_forwards_progress_with_the_repo_id(mocker):
     mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
     reports = []
 
-    models_handler.pull("depth-pro", on_progress=lambda *report: reports.append(report))
+    models_handler.pull(
+        "depth-anything-v2-coreml", on_progress=lambda *report: reports.append(report)
+    )
 
-    assert reports == [("apple/DepthPro-hf", 10, 100)]
+    assert reports == [("apple/coreml-depth-anything-v2-small", 10, 100)]
 
 
 def test_pull_unknown_model_raises(mocker):
@@ -88,7 +90,7 @@ def test_rm_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    models_handler.rm("depth-pro")
+    models_handler.rm("depth-anything-v2-coreml")
 
     assert len(fake.removed) == 1
 

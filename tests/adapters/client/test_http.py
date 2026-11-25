@@ -40,7 +40,7 @@ class FakeDiffusionBackend:
 
 
 class FakeDepthBackend:
-    name = "depth-pro"
+    name = "depth-pro-2"
     license = MIT
 
     def estimate(self, image_path, **params) -> DepthMap:
@@ -426,15 +426,20 @@ def test_models_pull_forwards_server_progress(mocker, remote_client):
     mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
     reports = []
 
-    remote_client.models_pull("depth-pro", on_progress=lambda *report: reports.append(report))
+    remote_client.models_pull(
+        "depth-anything-v2-coreml", on_progress=lambda *report: reports.append(report)
+    )
 
-    assert reports == [("apple/DepthPro-hf", 50, 100), ("apple/DepthPro-hf", 100, 100)]
+    assert reports == [
+        ("apple/coreml-depth-anything-v2-small", 50, 100),
+        ("apple/coreml-depth-anything-v2-small", 100, 100),
+    ]
 
 
 def test_models_pull_without_a_callback_still_completes(mocker, remote_client):
     mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
 
-    remote_client.models_pull("depth-pro")
+    remote_client.models_pull("depth-anything-v2-coreml")
 
 
 def test_models_pull_raises_the_error_the_server_sent_mid_stream(mocker, remote_client):
@@ -445,7 +450,7 @@ def test_models_pull_raises_the_error_the_server_sent_mid_stream(mocker, remote_
     mocker.patch("splat.handlers.models.get_model_source", return_value=FailingSource())
 
     with pytest.raises(SplatDomainError, match="repo gated"):
-        remote_client.models_pull("depth-pro")
+        remote_client.models_pull("depth-anything-v2-coreml")
 
 
 def test_models_pull_raises_when_the_stream_ends_early():
@@ -458,7 +463,7 @@ def test_models_pull_raises_when_the_stream_ends_early():
     )
 
     with pytest.raises(SplatDomainError, match="before it finished"):
-        client.models_pull("depth-pro")
+        client.models_pull("depth-anything-v2-coreml")
 
 
 def test_models_info_unknown_model_raises(remote_client):

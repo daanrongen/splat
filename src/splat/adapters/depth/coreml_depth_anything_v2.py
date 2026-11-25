@@ -1,6 +1,6 @@
 """Monocular *relative* depth estimation via Apple's CoreML export of
 Depth Anything V2 Small (`apple/coreml-depth-anything-v2-small`,
-Apache-2.0). Unlike `depth-pro`, this model predicts inverse depth
+Apache-2.0). Unlike `depth-pro-2`, this model predicts inverse depth
 (disparity, higher value = closer) on an arbitrary per-image scale, not
 metric depth in meters, and carries no focal length/field-of-view
 estimate - `DepthMap.focal_length_px` stays `None`, which `splat mesh`

@@ -98,21 +98,21 @@ def test_get_upscale_backend_wires_known_model():
 
 
 def test_resolve_weights_uses_the_installed_directory_without_pulling():
-    source = FakeModelSource(installed={"apple/DepthPro-hf"})
+    source = FakeModelSource(installed={"apple/coreml-depth-anything-v2-small"})
 
-    paths = resolve_weights(DEPTH_CATALOG["depth-pro"], source)
+    paths = resolve_weights(DEPTH_CATALOG["depth-anything-v2-coreml"], source)
 
-    assert paths == (Path("/store/apple--DepthPro-hf"),)
+    assert paths == (Path("/store/apple--coreml-depth-anything-v2-small"),)
     assert source.pulled == []
 
 
 def test_resolve_weights_pulls_only_the_files_a_missing_model_needs():
     source = FakeModelSource()
 
-    resolve_weights(DEPTH_CATALOG["depth-pro"], source)
+    resolve_weights(DEPTH_CATALOG["depth-anything-v2-coreml"], source)
 
     assert source.pulled == [
-        ("apple/DepthPro-hf", ("config.json", "preprocessor_config.json", "model.safetensors"))
+        ("apple/coreml-depth-anything-v2-small", ("DepthAnythingV2SmallF16.mlpackage/**",))
     ]
 
 

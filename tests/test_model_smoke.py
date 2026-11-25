@@ -49,7 +49,6 @@ SMOKE = {
     "sam-mlx": lambda image: splat.segment(image, max_stickers=2),
     "sam2-coreml": lambda image: splat.segment(image, model="sam2-coreml", max_stickers=2),
     "depth-pro-2": lambda image: splat.depth(image),
-    "depth-pro": lambda image: splat.depth(image, model="depth-pro"),
     "depth-anything-v2-coreml": lambda image: splat.depth(image, model="depth-anything-v2-coreml"),
     "realesrgan-mlx": lambda image: splat.upscale(image, factor=2),
     "sharp": lambda image: splat.gaussian(image),

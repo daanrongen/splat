@@ -62,7 +62,7 @@ def test_rm_delegates_to_model_source(mocker):
     fake = FakeModelSource()
     mocker.patch("splat.handlers.models.get_model_source", return_value=fake)
 
-    response = client.delete("/models/depth-pro")
+    response = client.delete("/models/depth-anything-v2-coreml")
 
     assert response.status_code == 200
     assert len(fake.removed) == 1
@@ -82,13 +82,13 @@ def _events(response) -> list[dict]:
 def test_pull_streams_progress_then_pulled(mocker):
     mocker.patch("splat.handlers.models.get_model_source", return_value=ReportingSource())
 
-    response = client.post("/models/depth-pro/pull")
+    response = client.post("/models/depth-anything-v2-coreml/pull")
 
     assert response.status_code == 200
     assert _events(response) == [
-        {"repo": "apple/DepthPro-hf", "done": 50, "total": 100},
-        {"repo": "apple/DepthPro-hf", "done": 100, "total": 100},
-        {"pulled": "depth-pro"},
+        {"repo": "apple/coreml-depth-anything-v2-small", "done": 50, "total": 100},
+        {"repo": "apple/coreml-depth-anything-v2-small", "done": 100, "total": 100},
+        {"pulled": "depth-anything-v2-coreml"},
     ]
 
 
@@ -99,7 +99,7 @@ def test_pull_reports_a_domain_error_as_the_last_event(mocker):
 
     mocker.patch("splat.handlers.models.get_model_source", return_value=FailingSource())
 
-    response = client.post("/models/depth-pro/pull")
+    response = client.post("/models/depth-anything-v2-coreml/pull")
 
     assert _events(response) == [{"code": "domain_error", "detail": "repo gated"}]
 
@@ -111,7 +111,7 @@ def test_pull_reports_an_unexpected_error_as_the_last_event(mocker):
 
     mocker.patch("splat.handlers.models.get_model_source", return_value=BrokenSource())
 
-    response = client.post("/models/depth-pro/pull")
+    response = client.post("/models/depth-anything-v2-coreml/pull")
 
     assert _events(response) == [{"code": "internal_error", "detail": "RuntimeError: boom"}]
 
@@ -135,7 +135,7 @@ def test_closing_the_stream_stops_the_download(mocker):
     mocker.patch("splat.handlers.models.get_model_source", return_value=SlowSource())
 
     async def disconnect_after_first_event():
-        events = models_route._pull_events("depth-pro")
+        events = models_route._pull_events("depth-anything-v2-coreml")
         await anext(events)
         await events.aclose()
 

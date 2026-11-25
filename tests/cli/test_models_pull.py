@@ -39,7 +39,7 @@ def test_pull_hands_the_client_a_progress_callback_on_a_terminal(mocker, stderr)
     spy = mocker.spy(client, "models_pull")
     mocker.patch("splat.cli.models.get_client", return_value=client)
 
-    runner.invoke(app, ["models", "pull", "depth-pro"])
+    runner.invoke(app, ["models", "pull", "depth-anything-v2-coreml"])
 
     assert spy.call_args.kwargs["on_progress"] is not None
 
@@ -48,10 +48,10 @@ def test_pull_draws_no_bar_when_stderr_is_not_a_terminal(mocker, stderr):
     buffer = stderr(terminal=False)
     mocker.patch("splat.cli.models.get_client", return_value=FakeClient())
 
-    result = runner.invoke(app, ["models", "pull", "depth-pro"])
+    result = runner.invoke(app, ["models", "pull", "depth-anything-v2-coreml"])
 
     assert buffer.getvalue() == ""
-    assert "pulled depth-pro" in result.output
+    assert "pulled depth-anything-v2-coreml" in result.output
 
 
 def test_pull_passes_no_callback_when_stderr_is_not_a_terminal(mocker, stderr):
@@ -60,7 +60,7 @@ def test_pull_passes_no_callback_when_stderr_is_not_a_terminal(mocker, stderr):
     spy = mocker.spy(client, "models_pull")
     mocker.patch("splat.cli.models.get_client", return_value=client)
 
-    runner.invoke(app, ["models", "pull", "depth-pro"])
+    runner.invoke(app, ["models", "pull", "depth-anything-v2-coreml"])
 
     assert spy.call_args.kwargs["on_progress"] is None
 
@@ -69,7 +69,7 @@ def test_pull_prints_the_repo_and_size_on_a_terminal(mocker, stderr):
     buffer = stderr(terminal=True)
     mocker.patch("splat.cli.models.get_client", return_value=FakeClient())
 
-    runner.invoke(app, ["models", "pull", "depth-pro"])
+    runner.invoke(app, ["models", "pull", "depth-anything-v2-coreml"])
 
     assert "org/model" in buffer.getvalue()
 
@@ -80,6 +80,6 @@ def test_pull_failure_exits_non_zero_with_one_line(mocker, stderr):
         "splat.cli.models.get_client", return_value=FakeClient(SplatDomainError("no such model"))
     )
 
-    result = runner.invoke(app, ["models", "pull", "depth-pro"])
+    result = runner.invoke(app, ["models", "pull", "depth-anything-v2-coreml"])
 
     assert result.exit_code == 1

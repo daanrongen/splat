@@ -41,7 +41,7 @@ def test_execute_without_a_callback_asks_the_source_for_none():
         def pull(self, model_id, *, files=(), on_progress=None):
             seen.append(on_progress)
 
-    PullModelUseCase(Source()).execute("depth-pro")
+    PullModelUseCase(Source()).execute("depth-anything-v2-coreml")
 
     assert seen == [None]
 

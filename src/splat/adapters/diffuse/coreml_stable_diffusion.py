@@ -3,7 +3,7 @@ Diffusion conversions (`apple/coreml-stable-diffusion-*`), driven directly
 through `coremltools` rather than Apple's `python_coreml_stable_diffusion`
 reference package — that package requires torch + diffusers==0.30.2 +
 transformers==4.44.2 (pinned old), which would conflict with this project's
-`transformers` (used by the DepthPro adapter) without actually avoiding
+`transformers` (used by the FastVLM adapter) without actually avoiding
 torch. This reuses the vendored MLX Stable Diffusion's tokenizer (pure
 regex BPE, no mlx dependency) and a NumPy port of its Euler sampler math,
 calling the CoreML .mlpackage files (text_encoder, unet, vae_decoder, vae_encoder)

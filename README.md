@@ -144,7 +144,7 @@ Every cloud records a `quality` report in its metadata (opacity histogram, near-
 
 | Command | |
 |---|---|
-| `splat models list` | every catalogued model with its stage, runtime, size on disk and license, then any directory in the store that no model uses |
+| `splat models list` | every catalogued model with its stage, runtime, whether it is installed, its size on disk and license, then any directory in the store that no model uses |
 | `splat models info NAME` | license, source repo, input counts and notes |
 | `splat models pull NAME` / `rm NAME` | download or remove weights, only the files the model needs |
 | `splat models prune [--yes]` | report, or delete, unmanaged store directories and hub-cache copies the store already holds |
@@ -161,7 +161,6 @@ Every model is one directory of real files at `$SPLAT_MODEL_CACHE_DIR/<org>--<na
 | `segment` | `sam-mlx` | MLX | Apache-2.0 |
 | `segment` | `sam2-coreml` | Core ML | Apache-2.0 |
 | `depth` | `depth-pro-2` | torch | Apple AMLR (research only) |
-| `depth` | `depth-pro` | torch | Apple ASCL |
 | `depth` | `depth-anything-v2-coreml` | Core ML | Apache-2.0 (relative disparity) |
 | `upscale` | `realesrgan-mlx` | MLX | BSD-3-Clause |
 | `gaussian` | `sharp` | torch | Apple ML Research (research only) |
